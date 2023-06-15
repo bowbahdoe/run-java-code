@@ -1,0 +1,6 @@
+[book]
+authors = ["Michael Lowry"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Senior Design Test"
