@@ -24,5 +24,5 @@ import('node-fetch').then(nodeFetch => {
     res.json(data);
   });
 
-  app.listen(3000, () => console.log('Server is running on port 3000'));
+  app.listen(process.env.PORT || 3000, '0.0.0.0', () => console.log('Server is running'));
 });
