@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Java Playground</title>
+  <link rel="stylesheet" href="stylesheet.css">
+</head>
+<body>
+  <header>
+    <h1>Java Playground</h1>
+  </header>
+
+  <div class="container">
+    <textarea id="code" placeholder="Enter your Java code here"></textarea>
+    <button onclick="runCode()">Run</button>
+    <textarea id="output" readonly></textarea>
+  </div>
+
+  <script>
+    function runCode() {
+  var code = document.getElementById("code").value;
+  var outputTextArea = document.getElementById("output");
+  outputTextArea.value = ""; // Clear previous output
+
+  fetch('http://127.0.0.1:3000/run-code', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({code: code})
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.stdout) outputTextArea.value += data.stdout;
+    if (data.stderr) outputTextArea.value += "[Error] " + data.stderr;
+    if (data.error) outputTextArea.value += "[Error] " + data.error;
+  });
+}
+
+  </script>
+  
+</body>
+</html>
