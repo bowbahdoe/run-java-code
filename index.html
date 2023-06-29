@@ -3,6 +3,30 @@
 <head>
   <title>Java Playground</title>
   <link rel="stylesheet" href="stylesheet.css">
+  <link rel="stylesheet" href="node_modules/monaco-editor/min/vs/editor/editor.main.css"/>
+  <style>
+    header {
+      margin-bottom: 20px;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .editor-container {
+      flex: 1 0 50%;
+      min-width: 300px;
+      height: 500px;
+      color: white;
+      padding: 50px;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+    }
+  </style>
+  <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
 </head>
 <body>
   <header>
@@ -10,33 +34,55 @@
   </header>
 
   <div class="container">
-    <textarea id="code" placeholder="Enter your Java code here"></textarea>
+    <div id="editorContainer" class="editor-container"></div>
+    <div id="outputContainer" class="editor-container"></div>
+  </div>
+
+  <div class="btn-container">
     <button onclick="runCode()">Run</button>
-    <textarea id="output" readonly></textarea>
   </div>
 
   <script>
+    var editor;
+    var outputEditor;
+
+    require.config({ paths: { 'vs': 'node_modules/monaco-editor/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+      editor = monaco.editor.create(document.getElementById('editorContainer'), {
+        value: 'Enter your Java code here',
+        language: 'java',
+        theme: 'vs-dark'
+      });
+
+      outputEditor = monaco.editor.create(document.getElementById('outputContainer'), {
+        value: '',
+        language: 'plaintext',
+        theme: 'vs-dark',
+        readOnly: true,
+        minimap: {
+          enabled: false
+        }
+      });
+    });
+
     function runCode() {
-  var code = document.getElementById("code").value;
-  var outputTextArea = document.getElementById("output");
-  outputTextArea.value = ""; // Clear previous output
+      var code = editor.getValue();
+      outputEditor.setValue('Running...');
 
-  fetch('http://146.190.154.242:3000/run-code', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({code: code})
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.stdout) outputTextArea.value += data.stdout;
-    if (data.stderr) outputTextArea.value += "[Error] " + data.stderr;
-    if (data.error) outputTextArea.value += "[Error] " + data.error;
-  });
-}
-
+      fetch('http://146.190.154.242:3000/run-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({code: code})
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.stdout) outputEditor.setValue(data.stdout);
+        if (data.stderr) outputEditor.setValue("[Error] " + data.stderr);
+        if (data.error) outputEditor.setValue("[Error] " + data.error);
+      });
+    }
   </script>
-  
 </body>
 </html>
