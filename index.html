@@ -35,7 +35,7 @@
 
   <div class="container">
     <div id="editorContainer" class="editor-container"></div>
-    <div id="outputContainer" class="editor-container"></div>
+    <div id="outputContainer" class="editor-container" onkeydown="handleTabKey(event)"></div>
   </div>
 
   <div class="btn-container">
@@ -65,6 +65,22 @@
       });
     });
 
+    function handleTabKey(event) {
+      if (event.key === "Tab") {
+        event.preventDefault(); // Prevent the default focus switching behavior
+
+        var textarea = event.target;
+        var start = textarea.selectionStart;
+        var end = textarea.selectionEnd;
+
+        // Insert a tab character at the current cursor position
+        textarea.value = textarea.value.substring(0, start) + "\t" + textarea.value.substring(end);
+
+        // Move the cursor position after the inserted tab character
+        textarea.selectionStart = textarea.selectionEnd = start + 1;
+      }
+    }
+
     function runCode() {
       var code = editor.getValue();
       outputEditor.setValue('Running...');
@@ -84,5 +100,6 @@
       });
     }
   </script>
+  
 </body>
 </html>
