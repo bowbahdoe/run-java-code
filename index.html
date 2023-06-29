@@ -8,6 +8,7 @@
     header {
       margin-bottom: 20px;
     }
+    
 
     .container {
       display: flex;
@@ -18,13 +19,27 @@
 
     .editor-container {
       flex: 1 0 50%;
-      min-width: 300px;
+      min-width: 350px;
       height: 500px;
       color: white;
       padding: 50px;
       box-sizing: border-box;
       margin-bottom: 20px;
     }
+
+    button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      cursor: pointer;
+      position: inherit;
+    }
+
   </style>
   <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
 </head>
@@ -32,15 +47,16 @@
   <header>
     <h1>Java Playground</h1>
   </header>
-
+  <main>
   <div class="container">
     <div id="editorContainer" class="editor-container"></div>
     <div id="outputContainer" class="editor-container" onkeydown="handleTabKey(event)"></div>
   </div>
-
+</main>
+  <footer>
   <div class="btn-container">
     <button onclick="runCode()">Run</button>
-  </div>
+  </div> </footer>
 
   <script>
     var editor;
