@@ -1,22 +1,49 @@
 {
-  "name": "my-java-playground",
+  "name": "java-playground",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
-  },
-  "keywords": [],
+  "description": "",
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "monaco-editor": "^0.39.0",
-    "node-fetch": "^3.3.1"
-  },
+  "keywords": [],
   "engines": {
     "node": "18.13.0"
+  },
+  "dependencies": {
+    "ace-builds": "^1.23.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "isomorphic-fetch": "^3.0.0",
+    "monaco-editor": "^0.39.0",
+    "node-fetch": "^3.3.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-scripts": "4.0.3"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "autoprefixer": "^10.2.6",
+    "monaco-editor-webpack-plugin": "^7.0.1",
+    "postcss": "^8.3.0",
+    "tailwindcss": "^2.1.4"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "react-scripts start --no-hot",
+    "build": "react-scripts build",
+    "eject": "react-scripts eject",
+    "server": "node server.js"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
