@@ -25,6 +25,7 @@ const App = () => {
       readOnly: true,
       maxLines: 30,
       minLines: 5,
+      showLineNumbers: false,
     });
 
     window.editor = editor;
