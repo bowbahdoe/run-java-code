@@ -8,6 +8,8 @@ import './app.css';
 const App = () => {
   const editorRef = useRef(null);
   const outputEditorRef = useRef(null);
+  const editorInstance = useRef(null);
+  const outputEditorInstance = useRef(null);
 
   useEffect(() => {
     const editor = ace.edit(editorRef.current, {
@@ -28,40 +30,40 @@ const App = () => {
       showLineNumbers: false,
     });
 
-    window.editor = editor;
-    window.outputEditor = outputEditor;
+    editorInstance.current = editor;
+    outputEditorInstance.current = outputEditor;
   }, []);
 
-  const runCode = () => {
-    const code = window.editor.getValue();
-    window.outputEditor.setValue('Running...');
-  
-    fetch('http://localhost:3000/run-code', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ code }),
-})
+  const runJavaCode = (code) => {
+    return fetch('http://localhost:3000/run-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code }),
+    }).then((response) => response.json());
+  };
 
-      .then((response) => response.json())
+  const runCode = () => {
+    const code = editorInstance.current.getValue();
+    outputEditorInstance.current.setValue('Running...');
+  
+    runJavaCode(code)
       .then((data) => {
         if (data.stdout) {
-          window.outputEditor.setValue(data.stdout);
+          outputEditorInstance.current.setValue(data.stdout);
         } else if (data.stderr) {
-          window.outputEditor.setValue("[Error] " + data.stderr);
+          outputEditorInstance.current.setValue("[Error] " + data.stderr);
         } else if (data.error) {
-          window.outputEditor.setValue("[Error] " + data.error);
+          outputEditorInstance.current.setValue("[Error] " + data.error);
         } else {
-          window.outputEditor.setValue("[Error] Unknown error occurred.");
+          outputEditorInstance.current.setValue("[Error] Unknown error occurred.");
         }
       })
       .catch((error) => {
-        window.outputEditor.setValue("[Error] " + error.message);
+        outputEditorInstance.current.setValue("[Error] " + error.message);
       });
   };
-  
-  
 
   return (
     <div className="bg-gray-100 h-screen">
@@ -80,6 +82,8 @@ const App = () => {
       </main>
       <footer className="p-6 flex justify-center items-center">
         <button
+          role="button"
+          aria-label="Run the Java code"
           className="py-2 px-4 bg-green-500 text-white rounded-md run-button"
           onClick={runCode}
         >
