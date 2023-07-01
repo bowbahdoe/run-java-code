@@ -16,8 +16,8 @@ const App = () => {
       value: 'Enter your Java code here',
       mode: 'ace/mode/java',
       theme: 'ace/theme/monokai',
-      maxLines: 30,
-      minLines: 5,
+      maxLines: Infinity,
+      autoScrollEditorIntoView: true,
     });
 
     const outputEditor = ace.edit(outputEditorRef.current, {
@@ -25,13 +25,33 @@ const App = () => {
       mode: 'ace/mode/plain_text',
       theme: 'ace/theme/monokai',
       readOnly: true,
-      maxLines: 30,
-      minLines: 5,
+      maxLines: Infinity,
+      autoScrollEditorIntoView: true,
       showLineNumbers: false,
     });
 
     editorInstance.current = editor;
     outputEditorInstance.current = outputEditor;
+
+    window.addEventListener('resize', () => {
+      editor.resize();
+      outputEditor.resize();
+    });
+
+    // Adding a delay to ensure all rendering is finished before calculating the lines
+    setTimeout(() => {
+      // Get the elements' height.
+      const editorHeight = editorRef.current.clientHeight;
+      const outputEditorHeight = outputEditorRef.current.clientHeight;
+
+      // Calculate the number of lines.
+      const editorLines = Math.floor(editorHeight / editor.renderer.lineHeight);
+      const outputEditorLines = Math.floor(outputEditorHeight / outputEditor.renderer.lineHeight);
+
+      // Set the number of lines.
+      editor.setOption('minLines', editorLines);
+      outputEditor.setOption('minLines', outputEditorLines);
+    }, 0);
   }, []);
 
   const runJavaCode = (code) => {
@@ -67,20 +87,7 @@ const App = () => {
 
   return (
     <div className="bg-gray-100 h-screen">
-      <header className="p-6 bg-blue-500 text-center text-white text-2xl rounded-md mb-4">
-        Java Playground
-      </header>
-      <main className="flex flex-wrap justify-center items-start h-full overflow-y-auto">
-        <div
-          ref={editorRef}
-          className="w-full md:w-1/2 h-1/2 p-2 overflow-hidden rounded-md bg-gray-900 text-white"
-        ></div>
-        <div
-          ref={outputEditorRef}
-          className="w-full md:w-1/2 h-1/2 p-2 overflow-hidden rounded-md bg-gray-900 text-white"
-        ></div>
-      </main>
-      <footer className="p-6 flex justify-center items-center">
+      <header className="p-6 bg-blue-500 text-white text-2xl rounded-md mb-4 header flex justify-between items-center">
         <button
           role="button"
           aria-label="Run the Java code"
@@ -89,7 +96,20 @@ const App = () => {
         >
           Run
         </button>
-      </footer>
+        <div class="title">Java Playground</div>
+      </header>
+      <main className="main flex">
+        <div
+          id="editor"
+          ref={editorRef}
+          className="editor w-full p-2 overflow-hidden rounded-md bg-gray-900 text-white"
+        ></div>
+        <div
+          id="outputEditor"
+          ref={outputEditorRef}
+          className="outputEditor w-full p-2 overflow-hidden rounded-md bg-gray-900 text-white"
+        ></div>
+      </main>
     </div>
   );
 };

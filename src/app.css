@@ -107,3 +107,41 @@
 .run-button {
   font-size: 1rem;
 }
+
+.header {
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.main {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 120px); 
+  overflow: auto;
+}
+
+.editor, .outputEditor {
+  flex: 1;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  height: 60px;
+  background: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-left: 1rem;
+  font-family: cursive;
+}
