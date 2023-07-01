@@ -38,7 +38,6 @@ const App = () => {
       outputEditor.resize();
     });
 
-    // Adding a delay to ensure all rendering is finished before calculating the lines
     setTimeout(() => {
       // Get the elements' height.
       const editorHeight = editorRef.current.clientHeight;
