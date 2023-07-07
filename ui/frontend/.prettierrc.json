@@ -1,0 +1,8 @@
+{
+  "printWidth": 100,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "importOrder": ["^[./].*(?<!\\.css)$", "\\.css$"],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true
+}

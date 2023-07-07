@@ -1,0 +1,22 @@
+build
+node_modules
+
+# Not for these ready yet
+.babelrc
+*.js
+*.json
+*.ts
+*.tsx
+*.scss
+
+# Slowly migrate files that we've touched
+!.eslintrc.js
+!PopButton.tsx
+!editor/AceEditor.tsx
+!editor/SimpleEditor.tsx
+!reducers/output/execute.ts
+!reducers/output/format.ts
+!reducers/output/gist.ts
+!reducers/websocket.ts
+!websocketActions.ts
+!websocketMiddleware.ts
