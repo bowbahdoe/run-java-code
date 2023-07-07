@@ -54,6 +54,7 @@ export interface ExecuteRequestBody {
   code: string;
   edition: string;
   backtrace: boolean;
+  preview: boolean;
 }
 
 interface ExecuteResponseBody {

@@ -161,6 +161,7 @@ pub struct CompileRequest {
     // TODO: Remove `tests` and `backtrace` -- don't make sense for compiling.
     pub tests: bool,
     pub backtrace: bool,
+    pub preview: bool,
     pub code: String,
 }
 
@@ -1175,6 +1176,7 @@ mod tests {
             edition: Edition::Rust2018,
             tests: false,
             backtrace: false,
+            preview: false,
             code: r#"pub fn add(a: u8, b: u8) -> u8 { a + b }"#.to_owned(),
         }
     }
@@ -1192,6 +1194,7 @@ mod tests {
             edition,
             tests: false,
             backtrace: false,
+            preview: false,
             code: r#"pub fn sub(a: u8, b: u8) -> u8 { a - b }"#.to_owned(),
         }
     }
@@ -1205,6 +1208,7 @@ mod tests {
             edition: Edition::Rust2015,
             tests: false,
             backtrace: false,
+            preview: false,
             code: r#"pub fn mul(a: u8, b: u8) -> u8 { a * b }"#.to_owned(),
         }
     }
@@ -1218,6 +1222,7 @@ mod tests {
             edition: Edition::Rust2021,
             tests: false,
             backtrace: false,
+            preview: false,
             code: r#"fn main() { println!("Hello World!"); }"#.to_owned(),
         }
     }
@@ -1231,6 +1236,7 @@ mod tests {
             edition: Edition::Rust2021,
             tests: false,
             backtrace: false,
+            preview: false,
             code: r#"#[export_name = "inc"] pub fn inc(a: u8) -> u8 { a + 1 }"#.to_owned(),
         }
     }

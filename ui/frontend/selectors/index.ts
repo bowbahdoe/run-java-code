@@ -8,6 +8,7 @@ import {
   Channel,
   Edition,
   Orientation,
+  Preview,
   PrimaryActionAuto,
   PrimaryActionCore,
   Version,
@@ -20,7 +21,8 @@ export const selectionSelector = (state: State) => state.selection;
 const HAS_TESTS_RE = /^\s*#\s*\[\s*test\s*([^"]*)]/m;
 export const hasTestsSelector = createSelector(codeSelector, code => !!code.match(HAS_TESTS_RE));
 
-const HAS_MAIN_FUNCTION_RE = /^\s*(pub\s+)?\s*(const\s+)?\s*(async\s+)?\s*fn\s+main\s*\(\s*\)/m;
+const HAS_MAIN_FUNCTION_RE =
+  /^\s*(public\s+)?\s*(static\s+)?\s*\s*void\s+main\s*(\(\s*\)|\(String\s*\[\]\s*[a-z|A-Z|0-9]+\))/m;
 export const hasMainFunctionSelector = createSelector(codeSelector, code => !!code.match(HAS_MAIN_FUNCTION_RE));
 
 const CRATE_TYPE_RE = /^\s*#!\s*\[\s*crate_type\s*=\s*"([^"]*)"\s*]/m;
@@ -104,6 +106,7 @@ const getBeta = (state: State) => state.versions?.beta;
 const getNightly = (state: State) => state.versions?.nightly;
 
 const getJava19 = (state: State) => state.versions?.java19;
+const getJava20 = (state: State) => state.versions?.java20;
 const getRustfmt = (state: State) => state.versions?.rustfmt;
 const getClippy = (state: State) => state.versions?.clippy;
 const getMiri = (state: State) => state.versions?.miri;
@@ -113,6 +116,7 @@ export const stableVersionText = createSelector(getStable, versionNumber);
 export const betaVersionText = createSelector(getBeta, versionNumber);
 export const nightlyVersionText = createSelector(getNightly, versionNumber);
 export const java19VersionText = createSelector(getJava19, versionNumber);
+export const java20VersionText = createSelector(getJava20, versionNumber);
 export const clippyVersionText = createSelector(getClippy, versionNumber);
 export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
 export const miriVersionText = createSelector(getMiri, versionNumber);
@@ -149,6 +153,10 @@ export const isEditionDefault = createSelector(
 
 export const getBacktraceSet = (state: State) => (
   state.configuration.backtrace !== Backtrace.Disabled
+);
+
+export const getPreviewSet = (state: State) => (
+  state.configuration.preview !== Preview.Disabled
 );
 
 export const getAdvancedOptionsSet = createSelector(
@@ -385,5 +393,6 @@ export const executeRequestPayloadSelector = createSelector(
     tests,
     code,
     backtrace: configuration.backtrace === Backtrace.Enabled,
+    preview: configuration.preview == Preview.Enabled
   }),
 );

@@ -1,7 +1,7 @@
 use octocrab::Octocrab;
 
-const FILENAME: &str = "playground.rs";
-const DESCRIPTION: &str = "Code shared from the Rust Playground";
+const FILENAME: &str = "Main.java";
+const DESCRIPTION: &str = "Code shared from the Java Playground";
 
 pub struct Gist {
     pub id: String,

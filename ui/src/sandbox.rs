@@ -154,74 +154,80 @@ fn build_execution_command(
     mode: Mode,
     req: impl CrateTypeRequest,
     tests: bool,
+    preview: bool
 ) -> Vec<&'static str> {
     use self::CompileTarget::*;
     use self::CrateType::*;
     use self::Mode::*;
 
-    if channel.is_java() {
-        let mut cmd = vec!["java", "--source"];
-        if channel == Channel::Java19{
-            cmd.push("19");
-        }
-        if channel == Channel::Java20{
-            cmd.push("20");
-        }
-        cmd.push("src/main.rs");
-        cmd 
-    }
-    else {
-        let mut cmd = vec!["cargo"];
+    match channel.java_version() {
+        Some(version) => {
+            let mut cmd = vec![
+                "java",
+            ];
+            cmd.extend(&["--source", version]);
+            // Enable using java.lang.foreign w/o warnings
+            cmd.push("--enable-native-access=ALL-UNNAMED");
 
-        match (target, req.crate_type(), tests) {
-            (Some(Wasm), _, _) => cmd.push("wasm"),
-            (Some(_), _, _) => cmd.push("rustc"),
-            (_, _, true) => cmd.push("test"),
-            (_, Library(_), _) => cmd.push("build"),
-            (_, _, _) => cmd.push("run"),
-        }
-
-        if mode == Release {
-            cmd.push("--release");
-        }
-
-        if let Some(target) = target {
-            cmd.extend(&["--", "-o"]);
-            if target == Hir {
-                // -Zunpretty=hir only emits the HIR, not the binary itself
-                cmd.push("/playground-result/compilation.hir");
-            } else {
-                cmd.push("/playground-result/compilation");
+            if preview {
+                cmd.push("--enable-preview");
             }
 
-            match target {
-                Assembly(flavor, _, _) => {
-                    use self::AssemblyFlavor::*;
+            cmd.push("src/main.rs");
+            cmd
+        }
+        _ => {
+            let mut cmd = vec!["cargo"];
 
-                    cmd.push("--emit=asm");
+            match (target, req.crate_type(), tests) {
+                (Some(Wasm), _, _) => cmd.push("wasm"),
+                (Some(_), _, _) => cmd.push("rustc"),
+                (_, _, true) => cmd.push("test"),
+                (_, Library(_), _) => cmd.push("build"),
+                (_, _, _) => cmd.push("run"),
+            }
 
-                    // Enable extra assembly comments for nightly builds
-                    if let Channel::Nightly = channel {
-                        cmd.push("-Z");
-                        cmd.push("asm-comments");
-                    }
+            if mode == Release {
+                cmd.push("--release");
+            }
 
-                    cmd.push("-C");
-                    match flavor {
-                        Att => cmd.push("llvm-args=-x86-asm-syntax=att"),
-                        Intel => cmd.push("llvm-args=-x86-asm-syntax=intel"),
-                    }
+            if let Some(target) = target {
+                cmd.extend(&["--", "-o"]);
+                if target == Hir {
+                    // -Zunpretty=hir only emits the HIR, not the binary itself
+                    cmd.push("/playground-result/compilation.hir");
+                } else {
+                    cmd.push("/playground-result/compilation");
                 }
-                LlvmIr => cmd.push("--emit=llvm-ir"),
-                Mir => cmd.push("--emit=mir"),
-                Hir => cmd.push("-Zunpretty=hir"),
-                Wasm => { /* handled by cargo-wasm wrapper */ }
+
+                match target {
+                    Assembly(flavor, _, _) => {
+                        use self::AssemblyFlavor::*;
+
+                        cmd.push("--emit=asm");
+
+                        // Enable extra assembly comments for nightly builds
+                        if let Channel::Nightly = channel {
+                            cmd.push("-Z");
+                            cmd.push("asm-comments");
+                        }
+
+                        cmd.push("-C");
+                        match flavor {
+                            Att => cmd.push("llvm-args=-x86-asm-syntax=att"),
+                            Intel => cmd.push("llvm-args=-x86-asm-syntax=intel"),
+                        }
+                    }
+                    LlvmIr => cmd.push("--emit=llvm-ir"),
+                    Mir => cmd.push("--emit=mir"),
+                    Hir => cmd.push("-Zunpretty=hir"),
+                    Wasm => { /* handled by cargo-wasm wrapper */ }
+                }
             }
+
+            cmd
         }
-
-        cmd
     }
-
 }
 
 fn set_execution_environment(
@@ -549,12 +555,18 @@ impl Sandbox {
         channel: Channel,
         mode: Mode,
         tests: bool,
-        req: impl CrateTypeRequest + EditionRequest + BacktraceRequest,
+        req: impl CrateTypeRequest + EditionRequest + BacktraceRequest + PreviewRequest,
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.crate_type()));
         set_execution_environment(&mut cmd, Some(target), &req);
-
-        let execution_cmd = build_execution_command(Some(target), channel, mode, &req, tests);
+        let execution_cmd = build_execution_command(
+            Some(target),
+            channel,
+            mode,
+            &req,
+            tests,
+            req.preview()
+        );
 
         cmd.arg(&channel.container_name()).args(&execution_cmd);
 
@@ -568,12 +580,19 @@ impl Sandbox {
         channel: Channel,
         mode: Mode,
         tests: bool,
-        req: impl CrateTypeRequest + EditionRequest + BacktraceRequest,
+        req: impl CrateTypeRequest + EditionRequest + BacktraceRequest + PreviewRequest,
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.crate_type()));
         set_execution_environment(&mut cmd, None, &req);
 
-        let execution_cmd = build_execution_command(None, channel, mode, &req, tests);
+        let execution_cmd = build_execution_command(
+            None,
+            channel,
+            mode,
+            &req,
+            tests,
+        req.preview()
+        );
 
         cmd.arg(&channel.container_name()).args(&execution_cmd);
 
@@ -798,8 +817,18 @@ pub enum Channel {
 }
 
 impl Channel {
+    fn java_version(&self) -> Option<&'static str> {
+        use self::Channel::*;
+
+        match *self {
+            Java19 => Some("19"),
+            Java20 => Some("20"),
+            _ => None
+        }
+    }
+
     fn is_java(&self) -> bool{
-        self != &Channel::Stable && self != &Channel::Beta && self != &Channel::Nightly
+        self.java_version().is_some()
     }
 
     fn container_name(&self) -> &'static str {
@@ -944,6 +973,16 @@ impl<R: BacktraceRequest> BacktraceRequest for &'_ R {
     }
 }
 
+trait PreviewRequest {
+    fn preview(&self) -> bool;
+}
+
+impl<R: PreviewRequest> PreviewRequest for &'_ R {
+    fn preview(&self) -> bool {
+        (*self).preview()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CompileRequest {
     pub target: CompileTarget,
@@ -953,6 +992,7 @@ pub struct CompileRequest {
     pub edition: Option<Edition>,
     pub tests: bool,
     pub backtrace: bool,
+    pub preview: bool,
     pub code: String,
 }
 
@@ -974,6 +1014,12 @@ impl BacktraceRequest for CompileRequest {
     }
 }
 
+impl PreviewRequest for CompileRequest {
+    fn preview(&self) -> bool {
+        self.preview
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CompileResponse {
     pub success: bool,
@@ -990,6 +1036,7 @@ pub struct ExecuteRequest {
     pub crate_type: CrateType,
     pub tests: bool,
     pub backtrace: bool,
+    pub preview: bool,
     pub code: String,
 }
 
@@ -1008,6 +1055,12 @@ impl EditionRequest for ExecuteRequest {
 impl BacktraceRequest for ExecuteRequest {
     fn backtrace(&self) -> bool {
         self.backtrace
+    }
+}
+
+impl PreviewRequest for ExecuteRequest {
+    fn preview(&self) -> bool {
+        self.preview
     }
 }
 
@@ -1234,6 +1287,7 @@ mod test {
                 code: HELLO_WORLD_CODE.to_string(),
                 edition: None,
                 backtrace: false,
+                preview: false,
             }
         }
     }
@@ -1249,6 +1303,7 @@ mod test {
                 code: HELLO_WORLD_CODE.to_string(),
                 edition: None,
                 backtrace: false,
+                preview: false,
             }
         }
     }

@@ -83,6 +83,7 @@ pub(crate) async fn serve(config: Config) {
         .route("/meta/version/beta", get_or_post(meta_version_beta))
         .route("/meta/version/nightly", get_or_post(meta_version_nightly))
         .route("/meta/version/java19_", get_or_post(meta_version_java19))
+        .route("/meta/version/java20_", get_or_post(meta_version_java20))
         .route("/meta/version/rustfmt", get_or_post(meta_version_rustfmt))
         .route("/meta/version/clippy", get_or_post(meta_version_clippy))
         .route("/meta/version/miri", get_or_post(meta_version_miri))
@@ -393,6 +394,16 @@ async fn meta_version_java19(
     apply_timestamped_caching(value, if_none_match)
 }
 
+async fn meta_version_java20(
+    Extension(cache): Extension<Arc<SandboxCache>>,
+    if_none_match: Option<TypedHeader<IfNoneMatch>>,
+) -> Result<impl IntoResponse> {
+    let value =
+        track_metric_no_request_async(Endpoint::MetaVersionJava20, || cache.version_java20())
+            .await?;
+    apply_timestamped_caching(value, if_none_match)
+}
+
 async fn meta_version_rustfmt(
     Extension(cache): Extension<Arc<SandboxCache>>,
     if_none_match: Option<TypedHeader<IfNoneMatch>>,
@@ -569,6 +580,7 @@ struct SandboxCache {
     version_beta: CacheOne<MetaVersionResponse>,
     version_nightly: CacheOne<MetaVersionResponse>,
     version_java19: CacheOne<MetaVersionResponse>,
+    version_java20: CacheOne<MetaVersionResponse>,
     version_rustfmt: CacheOne<MetaVersionResponse>,
     version_clippy: CacheOne<MetaVersionResponse>,
     version_miri: CacheOne<MetaVersionResponse>,
@@ -621,6 +633,18 @@ impl SandboxCache {
             .fetch(|sandbox| async move {
                 let version = sandbox
                     .version(Channel::Java19)
+                    .await
+                    .context(CachingSnafu)?;
+                Ok(version.into())
+            })
+            .await
+    }
+
+    async fn version_java20(&self) -> Result<Stamped<MetaVersionResponse>> {
+        self.version_java20
+            .fetch(|sandbox| async move {
+                let version = sandbox
+                    .version(Channel::Java20)
                     .await
                     .context(CachingSnafu)?;
                 Ok(version.into())
@@ -814,6 +838,7 @@ mod api_orchestrator_integration_impls {
                 crate_type,
                 tests,
                 backtrace,
+                preview,
                 code,
             } = other;
 
@@ -830,6 +855,7 @@ mod api_orchestrator_integration_impls {
                 edition: parse_edition(&edition)?,
                 tests,
                 backtrace,
+                preview,
                 code,
             })
         }

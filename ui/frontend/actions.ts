@@ -21,6 +21,7 @@ import {
   Orientation,
   Page,
   PairCharacters,
+  Preview,
   PrimaryAction,
   PrimaryActionAuto,
   PrimaryActionCore,
@@ -51,6 +52,7 @@ export const routes = {
       clippy: '/meta/version/clippy',
       miri: '/meta/version/miri',
       java19: '/meta/version/java19_',
+      java20: '/meta/version/java20_',
     },
     gistSave: '/meta/gist',
     gistLoad: '/meta/gist/id',
@@ -82,6 +84,7 @@ export enum ActionType {
   ChangeMode = 'CHANGE_MODE',
   ChangeEdition = 'CHANGE_EDITION',
   ChangeBacktrace = 'CHANGE_BACKTRACE',
+  ChangePreview = 'CHANGE_PREVIEW',
   ChangeFocus = 'CHANGE_FOCUS',
   CompileAssemblyRequest = 'COMPILE_ASSEMBLY_REQUEST',
   CompileAssemblySucceeded = 'COMPILE_ASSEMBLY_SUCCEEDED',
@@ -173,6 +176,9 @@ export const changeEdition = (edition: Edition) =>
 
 export const changeBacktrace = (backtrace: Backtrace) =>
   createAction(ActionType.ChangeBacktrace, { backtrace });
+
+export const changePreview = (preview: Preview) =>
+  createAction(ActionType.ChangePreview, { preview });
 
 export const reExecuteWithBacktrace = (): ThunkAction => dispatch => {
   dispatch(changeBacktrace(Backtrace.Enabled));
@@ -321,6 +327,7 @@ function performCompileShow(
     const crateType = getCrateType(state);
     const tests = runAsTest(state);
     const backtrace = state.configuration.backtrace === Backtrace.Enabled;
+    const preview = state.configuration.preview === Preview.Enabled;
     const body: CompileRequestBody = {
       channel,
       mode,
@@ -333,6 +340,7 @@ function performCompileShow(
       demangleAssembly,
       processAssembly,
       backtrace,
+      preview
     };
 
     return jsonPost<CompileResponseBody>(routes.compile, body)
@@ -630,11 +638,18 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  stable, beta, nightly, java19, rustfmt, clippy, miri,
+  stable, beta, nightly, java19, java20, rustfmt, clippy, miri,
 }: {
-  stable: Version, beta: Version, nightly: Version, java19: Version, rustfmt: Version, clippy: Version, miri: Version,
+  stable: Version,
+  beta: Version,
+  nightly: Version,
+  java19: Version,
+  java20: Version,
+  rustfmt: Version,
+  clippy: Version,
+  miri: Version,
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { stable, beta, nightly, java19, rustfmt, clippy, miri });
+  createAction(ActionType.VersionsLoadSucceeded, { stable, beta, nightly, java19, java20, rustfmt, clippy, miri });
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
@@ -644,18 +659,20 @@ export function performVersionsLoad(): ThunkAction {
     const beta = jsonGet(routes.meta.version.beta);
     const nightly = jsonGet(routes.meta.version.nightly);
     const java19 = jsonGet(routes.meta.version.java19);
+    const java20 = jsonGet(routes.meta.version.java20);
     const rustfmt = jsonGet(routes.meta.version.rustfmt);
     const clippy = jsonGet(routes.meta.version.clippy);
     const miri = jsonGet(routes.meta.version.miri);
 
-    const all = Promise.all([stable, beta, nightly, java19, rustfmt, clippy, miri]);
+    const all = Promise.all([stable, beta, nightly, java19, java20, rustfmt, clippy, miri]);
 
     return all
-      .then(([stable, beta, nightly, java19, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
+      .then(([stable, beta, nightly, java19, java20, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
         stable,
         beta,
         nightly,
         java19,
+        java20,
         rustfmt,
         clippy,
         miri,
@@ -767,6 +784,7 @@ export type Action =
   | ReturnType<typeof changePairCharacters>
   | ReturnType<typeof changeAssemblyFlavor>
   | ReturnType<typeof changeBacktrace>
+  | ReturnType<typeof changePreview>
   | ReturnType<typeof changeChannel>
   | ReturnType<typeof changeDemangleAssembly>
   | ReturnType<typeof changeEdition>

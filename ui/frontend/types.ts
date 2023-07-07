@@ -107,6 +107,11 @@ export enum Backtrace {
   Enabled = 'enabled',
 }
 
+export enum Preview {
+  Disabled = 'disabled',
+  Enabled = 'enabled',
+}
+
 export enum Focus {
   Clippy = 'clippy',
   Miri = 'miri',

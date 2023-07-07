@@ -6,18 +6,21 @@ import { Either as EitherConfig, Select as SelectConfig } from './ConfigElement'
 import MenuGroup from './MenuGroup';
 import { State } from './reducers';
 import * as selectors from './selectors';
-import { Backtrace, Edition } from './types';
+import { Backtrace, Edition, Preview } from './types';
 
 const AdvancedOptionsMenu: React.FC = () => {
   const isEditionDefault = useSelector(selectors.isEditionDefault);
   const edition = useSelector((state: State) => state.configuration.edition);
   const isBacktraceSet = useSelector(selectors.getBacktraceSet);
   const backtrace = useSelector((state: State) => state.configuration.backtrace);
+  const isPreviewSet = useSelector(selectors.getPreviewSet);
+  const preview = useSelector((state: State) => state.configuration.preview);
 
   const dispatch = useDispatch();
 
   const changeEdition = useCallback((e: Edition) => dispatch(actions.changeEdition(e)), [dispatch]);
   const changeBacktrace = useCallback((b: Backtrace) => dispatch(actions.changeBacktrace(b)), [dispatch]);
+  const changePreview = useCallback((b: Preview) => dispatch(actions.changePreview(b)), [dispatch]);
 
   return (
     <MenuGroup title="Advanced options">
@@ -40,6 +43,15 @@ const AdvancedOptionsMenu: React.FC = () => {
         value={backtrace}
         isNotDefault={isBacktraceSet}
         onChange={changeBacktrace} />
+
+      <EitherConfig
+        id="preview"
+        name="Preview"
+        a={Preview.Disabled}
+        b={Preview.Enabled}
+        value={preview}
+        isNotDefault={isPreviewSet}
+        onChange={changePreview} />
     </MenuGroup>
   );
 };

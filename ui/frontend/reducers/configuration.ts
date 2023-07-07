@@ -9,6 +9,7 @@ import {
   Mode,
   Orientation,
   PairCharacters,
+  Preview,
   PrimaryAction,
   PrimaryActionAuto,
   ProcessAssembly,
@@ -33,6 +34,7 @@ export interface State {
   mode: Mode;
   edition: Edition;
   backtrace: Backtrace;
+  preview: Preview;
 }
 
 const DEFAULT: State = {
@@ -54,6 +56,7 @@ const DEFAULT: State = {
   mode: Mode.Debug,
   edition: Edition.Rust2021,
   backtrace: Backtrace.Disabled,
+  preview: Preview.Disabled
 };
 
 export default function configuration(state = DEFAULT, action: Action): State {
@@ -97,6 +100,8 @@ export default function configuration(state = DEFAULT, action: Action): State {
     }
     case ActionType.ChangeBacktrace:
       return { ...state, backtrace: action.backtrace };
+    case ActionType.ChangePreview:
+      return { ...state, preview: action.preview };
     default:
       return state;
   }

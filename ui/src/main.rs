@@ -260,6 +260,8 @@ struct CompileRequest {
     tests: bool,
     #[serde(default)]
     backtrace: bool,
+    #[serde(default)]
+    preview: bool,
     code: String,
 }
 
@@ -282,6 +284,8 @@ struct ExecuteRequest {
     tests: bool,
     #[serde(default)]
     backtrace: bool,
+    #[serde(default)]
+    preview: bool,
     code: String,
 }
 
@@ -437,6 +441,7 @@ impl TryFrom<CompileRequest> for sandbox::CompileRequest {
             crate_type: parse_crate_type(&me.crate_type)?,
             tests: me.tests,
             backtrace: me.backtrace,
+            preview: me.preview,
             code: me.code,
         })
     }
@@ -464,6 +469,7 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
             crate_type: parse_crate_type(&me.crate_type)?,
             tests: me.tests,
             backtrace: me.backtrace,
+            preview: me.preview,
             code: me.code,
         })
     }
@@ -615,6 +621,7 @@ impl TryFrom<EvaluateRequest> for sandbox::ExecuteRequest {
             crate_type: sandbox::CrateType::Binary,
             tests: me.tests,
             backtrace: false,
+            preview: false,
             code: me.code,
         })
     }

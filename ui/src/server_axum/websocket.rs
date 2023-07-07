@@ -48,6 +48,7 @@ struct ExecuteRequest {
     tests: bool,
     code: String,
     backtrace: bool,
+    preview: bool
 }
 
 impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
@@ -62,6 +63,7 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
             tests,
             code,
             backtrace,
+            preview
         } = value;
 
         Ok(sandbox::ExecuteRequest {
@@ -71,6 +73,7 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
             crate_type: parse_crate_type(&crate_type)?,
             tests,
             backtrace,
+            preview,
             code,
         })
     }
