@@ -3,7 +3,7 @@
 import ace, { Ace } from 'ace-builds';
 import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/ext-searchbox';
-import 'ace-builds/src-noconflict/mode-rust';
+import 'ace-builds/src-noconflict/mode-java';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AceResizeKey, Crate, PairCharacters, Position, Selection } from '../types';
@@ -110,7 +110,7 @@ const AceEditor: React.FC<AceEditorProps> = props => {
     if (!child.current) { return; }
 
     const editor = ace.edit(child.current, {
-      mode: 'ace/mode/rust',
+      mode: 'ace/mode/java',
     });
     setEditor(editor);
 

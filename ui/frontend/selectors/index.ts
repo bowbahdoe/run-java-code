@@ -102,6 +102,8 @@ export const getExecutionLabel = createSelector(primaryActionSelector, primaryAc
 const getStable = (state: State) => state.versions?.stable;
 const getBeta = (state: State) => state.versions?.beta;
 const getNightly = (state: State) => state.versions?.nightly;
+
+const getJava19 = (state: State) => state.versions?.java19;
 const getRustfmt = (state: State) => state.versions?.rustfmt;
 const getClippy = (state: State) => state.versions?.clippy;
 const getMiri = (state: State) => state.versions?.miri;
@@ -110,6 +112,7 @@ const versionNumber = (v: Version | undefined) => v ? v.version : '';
 export const stableVersionText = createSelector(getStable, versionNumber);
 export const betaVersionText = createSelector(getBeta, versionNumber);
 export const nightlyVersionText = createSelector(getNightly, versionNumber);
+export const java19VersionText = createSelector(getJava19, versionNumber);
 export const clippyVersionText = createSelector(getClippy, versionNumber);
 export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
 export const miriVersionText = createSelector(getMiri, versionNumber);

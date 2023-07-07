@@ -26,6 +26,7 @@ fn main() {
     let _ = dotenv::dotenv();
     openssl_probe::init_ssl_cert_env_vars();
 
+
     // Info-level logging is enabled by default.
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
@@ -689,6 +690,7 @@ fn parse_channel(s: &str) -> Result<sandbox::Channel> {
         "stable" => sandbox::Channel::Stable,
         "beta" => sandbox::Channel::Beta,
         "nightly" => sandbox::Channel::Nightly,
+        "java19" => sandbox::Channel::Java19,
         value => InvalidChannelSnafu { value }.fail()?,
     })
 }

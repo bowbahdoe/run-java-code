@@ -7,7 +7,7 @@ import { config, grammar, themeVsDarkPlus } from './rust_monaco_def';
 
 import styles from './Editor.module.css';
 
-const MODE_ID = 'rust';
+const MODE_ID = 'java';
 
 const initMonaco: EditorWillMount = (monaco) => {
   monaco.editor.defineTheme('vscode-dark-plus', themeVsDarkPlus);

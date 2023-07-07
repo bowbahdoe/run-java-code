@@ -20,6 +20,7 @@ const ChannelMenu: React.FC<ChannelMenuProps> = props => {
   const stableVersion = useSelector(selectors.stableVersionText);
   const betaVersion = useSelector(selectors.betaVersionText);
   const nightlyVersion = useSelector(selectors.nightlyVersionText);
+  const java19Version = useSelector(selectors.java19VersionText);
   const betaVersionDetails = useSelector(selectors.betaVersionDetailsText);
   const nightlyVersionDetails = useSelector(selectors.nightlyVersionDetailsText);
 
@@ -57,6 +58,15 @@ const ChannelMenu: React.FC<ChannelMenuProps> = props => {
         >
           <Desc>Build using the Nightly version: {nightlyVersion}</Desc>
           <Desc>({nightlyVersionDetails})</Desc>
+        </SelectOne>
+        <SelectOne
+          name="Java 19"
+          currentValue={channel}
+          thisValue={Channel.Java19}
+          changeValue={changeChannel}
+        >
+          <Desc>Build using Java 19</Desc>
+          <Desc>({java19Version})</Desc>
         </SelectOne>
       </MenuGroup>
     </Fragment>

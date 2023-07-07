@@ -87,6 +87,7 @@ export enum Channel {
   Stable = 'stable',
   Beta = 'beta',
   Nightly = 'nightly',
+  Java19 = 'java19'
 }
 
 export enum Mode {

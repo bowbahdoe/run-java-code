@@ -13,6 +13,7 @@ use std::{
 use tempfile::TempDir;
 use tokio::{fs, process::Command, time};
 use tracing::debug;
+use crate::sandbox::Channel::Java19;
 
 pub(crate) const DOCKER_PROCESS_TIMEOUT_SOFT: Duration = Duration::from_secs(10);
 const DOCKER_PROCESS_TIMEOUT_HARD: Duration = Duration::from_secs(12);
@@ -159,55 +160,62 @@ fn build_execution_command(
     use self::CrateType::*;
     use self::Mode::*;
 
-    let mut cmd = vec!["cargo"];
-
-    match (target, req.crate_type(), tests) {
-        (Some(Wasm), _, _) => cmd.push("wasm"),
-        (Some(_), _, _) => cmd.push("rustc"),
-        (_, _, true) => cmd.push("test"),
-        (_, Library(_), _) => cmd.push("build"),
-        (_, _, _) => cmd.push("run"),
+    if channel == Java19 {
+        let cmd = vec!["java", "--source", "19", "src/main.rs"];
+        cmd
     }
+    else {
+        let mut cmd = vec!["cargo"];
 
-    if mode == Release {
-        cmd.push("--release");
-    }
-
-    if let Some(target) = target {
-        cmd.extend(&["--", "-o"]);
-        if target == Hir {
-            // -Zunpretty=hir only emits the HIR, not the binary itself
-            cmd.push("/playground-result/compilation.hir");
-        } else {
-            cmd.push("/playground-result/compilation");
+        match (target, req.crate_type(), tests) {
+            (Some(Wasm), _, _) => cmd.push("wasm"),
+            (Some(_), _, _) => cmd.push("rustc"),
+            (_, _, true) => cmd.push("test"),
+            (_, Library(_), _) => cmd.push("build"),
+            (_, _, _) => cmd.push("run"),
         }
 
-        match target {
-            Assembly(flavor, _, _) => {
-                use self::AssemblyFlavor::*;
+        if mode == Release {
+            cmd.push("--release");
+        }
 
-                cmd.push("--emit=asm");
-
-                // Enable extra assembly comments for nightly builds
-                if let Channel::Nightly = channel {
-                    cmd.push("-Z");
-                    cmd.push("asm-comments");
-                }
-
-                cmd.push("-C");
-                match flavor {
-                    Att => cmd.push("llvm-args=-x86-asm-syntax=att"),
-                    Intel => cmd.push("llvm-args=-x86-asm-syntax=intel"),
-                }
+        if let Some(target) = target {
+            cmd.extend(&["--", "-o"]);
+            if target == Hir {
+                // -Zunpretty=hir only emits the HIR, not the binary itself
+                cmd.push("/playground-result/compilation.hir");
+            } else {
+                cmd.push("/playground-result/compilation");
             }
-            LlvmIr => cmd.push("--emit=llvm-ir"),
-            Mir => cmd.push("--emit=mir"),
-            Hir => cmd.push("-Zunpretty=hir"),
-            Wasm => { /* handled by cargo-wasm wrapper */ }
+
+            match target {
+                Assembly(flavor, _, _) => {
+                    use self::AssemblyFlavor::*;
+
+                    cmd.push("--emit=asm");
+
+                    // Enable extra assembly comments for nightly builds
+                    if let Channel::Nightly = channel {
+                        cmd.push("-Z");
+                        cmd.push("asm-comments");
+                    }
+
+                    cmd.push("-C");
+                    match flavor {
+                        Att => cmd.push("llvm-args=-x86-asm-syntax=att"),
+                        Intel => cmd.push("llvm-args=-x86-asm-syntax=intel"),
+                    }
+                }
+                LlvmIr => cmd.push("--emit=llvm-ir"),
+                Mir => cmd.push("--emit=mir"),
+                Hir => cmd.push("-Zunpretty=hir"),
+                Wasm => { /* handled by cargo-wasm wrapper */ }
+            }
         }
+
+        cmd
     }
 
-    cmd
 }
 
 fn set_execution_environment(
@@ -419,38 +427,61 @@ impl Sandbox {
     }
 
     pub async fn version(&self, channel: Channel) -> Result<Version> {
-        let mut command = basic_secure_docker_command();
-        command.args(&[channel.container_name()]);
-        command.args(&["rustc", "--version", "--verbose"]);
+        if channel == Java19 {
+            let mut command = basic_secure_docker_command();
+            command.args(&[channel.container_name()]);
+            command.args(&["java", "--version"]);
 
-        let output = run_command_with_timeout(command).await?;
-        let version_output = vec_to_str(output.stdout)?;
 
-        let mut info: BTreeMap<String, String> = version_output
-            .lines()
-            .skip(1)
-            .filter_map(|line| {
-                let mut pieces = line.splitn(2, ':').fuse();
-                match (pieces.next(), pieces.next()) {
-                    (Some(name), Some(value)) => Some((name.trim().into(), value.trim().into())),
-                    _ => None,
-                }
+            let output = run_command_with_timeout(command).await?;
+
+            let version_output = vec_to_str(output.stdout)?;
+
+            let version = version_output.lines()
+                .take(1)
+                .fold(String::new(), |a, b| a + " " + b);
+
+            Ok(Version {
+                release: version.to_string(),
+                commit_hash: version.to_string(),
+                commit_date: version.to_string(),
             })
-            .collect();
+        }
+        else {
+            let mut command = basic_secure_docker_command();
+            command.args(&[channel.container_name()]);
+            command.args(&["rustc", "--version", "--verbose"]);
 
-        let release = info.remove("release").context(VersionReleaseMissingSnafu)?;
-        let commit_hash = info
-            .remove("commit-hash")
-            .context(VersionHashMissingSnafu)?;
-        let commit_date = info
-            .remove("commit-date")
-            .context(VersionDateMissingSnafu)?;
+            let output = run_command_with_timeout(command).await?;
+            let version_output = vec_to_str(output.stdout)?;
 
-        Ok(Version {
-            release,
-            commit_hash,
-            commit_date,
-        })
+            let mut info: BTreeMap<String, String> = version_output
+                .lines()
+                .skip(1)
+                .filter_map(|line| {
+                    let mut pieces = line.splitn(2, ':').fuse();
+                    match (pieces.next(), pieces.next()) {
+                        (Some(name), Some(value)) => Some((name.trim().into(), value.trim().into())),
+                        _ => None,
+                    }
+                })
+                .collect();
+
+            let release = info.remove("release").context(VersionReleaseMissingSnafu)?;
+            let commit_hash = info
+                .remove("commit-hash")
+                .context(VersionHashMissingSnafu)?;
+            let commit_date = info
+                .remove("commit-date")
+                .context(VersionDateMissingSnafu)?;
+
+            Ok(Version {
+                release,
+                commit_hash,
+                commit_date,
+            })
+        }
+
     }
 
     pub async fn version_rustfmt(&self) -> Result<Version> {
@@ -470,6 +501,8 @@ impl Sandbox {
         command.args(&["miri", "cargo", "miri", "--version"]);
         self.cargo_tool_version(command).await
     }
+
+
 
     // Parses versions of the shape `toolname 0.0.0 (0000000 0000-00-00)`
     async fn cargo_tool_version(&self, command: Command) -> Result<Version> {
@@ -754,6 +787,7 @@ pub enum Channel {
     Stable,
     Beta,
     Nightly,
+    Java19
 }
 
 impl Channel {
@@ -764,6 +798,7 @@ impl Channel {
             Stable => "rust-stable",
             Beta => "rust-beta",
             Nightly => "rust-nightly",
+            Java19 => "eclipse-temurin:19"
         }
     }
 }

@@ -50,6 +50,7 @@ export const routes = {
       rustfmt: '/meta/version/rustfmt',
       clippy: '/meta/version/clippy',
       miri: '/meta/version/miri',
+      java19: '/meta/version/java19_',
     },
     gistSave: '/meta/gist',
     gistLoad: '/meta/gist/id',
@@ -629,11 +630,11 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  stable, beta, nightly, rustfmt, clippy, miri,
+  stable, beta, nightly, java19, rustfmt, clippy, miri,
 }: {
-  stable: Version, beta: Version, nightly: Version, rustfmt: Version, clippy: Version, miri: Version,
+  stable: Version, beta: Version, nightly: Version, java19: Version, rustfmt: Version, clippy: Version, miri: Version,
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { stable, beta, nightly, rustfmt, clippy, miri });
+  createAction(ActionType.VersionsLoadSucceeded, { stable, beta, nightly, java19, rustfmt, clippy, miri });
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
@@ -642,17 +643,19 @@ export function performVersionsLoad(): ThunkAction {
     const stable = jsonGet(routes.meta.version.stable);
     const beta = jsonGet(routes.meta.version.beta);
     const nightly = jsonGet(routes.meta.version.nightly);
+    const java19 = jsonGet(routes.meta.version.java19);
     const rustfmt = jsonGet(routes.meta.version.rustfmt);
     const clippy = jsonGet(routes.meta.version.clippy);
     const miri = jsonGet(routes.meta.version.miri);
 
-    const all = Promise.all([stable, beta, nightly, rustfmt, clippy, miri]);
+    const all = Promise.all([stable, beta, nightly, java19, rustfmt, clippy, miri]);
 
     return all
-      .then(([stable, beta, nightly, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
+      .then(([stable, beta, nightly, java19, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
         stable,
         beta,
         nightly,
+        java19,
         rustfmt,
         clippy,
         miri,

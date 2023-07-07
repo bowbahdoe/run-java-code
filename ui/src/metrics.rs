@@ -51,6 +51,7 @@ pub(crate) enum Endpoint {
     MetaVersionStable,
     MetaVersionBeta,
     MetaVersionNightly,
+    MetaVersionJava19,
     MetaVersionRustfmt,
     MetaVersionClippy,
     MetaVersionMiri,
