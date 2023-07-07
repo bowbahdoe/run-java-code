@@ -691,6 +691,8 @@ fn parse_channel(s: &str) -> Result<sandbox::Channel> {
         "beta" => sandbox::Channel::Beta,
         "nightly" => sandbox::Channel::Nightly,
         "java19" => sandbox::Channel::Java19,
+        "java20" => sandbox::Channel::Java20,
+        
         value => InvalidChannelSnafu { value }.fail()?,
     })
 }

@@ -68,8 +68,19 @@ const ChannelMenu: React.FC<ChannelMenuProps> = props => {
           <Desc>Build using Java 19</Desc>
           <Desc>({java19Version})</Desc>
         </SelectOne>
+        <SelectOne
+          name="Java 20"
+          currentValue={channel}
+          thisValue={Channel.Java20}
+          changeValue={changeChannel}
+        >
+          <Desc>Build using Java 20</Desc>
+          <Desc>({java19Version})</Desc>
+
+        </SelectOne>
       </MenuGroup>
     </Fragment>
+
   );
 };
 

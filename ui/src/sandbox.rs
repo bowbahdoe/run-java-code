@@ -13,7 +13,6 @@ use std::{
 use tempfile::TempDir;
 use tokio::{fs, process::Command, time};
 use tracing::debug;
-use crate::sandbox::Channel::Java19;
 
 pub(crate) const DOCKER_PROCESS_TIMEOUT_SOFT: Duration = Duration::from_secs(10);
 const DOCKER_PROCESS_TIMEOUT_HARD: Duration = Duration::from_secs(12);
@@ -160,9 +159,16 @@ fn build_execution_command(
     use self::CrateType::*;
     use self::Mode::*;
 
-    if channel == Java19 {
-        let cmd = vec!["java", "--source", "19", "src/main.rs"];
-        cmd
+    if channel.is_java() {
+        let mut cmd = vec!["java", "--source"];
+        if channel == Channel::Java19{
+            cmd.push("19");
+        }
+        if channel == Channel::Java20{
+            cmd.push("20");
+        }
+        cmd.push("src/main.rs");
+        cmd 
     }
     else {
         let mut cmd = vec!["cargo"];
@@ -427,7 +433,7 @@ impl Sandbox {
     }
 
     pub async fn version(&self, channel: Channel) -> Result<Version> {
-        if channel == Java19 {
+        if channel.is_java() {
             let mut command = basic_secure_docker_command();
             command.args(&[channel.container_name()]);
             command.args(&["java", "--version"]);
@@ -787,10 +793,15 @@ pub enum Channel {
     Stable,
     Beta,
     Nightly,
-    Java19
+    Java19,
+    Java20
 }
 
 impl Channel {
+    fn is_java(&self) -> bool{
+        self != &Channel::Stable && self != &Channel::Beta && self != &Channel::Nightly
+    }
+
     fn container_name(&self) -> &'static str {
         use self::Channel::*;
 
@@ -798,7 +809,8 @@ impl Channel {
             Stable => "rust-stable",
             Beta => "rust-beta",
             Nightly => "rust-nightly",
-            Java19 => "eclipse-temurin:19"
+            Java19 => "eclipse-temurin:19",
+            Java20 => "eclipse-temurin:20"
         }
     }
 }
