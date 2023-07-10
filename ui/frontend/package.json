@@ -85,7 +85,6 @@
     "webpack-cli": "^5.0.1"
   },
   "resolutions": {
-    "//": "https://github.com/isaacs/jackspeak/issues/5",
     "jackspeak": "2.0.3"
   },
   "engines": {
