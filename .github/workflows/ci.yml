@@ -39,7 +39,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ env.GH_CONTAINER_REGISTRY_USERNAME }}"
-          password: "${{ secrets.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 }}"
+          password: "${{ secrets.GH_CONTAINER_REGISTRY_TOKEN }}"
       - name: Build and push 'toolchain' container
         env:
           TAG_PREFIX: "${{ env.IMAGE_NAME }}:toolchain"
