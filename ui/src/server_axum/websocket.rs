@@ -48,7 +48,7 @@ struct ExecuteRequest {
     tests: bool,
     code: String,
     backtrace: bool,
-    preview: bool
+    preview: bool,
 }
 
 impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
@@ -63,7 +63,7 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
             tests,
             code,
             backtrace,
-            preview
+            preview,
         } = value;
 
         Ok(sandbox::ExecuteRequest {

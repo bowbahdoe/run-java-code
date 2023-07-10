@@ -154,7 +154,7 @@ fn build_execution_command(
     mode: Mode,
     req: impl CrateTypeRequest,
     tests: bool,
-    preview: bool
+    preview: bool,
 ) -> Vec<&'static str> {
     use self::CompileTarget::*;
     use self::CrateType::*;
@@ -162,9 +162,7 @@ fn build_execution_command(
 
     match channel.java_version() {
         Some(version) => {
-            let mut cmd = vec![
-                "java",
-            ];
+            let mut cmd = vec!["java"];
             cmd.extend(&["--source", version]);
             // Enable using java.lang.foreign w/o warnings
             cmd.push("--enable-native-access=ALL-UNNAMED");
@@ -444,12 +442,12 @@ impl Sandbox {
             command.args(&[channel.container_name()]);
             command.args(&["java", "--version"]);
 
-
             let output = run_command_with_timeout(command).await?;
 
             let version_output = vec_to_str(output.stdout)?;
 
-            let version = version_output.lines()
+            let version = version_output
+                .lines()
                 .take(1)
                 .fold(String::new(), |a, b| a + " " + b);
 
@@ -458,8 +456,7 @@ impl Sandbox {
                 commit_hash: version.to_string(),
                 commit_date: version.to_string(),
             })
-        }
-        else {
+        } else {
             let mut command = basic_secure_docker_command();
             command.args(&[channel.container_name()]);
             command.args(&["rustc", "--version", "--verbose"]);
@@ -473,7 +470,9 @@ impl Sandbox {
                 .filter_map(|line| {
                     let mut pieces = line.splitn(2, ':').fuse();
                     match (pieces.next(), pieces.next()) {
-                        (Some(name), Some(value)) => Some((name.trim().into(), value.trim().into())),
+                        (Some(name), Some(value)) => {
+                            Some((name.trim().into(), value.trim().into()))
+                        }
                         _ => None,
                     }
                 })
@@ -493,7 +492,6 @@ impl Sandbox {
                 commit_date,
             })
         }
-
     }
 
     pub async fn version_rustfmt(&self) -> Result<Version> {
@@ -513,8 +511,6 @@ impl Sandbox {
         command.args(&["miri", "cargo", "miri", "--version"]);
         self.cargo_tool_version(command).await
     }
-
-
 
     // Parses versions of the shape `toolname 0.0.0 (0000000 0000-00-00)`
     async fn cargo_tool_version(&self, command: Command) -> Result<Version> {
@@ -559,14 +555,8 @@ impl Sandbox {
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.crate_type()));
         set_execution_environment(&mut cmd, Some(target), &req);
-        let execution_cmd = build_execution_command(
-            Some(target),
-            channel,
-            mode,
-            &req,
-            tests,
-            req.preview()
-        );
+        let execution_cmd =
+            build_execution_command(Some(target), channel, mode, &req, tests, req.preview());
 
         cmd.arg(&channel.container_name()).args(&execution_cmd);
 
@@ -585,14 +575,8 @@ impl Sandbox {
         let mut cmd = self.docker_command(Some(req.crate_type()));
         set_execution_environment(&mut cmd, None, &req);
 
-        let execution_cmd = build_execution_command(
-            None,
-            channel,
-            mode,
-            &req,
-            tests,
-        req.preview()
-        );
+        let execution_cmd =
+            build_execution_command(None, channel, mode, &req, tests, req.preview());
 
         cmd.arg(&channel.container_name()).args(&execution_cmd);
 
@@ -813,7 +797,7 @@ pub enum Channel {
     Beta,
     Nightly,
     Java19,
-    Java20
+    Java20,
 }
 
 impl Channel {
@@ -823,11 +807,11 @@ impl Channel {
         match *self {
             Java19 => Some("19"),
             Java20 => Some("20"),
-            _ => None
+            _ => None,
         }
     }
 
-    fn is_java(&self) -> bool{
+    fn is_java(&self) -> bool {
         self.java_version().is_some()
     }
 
@@ -839,7 +823,7 @@ impl Channel {
             Beta => "rust-beta",
             Nightly => "rust-nightly",
             Java19 => "eclipse-temurin:19",
-            Java20 => "eclipse-temurin:20"
+            Java20 => "eclipse-temurin:20",
         }
     }
 }

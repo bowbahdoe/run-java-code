@@ -76,7 +76,7 @@ pub(crate) struct LabelsCore {
     crate_type: Option<CrateType>,
     tests: Option<bool>,
     backtrace: Option<bool>,
-    preview: Option<bool>
+    preview: Option<bool>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -91,7 +91,7 @@ pub(crate) struct Labels {
     crate_type: Option<CrateType>,
     tests: Option<bool>,
     backtrace: Option<bool>,
-    preview: Option<bool>
+    preview: Option<bool>,
 }
 
 impl Labels {
@@ -120,7 +120,7 @@ impl Labels {
             crate_type,
             tests,
             backtrace,
-            preview
+            preview,
         } = *self;
 
         fn b(v: Option<bool>) -> &'static str {
@@ -152,7 +152,7 @@ impl Labels {
             edition,
             crate_type,
             tests,
-            backtrace
+            backtrace,
         ]
     }
 
@@ -165,7 +165,7 @@ impl Labels {
             crate_type,
             tests,
             backtrace,
-            preview
+            preview,
         } = labels_core;
         Self {
             endpoint,
@@ -177,7 +177,7 @@ impl Labels {
             crate_type,
             tests,
             backtrace,
-            preview
+            preview,
         }
     }
 }
@@ -219,7 +219,7 @@ impl GenerateLabels for sandbox::CompileRequest {
             crate_type: Some(crate_type),
             tests: Some(tests),
             backtrace: Some(backtrace),
-            preview: Some(preview)
+            preview: Some(preview),
         }
     }
 }
@@ -248,7 +248,7 @@ impl GenerateLabels for sandbox::ExecuteRequest {
             crate_type: Some(crate_type),
             tests: Some(tests),
             backtrace: Some(backtrace),
-            preview: Some(preview)
+            preview: Some(preview),
         }
     }
 }
@@ -268,7 +268,7 @@ impl GenerateLabels for sandbox::FormatRequest {
             crate_type: None,
             tests: None,
             backtrace: None,
-            preview: None
+            preview: None,
         }
     }
 }
@@ -292,7 +292,7 @@ impl GenerateLabels for sandbox::ClippyRequest {
             crate_type: Some(crate_type),
             tests: None,
             backtrace: None,
-            preview: None
+            preview: None,
         }
     }
 }
@@ -312,7 +312,7 @@ impl GenerateLabels for sandbox::MiriRequest {
             crate_type: None,
             tests: None,
             backtrace: None,
-            preview: None
+            preview: None,
         }
     }
 }
@@ -332,7 +332,7 @@ impl GenerateLabels for sandbox::MacroExpansionRequest {
             crate_type: None,
             tests: None,
             backtrace: None,
-            preview: None
+            preview: None,
         }
     }
 }
@@ -494,7 +494,7 @@ where
         crate_type: None,
         tests: None,
         backtrace: None,
-        preview: None
+        preview: None,
     };
 
     record_metric_complete(labels, elapsed);
@@ -528,7 +528,7 @@ impl HasLabelsCore for coordinator::CompileRequest {
             crate_type: Some(crate_type.into()),
             tests: Some(tests),
             backtrace: Some(backtrace),
-            preview: Some(preview)
+            preview: Some(preview),
         }
     }
 }
