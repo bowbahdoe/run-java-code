@@ -797,6 +797,7 @@ pub enum Channel {
     Java20
 }
 
+
 impl Channel {
     fn is_java(&self) -> bool{
         self != &Channel::Stable && self != &Channel::Beta && self != &Channel::Nightly
