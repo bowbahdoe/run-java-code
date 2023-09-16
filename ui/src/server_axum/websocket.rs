@@ -1,15 +1,11 @@
-use crate::{
-    metrics, parse_channel, parse_crate_type, parse_edition, parse_mode,
-    sandbox::{self, Sandbox},
-    Error, ExecutionSnafu, Result, SandboxCreationSnafu, WebSocketTaskPanicSnafu,
-};
+extern crate reqwest;
+
+use crate::sandbox;
+use crate::{metrics, Error, ExecutionSnafu, Result, WebSocketTaskPanicSnafu};
 
 use axum::extract::ws::{Message, WebSocket};
 use snafu::prelude::*;
-use std::{
-    convert::{TryFrom, TryInto},
-    time::Instant,
-};
+use std::time::Instant;
 use tokio::{sync::mpsc, task::JoinSet};
 
 type Meta = serde_json::Value;
@@ -41,42 +37,8 @@ enum WSMessageRequest {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ExecuteRequest {
-    channel: String,
-    mode: String,
-    edition: String,
-    crate_type: String,
-    tests: bool,
     code: String,
-    backtrace: bool,
-    preview: bool,
-}
-
-impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
-    type Error = Error;
-
-    fn try_from(value: ExecuteRequest) -> Result<Self, Self::Error> {
-        let ExecuteRequest {
-            channel,
-            mode,
-            edition,
-            crate_type,
-            tests,
-            code,
-            backtrace,
-            preview,
-        } = value;
-
-        Ok(sandbox::ExecuteRequest {
-            channel: parse_channel(&channel)?,
-            mode: parse_mode(&mode)?,
-            edition: parse_edition(&edition)?,
-            crate_type: parse_crate_type(&crate_type)?,
-            tests,
-            backtrace,
-            preview,
-            code,
-        })
-    }
+    language: String, // assuming Java
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -258,29 +220,21 @@ async fn handle_msg(
 }
 
 async fn handle_execute(req: ExecuteRequest) -> Result<ExecuteResponse> {
-    // Determine whether the request is for Rust or Java code execution
-    if req.language == "Java" {
-        // Make a POST request to your Java code execution API
-        let client = reqwest::Client::new();
-        let api_endpoint = std::env::var("JAVA_EXECUTION_API_ENDPOINT")
-            .unwrap_or_else(|_| "http://34.226.203.124:3000/execute".to_string());
-        let api_response = client
-            .post(&api_endpoint)
-            .json(&serde_json::json!({"code": req.code}))
-            .send()
-            .await?;
+    // Make a POST request to your Java code execution API
+    let client = reqwest::Client::new();
+    let api_endpoint = std::env::var("JAVA_EXECUTION_API_ENDPOINT")
+        .unwrap_or_else(|_| "http://34.226.203.124:3000/execute".to_string());
+    let api_response = client
+        .post(&api_endpoint)
+        .json(&serde_json::json!({"code": req.code}))
+        .send()
+        .await?;
 
-        // Process the API response
-        if api_response.status().is_success() {
-            let api_result: ExecuteResponse = api_response.json().await?;
-            return Ok(api_result);
-        } else {
-            return Err(ExecutionSnafu { /* ... */ });
-        }
+    // Process the API response
+    if api_response.status().is_success() {
+        let api_result: ExecuteResponse = api_response.json().await?;
+        return Ok(api_result);
     } else {
-        let sb = Sandbox::new().await.context(SandboxCreationSnafu)?;
-        let req = req.try_into()?;
-        let resp = sb.execute(&req).await.context(ExecutionSnafu)?;
-        return Ok(resp.into());
+        return Err(ExecutionSnafu {});
     }
 }
