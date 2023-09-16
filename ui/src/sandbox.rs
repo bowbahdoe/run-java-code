@@ -835,10 +835,38 @@ pub enum Mode {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
+
+pub enum Version
+{
+    Java17,
+    Java18,
+    Java19,
+    Java20,
+}
+
+impl Version
+{
+    fn java_version(&self) -> &'static str
+    {
+        use self::Version::*;
+
+        match *self
+        {
+            Java17 => Some("17"),
+            Java18 => Some("18"),
+            Java19 => Some("19"),
+            Java20 => Some("20"),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
 pub enum Edition {
-    Rust2015,
-    Rust2018,
-    Rust2021, // TODO - add parallel tests for 2021
+    JavaPlatformStandardEdition,
+    JavaPlatformEnterpriseEdition,
+    JavaPlatformMicroEdition,
+    JavaFX,
 }
 
 impl Edition {
@@ -846,9 +874,10 @@ impl Edition {
         use self::Edition::*;
 
         match *self {
-            Rust2015 => "2015",
-            Rust2018 => "2018",
-            Rust2021 => "2021",
+            JavaPlatformStandardEdition => "Java SE",
+            JavaPlatformEnterpriseEdition => "Java EE",
+            JavaPlatformMicroEdition => "Java ME",
+            JavaFX => "Java FX",
         }
     }
 }

@@ -164,6 +164,7 @@ impl MetricsToken {
 
 #[derive(Debug, Snafu)]
 pub enum Error {
+    
     #[snafu(display("Sandbox creation failed: {}", source))]
     SandboxCreation { source: sandbox::Error },
     #[snafu(display("Compilation operation failed: {}", source))]
@@ -202,6 +203,8 @@ pub enum Error {
     InvalidProcessAssembly { value: String },
     #[snafu(display("The value {:?} is not a valid channel", value,))]
     InvalidChannel { value: String },
+    #[snafu(display("Invalid Java Version: {}", value))]
+    InvalidVersion {value : String },
     #[snafu(display("The value {:?} is not a valid mode", value))]
     InvalidMode { value: String },
     #[snafu(display("The value {:?} is not a valid edition", value))]
@@ -696,8 +699,6 @@ fn parse_channel(s: &str) -> Result<sandbox::Channel> {
         "stable" => sandbox::Channel::Stable,
         "beta" => sandbox::Channel::Beta,
         "nightly" => sandbox::Channel::Nightly,
-        "java19" => sandbox::Channel::Java19,
-        "java20" => sandbox::Channel::Java20,
 
         value => InvalidChannelSnafu { value }.fail()?,
     })
@@ -711,6 +712,17 @@ fn parse_mode(s: &str) -> Result<sandbox::Mode> {
     })
 }
 
+fn parse_version(s: &str) -> Result<Option<sandbox::Version>>
+{
+    Ok(match s {
+        "" => None,
+        "17" => Some(sandbox::Version::Java17),
+        "18" => Some(sandbox::Version::Java18),
+        "19" => Some(sandbox::Version::Java19),
+        "20" => Some(sandbox::Version::Java20),
+        value => InvalidVersionSnafu { value }.fail()?        
+    })
+}
 fn parse_edition(s: &str) -> Result<Option<sandbox::Edition>> {
     Ok(match s {
         "" => None,

@@ -42,13 +42,15 @@ enum WSMessageRequest {
 #[serde(rename_all = "camelCase")]
 struct ExecuteRequest {
     channel: String,
-    mode: String,
-    edition: String,
     crate_type: String,
     tests: bool,
     code: String,
     backtrace: bool,
     preview: bool,
+    // For Java
+    version: String, // eg Java 19 Java 20
+    edition: String, // Java SE, vs EE vs ME vs FX
+    mode: String, // Debug or Release -g enabled
 }
 
 impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
@@ -56,20 +58,23 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
 
     fn try_from(value: ExecuteRequest) -> Result<Self, Self::Error> {
         let ExecuteRequest {
-            channel,
-            mode,
-            edition,
-            crate_type,
-            tests,
-            code,
-            backtrace,
-            preview,
+            channel: String,
+            crate_type: String,
+            tests: bool,
+            code: String,
+            backtrace: bool,
+            preview: bool,
+            // For Java
+            version: String, // eg Java 19 Java 20
+            edition: String, // Java SE, vs EE vs ME vs FX
+            mode: String, // Debug or Release -g enabled
         } = value;
 
         Ok(sandbox::ExecuteRequest {
             channel: parse_channel(&channel)?,
-            mode: parse_mode(&mode)?,
             edition: parse_edition(&edition)?,
+            mode: parse_mode(&mode)?,
+            version: parse_version(&version)?,
             crate_type: parse_crate_type(&crate_type)?,
             tests,
             backtrace,
