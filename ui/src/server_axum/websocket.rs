@@ -200,8 +200,14 @@ async fn handle_core(mut socket: WebSocket) {
 }
 
 async fn connect_handshake(socket: &mut WebSocket) -> bool {
-    let Some(Ok(Message::Text(txt))) = socket.recv().await else { return false };
-    let Ok(HandshakeMessage::Connected { payload, .. }) = serde_json::from_str::<HandshakeMessage>(&txt) else { return false };
+    let Some(Ok(Message::Text(txt))) = socket.recv().await else {
+        return false;
+    };
+    let Ok(HandshakeMessage::Connected { payload, .. }) =
+        serde_json::from_str::<HandshakeMessage>(&txt)
+    else {
+        return false;
+    };
     if !payload.i_accept_this_is_an_unsupported_api {
         return false;
     }
@@ -256,8 +262,10 @@ async fn handle_execute(req: ExecuteRequest) -> Result<ExecuteResponse> {
     if req.language == "Java" {
         // Make a POST request to your Java code execution API
         let client = reqwest::Client::new();
-        let api_endpoint = std::env::var("JAVA_EXECUTION_API_ENDPOINT").unwrap_or_else(|_| "http://34.226.203.124:3000/execute".to_string());
-        let api_response = client.post(&api_endpoint)
+        let api_endpoint = std::env::var("JAVA_EXECUTION_API_ENDPOINT")
+            .unwrap_or_else(|_| "http://34.226.203.124:3000/execute".to_string());
+        let api_response = client
+            .post(&api_endpoint)
             .json(&serde_json::json!({"code": req.code}))
             .send()
             .await?;
@@ -276,4 +284,3 @@ async fn handle_execute(req: ExecuteRequest) -> Result<ExecuteResponse> {
         return Ok(resp.into());
     }
 }
-
