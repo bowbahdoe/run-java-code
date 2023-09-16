@@ -22,7 +22,7 @@ const HAS_TESTS_RE = /^\s*#\s*\[\s*test\s*([^"]*)]/m;
 export const hasTestsSelector = createSelector(codeSelector, code => !!code.match(HAS_TESTS_RE));
 
 const HAS_MAIN_FUNCTION_RE =
-  /^\s*(public\s+)?\s*(static\s+)?\s*\s*void\s+main\s*(\(\s*\)|\(String\s*\[\]\s*[a-z|A-Z|0-9]+\))/m;
+  /\s*(public\s+)?\s*(static\s+)?\s*void\s+main\s*\(\s*String\s*\[\]\s*\w+\s*\)/m;
 export const hasMainFunctionSelector = createSelector(codeSelector, code => !!code.match(HAS_MAIN_FUNCTION_RE));
 
 const CRATE_TYPE_RE = /^\s*#!\s*\[\s*crate_type\s*=\s*"([^"]*)"\s*]/m;
