@@ -252,9 +252,28 @@ async fn handle_msg(
 }
 
 async fn handle_execute(req: ExecuteRequest) -> Result<ExecuteResponse> {
-    let sb = Sandbox::new().await.context(SandboxCreationSnafu)?;
+    // Determine whether the request is for Rust or Java code execution
+    if req.language == "Java" {
+        // Make a POST request to your Java code execution API
+        let client = reqwest::Client::new();
+        let api_endpoint = std::env::var("JAVA_EXECUTION_API_ENDPOINT").unwrap_or_else(|_| "http://34.226.203.124:3000/execute".to_string());
+        let api_response = client.post(&api_endpoint)
+            .json(&serde_json::json!({"code": req.code}))
+            .send()
+            .await?;
 
-    let req = req.try_into()?;
-    let resp = sb.execute(&req).await.context(ExecutionSnafu)?;
-    Ok(resp.into())
+        // Process the API response
+        if api_response.status().is_success() {
+            let api_result: ExecuteResponse = api_response.json().await?;
+            return Ok(api_result);
+        } else {
+            return Err(ExecutionSnafu { /* ... */ });
+        }
+    } else {
+        let sb = Sandbox::new().await.context(SandboxCreationSnafu)?;
+        let req = req.try_into()?;
+        let resp = sb.execute(&req).await.context(ExecutionSnafu)?;
+        return Ok(resp.into());
+    }
 }
+
