@@ -301,7 +301,7 @@ fn write_primary_file_request(crate_type: CrateType, code: &str) -> WriteFileReq
 
     WriteFileRequest {
         path: path.to_owned(),
-        content: code.clone().into(),
+        content: code.into(),
     }
 }
 
@@ -656,7 +656,7 @@ struct ModifyCargoToml {
 }
 
 impl ModifyCargoToml {
-    const PATH: &str = "Cargo.toml";
+    const PATH: &'static str = "Cargo.toml";
 
     async fn new(commander: Commander) -> Result<Self, ModifyCargoTomlError> {
         let cargo_toml = Self::read(&commander).await?;

@@ -1,11 +1,12 @@
 use serde_derive::Deserialize;
 use snafu::prelude::*;
+use std::os::unix::prelude::PermissionsExt;
 use std::{
     collections::BTreeMap,
     ffi::OsStr,
     fmt, io,
     io::ErrorKind,
-    os::unix::fs::PermissionsExt,
+    // os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     string,
     time::Duration,
