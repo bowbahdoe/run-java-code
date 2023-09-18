@@ -87,8 +87,15 @@ export enum Channel {
   Stable = 'stable',
   Beta = 'beta',
   Nightly = 'nightly',
+  
+}
+
+export enum JavaVersion
+{
+  Java17 = 'java17',
+  Java18 = 'java18',
   Java19 = 'java19',
-  Java20 = 'java20'
+  Java20 = 'java20',
 }
 
 export enum Mode {
@@ -97,9 +104,10 @@ export enum Mode {
 }
 
 export enum Edition {
-  Rust2015 = '2015',
-  Rust2018 = '2018',
-  Rust2021 = '2021',
+  JavaStandardEdition = 'javaSE',
+  JavaEnterpriseEdition = 'javaEE',
+  JavaMicroEdition = 'javaME',
+  JavaFX = 'javaFX',
 }
 
 export enum Backtrace {

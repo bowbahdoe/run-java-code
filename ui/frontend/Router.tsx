@@ -9,7 +9,7 @@ import Route from 'route-parser';
 
 import * as actions from './actions';
 import State from './state';
-import { Channel, Edition, Mode, Page } from './types';
+import { Channel, Edition, Mode, Page, JavaVersion } from './types';
 
 const homeRoute = new Route('/');
 const helpRoute = new Route('/help');
@@ -20,6 +20,7 @@ interface Substate {
     channel: Channel;
     mode: Mode;
     edition: Edition;
+    java_version: JavaVersion;
   };
   output: {
     gist: {
@@ -28,12 +29,13 @@ interface Substate {
   }
 }
 
-const stateSelector = ({ page, configuration: { channel, mode, edition}, output }: State): Substate => ({
+const stateSelector = ({ page, configuration: { channel, mode, edition, java_version}, output }: State): Substate => ({
   page,
   configuration: {
     channel,
     mode,
     edition,
+    java_version,
   },
   output: {
     gist: {
@@ -52,9 +54,9 @@ const stateToLocation = ({ page, configuration, output }: Substate): Partial<Pat
 
     default: {
       const query = {
-        version: configuration.channel,
         mode: configuration.mode,
         edition: configuration.edition,
+        java_version: configuration.java_version,
         gist: output.gist.id,
       };
       return {

@@ -38,12 +38,6 @@ impl From<CrateInformationInner> for CrateInformation {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Version {
-    pub release: String,
-    pub commit_hash: String,
-    pub commit_date: String,
-}
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -545,6 +539,13 @@ impl Sandbox {
         Ok(())
     }
 
+    fn compile_class_file(
+        &self,
+        target: CompileTarget,
+        mode: Mode,
+        version: Version,
+        edition: Edition,
+    )
     fn compile_command(
         &self,
         target: CompileTarget,
@@ -835,7 +836,6 @@ pub enum Mode {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-
 pub enum Version
 {
     Java17,
