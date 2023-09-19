@@ -487,21 +487,6 @@ export function performMacroExpansion(): ThunkAction {
   };
 }
 
-const requestCratesLoad = () =>
-  createAction(ActionType.RequestCratesLoad);
-
-const receiveCratesLoadSuccess = ({ crates }: { crates: Crate[] }) =>
-  createAction(ActionType.CratesLoadSucceeded, { crates });
-
-export function performCratesLoad(): ThunkAction {
-  return function(dispatch) {
-    dispatch(requestCratesLoad());
-
-    return jsonGet(routes.meta.crates)
-      .then(json => dispatch(receiveCratesLoadSuccess(json)));
-    // TODO: Failure case
-  };
-}
 
 const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
@@ -549,18 +534,6 @@ export const browserWidthChanged = (isSmall: boolean) =>
 export const splitRatioChanged = () =>
   createAction(ActionType.SplitRatioChanged);
 
-function parseChannel(s?: string): Channel | null {
-  switch (s) {
-    case 'stable':
-      return Channel.Stable;
-    case 'beta':
-      return Channel.Beta;
-    case 'nightly':
-      return Channel.Nightly;
-    default:
-      return null;
-  }
-}
 
 function parseMode(s?: string): Mode | null {
   switch (s) {
@@ -575,12 +548,14 @@ function parseMode(s?: string): Mode | null {
 
 function parseEdition(s?: string): Edition | null {
   switch (s) {
-    case '2015':
-      return Edition.Rust2015;
-    case '2018':
-      return Edition.Rust2018;
-    case '2021':
-      return Edition.Rust2021;
+    case 'javaSE':
+      return Edition.JavaStandardEdition;
+    case 'javaEE':
+      return Edition.JavaEnterpriseEdition;
+    case 'javaME':
+      return Edition.JavaMicroEdition;
+    case 'javaME':
+      return Edition.JavaFX;
     default:
       return null;
   }
@@ -594,7 +569,7 @@ export function indexPageLoad({
   edition: editionString,
 }: { code?: string, gist?: string, version?: string, mode?: string, edition?: string }): ThunkAction {
   return function(dispatch) {
-    const channel = parseChannel(version) || Channel.Stable;
+    const channel = version;
     const mode = parseMode(modeString) || Mode.Debug;
     let maybeEdition = parseEdition(editionString);
 
@@ -605,7 +580,7 @@ export function indexPageLoad({
       // of editions will *forever* pick 2015. However, if we aren't
       // loading code, then allow the edition to remain the default.
       if (!maybeEdition) {
-        maybeEdition = Edition.Rust2015;
+        maybeEdition = Edition.JavaStandardEdition;
       }
     }
 
@@ -617,7 +592,6 @@ export function indexPageLoad({
       dispatch(performGistLoad({ id: gist, channel, mode, edition }));
     }
 
-    dispatch(changeChannel(channel));
     dispatch(changeMode(mode));
     dispatch(changeEdition(edition));
   };
@@ -639,11 +613,8 @@ export type Action =
   | ReturnType<typeof disableSyncChangesToStorage>
   | ReturnType<typeof setPage>
   | ReturnType<typeof changePairCharacters>
-  | ReturnType<typeof changeAssemblyFlavor>
   | ReturnType<typeof changeBacktrace>
   | ReturnType<typeof changePreview>
-  | ReturnType<typeof changeChannel>
-  | ReturnType<typeof changeDemangleAssembly>
   | ReturnType<typeof changeEdition>
   | ReturnType<typeof changeEditor>
   | ReturnType<typeof changeFocus>
@@ -654,38 +625,12 @@ export type Action =
   | ReturnType<typeof changeProcessAssembly>
   | ReturnType<typeof changeAceTheme>
   | ReturnType<typeof changeMonacoTheme>
-  | ReturnType<typeof requestCompileAssembly>
-  | ReturnType<typeof receiveCompileAssemblySuccess>
-  | ReturnType<typeof receiveCompileAssemblyFailure>
-  | ReturnType<typeof requestCompileLlvmIr>
-  | ReturnType<typeof receiveCompileLlvmIrSuccess>
-  | ReturnType<typeof receiveCompileLlvmIrFailure>
-  | ReturnType<typeof requestCompileMir>
-  | ReturnType<typeof receiveCompileMirSuccess>
-  | ReturnType<typeof receiveCompileMirFailure>
-  | ReturnType<typeof requestCompileHir>
-  | ReturnType<typeof receiveCompileHirSuccess>
-  | ReturnType<typeof receiveCompileHirFailure>
-  | ReturnType<typeof requestCompileWasm>
-  | ReturnType<typeof receiveCompileWasmSuccess>
-  | ReturnType<typeof receiveCompileWasmFailure>
   | ReturnType<typeof editCode>
   | ReturnType<typeof addMainFunction>
   | ReturnType<typeof addImport>
   | ReturnType<typeof enableFeatureGate>
   | ReturnType<typeof gotoPosition>
   | ReturnType<typeof selectText>
-  | ReturnType<typeof requestClippy>
-  | ReturnType<typeof receiveClippySuccess>
-  | ReturnType<typeof receiveClippyFailure>
-  | ReturnType<typeof requestMiri>
-  | ReturnType<typeof receiveMiriSuccess>
-  | ReturnType<typeof receiveMiriFailure>
-  | ReturnType<typeof requestMacroExpansion>
-  | ReturnType<typeof receiveMacroExpansionSuccess>
-  | ReturnType<typeof receiveMacroExpansionFailure>
-  | ReturnType<typeof requestCratesLoad>
-  | ReturnType<typeof receiveCratesLoadSuccess>
   | ReturnType<typeof requestVersionsLoad>
   | ReturnType<typeof receiveVersionsLoadSuccess>
   | ReturnType<typeof notificationSeen>
