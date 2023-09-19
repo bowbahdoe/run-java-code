@@ -3,7 +3,6 @@ import { combineReducers } from '@reduxjs/toolkit';
 import browser from './browser';
 import code from './code';
 import configuration from './configuration';
-import crates from './crates';
 import globalConfiguration from './globalConfiguration';
 import notifications from './notifications';
 import output from './output';
@@ -17,7 +16,6 @@ const playgroundApp = combineReducers({
   browser,
   code,
   configuration,
-  crates,
   globalConfiguration,
   notifications,
   output,

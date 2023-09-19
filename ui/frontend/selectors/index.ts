@@ -5,7 +5,6 @@ import { State } from '../reducers';
 import {
   AceResizeKey,
   Backtrace,
-  Channel,
   Edition,
   Orientation,
   Preview,
@@ -40,20 +39,13 @@ const autoPrimaryActionSelector = createSelector(
         return PrimaryActionCore.Compile;
       }
     } else {
-      if (hasTests) {
-        return PrimaryActionCore.Test;
-      } else if (hasMainFunction) {
+      if (hasMainFunction) {
         return PrimaryActionCore.Execute;
       } else {
         return PrimaryActionCore.Compile;
       }
     }
   },
-);
-
-export const runAsTest = createSelector(
-  autoPrimaryActionSelector,
-  primaryAction => primaryAction === PrimaryActionCore.Test,
 );
 
 export const getCrateType = createSelector(
@@ -88,16 +80,6 @@ const primaryActionSelector = createSelector(
   ),
 );
 
-const LABELS: { [index in PrimaryActionCore]: string } = {
-  [PrimaryActionCore.Asm]: 'Show Assembly',
-  [PrimaryActionCore.Compile]: 'Build',
-  [PrimaryActionCore.Execute]: 'Run',
-  [PrimaryActionCore.LlvmIr]: 'Show LLVM IR',
-  [PrimaryActionCore.Hir]: 'Show HIR',
-  [PrimaryActionCore.Mir]: 'Show MIR',
-  [PrimaryActionCore.Test]: 'Test',
-  [PrimaryActionCore.Wasm]: 'Show WASM',
-};
 
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
 
@@ -107,39 +89,28 @@ const getJava19 = (state: State) => state.versions?.java19;
 const getJava20 = (state: State) => state.versions?.java20;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
-export const java17VersionText = createSelector(getJava19, versionNumber);
-export const java18VersionText = createSelector(getJava19, versionNumber);
-export const java19VersionText = createSelector(getJava19, versionNumber);
-export const java20VersionText = createSelector(getJava20, versionNumber);
+export const java17VersionNumber = createSelector(getJava17, versionNumber);
+export const java18VersionNumber = createSelector(getJava18, versionNumber);
+export const java19VersionNumber = createSelector(getJava19, versionNumber);
+export const java20VersionNumber = createSelector(getJava20, versionNumber);
 
 const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
-export const betaVersionDetailsText = createSelector(getBeta, versionDetails);
-export const nightlyVersionDetailsText = createSelector(getNightly, versionDetails);
-export const clippyVersionDetailsText = createSelector(getClippy, versionDetails);
-export const rustfmtVersionDetailsText = createSelector(getRustfmt, versionDetails);
-export const miriVersionDetailsText = createSelector(getMiri, versionDetails);
+export const java17VersionText = createSelector(getJava17, versionDetails);
+export const java18VersionText = createSelector(getJava18, versionDetails);
+export const java19VersionText = createSelector(getJava19, versionDetails);
+export const java20VersionText = createSelector(getJava20, versionDetails);
 
 const editionSelector = (state: State) => state.configuration.edition;
 
-export const isNightlyChannel = (state: State) => (
-  state.configuration.channel === Channel.Nightly
-);
-export const isWasmAvailable = isNightlyChannel;
-export const isHirAvailable = isNightlyChannel;
 
 export const getModeLabel = (state: State) => {
   const { configuration: { mode } } = state;
   return `${mode}`;
 };
 
-export const getChannelLabel = (state: State) => {
-  const { configuration: { channel } } = state;
-  return `${channel}`;
-};
-
 export const isEditionDefault = createSelector(
   editionSelector,
-  edition => edition == Edition.Rust2021,
+  edition => edition == Edition.JavaStandardEdition,
 );
 
 export const getBacktraceSet = (state: State) => (
@@ -160,17 +131,9 @@ export const getAdvancedOptionsSet = createSelector(
 export const hasProperties = (obj: {}) => Object.values(obj).some(val => !!val);
 
 const getOutputs = (state: State) => [
-  state.output.assembly,
-  state.output.clippy,
   state.output.execute,
   state.output.format,
   state.output.gist,
-  state.output.llvmIr,
-  state.output.mir,
-  state.output.hir,
-  state.output.miri,
-  state.output.macroExpansion,
-  state.output.wasm,
 ];
 
 export const getSomethingToShow = createSelector(
@@ -346,7 +309,7 @@ export const aceTheme = createSelector(aceConfig, c => c.theme);
 
 export const offerCrateAutocompleteOnUse = createSelector(
   editionSelector,
-  (edition) => edition !== Edition.Rust2015,
+  (edition) => edition !== Edition.JavaStandardEdition,
 );
 
 const websocket = (state: State) => state.websocket;
@@ -382,6 +345,6 @@ export const executeRequestPayloadSelector = createSelector(
     edition: configuration.edition,
     code,
     backtrace: configuration.backtrace === Backtrace.Enabled,
-    preview: configuration.preview == Preview.Enabled
+    preview: configuration.preview == Preview.Enabled,
   }),
 );

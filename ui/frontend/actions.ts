@@ -3,8 +3,6 @@ import { ThunkAction as ReduxThunkAction, AnyAction } from '@reduxjs/toolkit';
 
 import {
   codeSelector,
-  clippyRequestSelector,
-  getCrateType,
   runAsTest,
 } from './selectors';
 import State from './state';
@@ -250,19 +248,10 @@ export const adaptFetchError = async <R>(cb: () => Promise<R>): Promise<R> => {
   return result;
 }
 
-function performAutoOnly(): ThunkAction {
-  return function(dispatch, getState) {
-    const state = getState();
-    const crateType = getCrateType(state);
-    const tests = runAsTest(state);
 
-    return dispatch(performCommonExecute(crateType, tests));
-  };
-}
 
 const performExecuteOnly = (): ThunkAction => performCommonExecute('bin', false);
 const performCompileOnly = (): ThunkAction => performCommonExecute('lib', false);
-const performTestOnly = (): ThunkAction => performCommonExecute('lib', true);
 
 interface CompileRequestBody extends ExecuteRequestBody {
   target: string;
@@ -371,121 +360,6 @@ interface GeneralSuccess {
   stderr: string;
 }
 
-const requestClippy = () =>
-  createAction(ActionType.RequestClippy);
-
-interface ClippyRequestBody {
-  code: string;
-  edition: string;
-  crateType: string;
-}
-
-interface ClippyResponseBody {
-  success: boolean;
-  stdout: string;
-  stderr: string;
-}
-
-type ClippySuccess = GeneralSuccess;
-
-const receiveClippySuccess = ({ stdout, stderr }: ClippySuccess) =>
-  createAction(ActionType.ClippySucceeded, { stdout, stderr });
-
-const receiveClippyFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.ClippyFailed, { error });
-
-export function performClippy(): ThunkAction {
-  // TODO: Check a cache
-  return function(dispatch, getState) {
-    dispatch(requestClippy());
-
-    const body: ClippyRequestBody = clippyRequestSelector(getState());
-
-    return jsonPost<ClippyResponseBody>(routes.clippy, body)
-      .then(json => dispatch(receiveClippySuccess(json)))
-      .catch(json => dispatch(receiveClippyFailure(json)));
-  };
-}
-
-const requestMiri = () =>
-  createAction(ActionType.RequestMiri);
-
-interface MiriRequestBody {
-  code: string;
-  edition: string;
-}
-
-interface MiriResponseBody {
-  success: boolean;
-  stdout: string;
-  stderr: string;
-}
-
-type MiriSuccess = GeneralSuccess;
-
-const receiveMiriSuccess = ({ stdout, stderr }: MiriSuccess) =>
-  createAction(ActionType.MiriSucceeded, { stdout, stderr });
-
-const receiveMiriFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.MiriFailed, { error });
-
-export function performMiri(): ThunkAction {
-  // TODO: Check a cache
-  return function(dispatch, getState) {
-    dispatch(requestMiri());
-
-    const state = getState();
-    const code = codeSelector(state);
-    const { configuration: {
-      edition,
-    } } = state;
-    const body: MiriRequestBody = { code, edition };
-
-    return jsonPost<MiriResponseBody>(routes.miri, body)
-      .then(json => dispatch(receiveMiriSuccess(json)))
-      .catch(json => dispatch(receiveMiriFailure(json)));
-  };
-}
-
-const requestMacroExpansion = () =>
-  createAction(ActionType.RequestMacroExpansion);
-
-interface MacroExpansionRequestBody {
-  code: string;
-  edition: string;
-}
-
-interface MacroExpansionResponseBody {
-  success: boolean;
-  stdout: string;
-  stderr: string;
-}
-
-type MacroExpansionSuccess = GeneralSuccess;
-
-const receiveMacroExpansionSuccess = ({ stdout, stderr }: MacroExpansionSuccess) =>
-  createAction(ActionType.MacroExpansionSucceeded, { stdout, stderr });
-
-const receiveMacroExpansionFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.MacroExpansionFailed, { error });
-
-export function performMacroExpansion(): ThunkAction {
-  // TODO: Check a cache
-  return function(dispatch, getState) {
-    dispatch(requestMacroExpansion());
-
-    const state = getState();
-    const code = codeSelector(state);
-    const { configuration: {
-      edition,
-    } } = state;
-    const body: MacroExpansionRequestBody = { code, edition };
-
-    return jsonPost<MacroExpansionResponseBody>(routes.macroExpansion, body)
-      .then(json => dispatch(receiveMacroExpansionSuccess(json)))
-      .catch(json => dispatch(receiveMacroExpansionFailure(json)));
-  };
-}
 
 
 const requestVersionsLoad = () =>
@@ -509,7 +383,7 @@ export function performVersionsLoad(): ThunkAction {
     const java18 = jsonGet(routes.meta.version.java18);
     const java19 = jsonGet(routes.meta.version.java19);
     const java20 = jsonGet(routes.meta.version.java20);
-  
+
     const all = Promise.all([java17, java18, java19, java20]);
 
     return all

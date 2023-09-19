@@ -3,7 +3,7 @@ import * as z from 'zod';
 
 import { SimpleThunkAction, adaptFetchError, jsonPost, routes } from '../../actions';
 import { executeRequestPayloadSelector, useWebsocketSelector } from '../../selectors';
-import { Channel, Edition, Mode } from '../../types';
+import { Edition, Mode, Version } from '../../types';
 import {
   WsPayloadAction,
   createWebsocketResponseAction,
@@ -31,7 +31,7 @@ const wsExecuteResponsePayloadSchema = z.object({
 type wsExecuteResponsePayload = z.infer<typeof wsExecuteResponsePayloadSchema>;
 
 type wsExecuteRequestPayload = {
-  version: Version;
+  version:Version;
   mode: Mode;
   edition: Edition;
   crateType: string;
