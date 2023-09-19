@@ -101,25 +101,16 @@ const LABELS: { [index in PrimaryActionCore]: string } = {
 
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
 
-const getStable = (state: State) => state.versions?.stable;
-const getBeta = (state: State) => state.versions?.beta;
-const getNightly = (state: State) => state.versions?.nightly;
-
+const getJava17 = (state: State) => state.versions?.java19;
+const getJava18 = (state: State) => state.versions?.java20;
 const getJava19 = (state: State) => state.versions?.java19;
 const getJava20 = (state: State) => state.versions?.java20;
-const getRustfmt = (state: State) => state.versions?.rustfmt;
-const getClippy = (state: State) => state.versions?.clippy;
-const getMiri = (state: State) => state.versions?.miri;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
-export const stableVersionText = createSelector(getStable, versionNumber);
-export const betaVersionText = createSelector(getBeta, versionNumber);
-export const nightlyVersionText = createSelector(getNightly, versionNumber);
+export const java17VersionText = createSelector(getJava19, versionNumber);
+export const java18VersionText = createSelector(getJava19, versionNumber);
 export const java19VersionText = createSelector(getJava19, versionNumber);
 export const java20VersionText = createSelector(getJava20, versionNumber);
-export const clippyVersionText = createSelector(getClippy, versionNumber);
-export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
-export const miriVersionText = createSelector(getMiri, versionNumber);
 
 const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
 export const betaVersionDetailsText = createSelector(getBeta, versionDetails);

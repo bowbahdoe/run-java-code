@@ -31,7 +31,7 @@ const wsExecuteResponsePayloadSchema = z.object({
 type wsExecuteResponsePayload = z.infer<typeof wsExecuteResponsePayloadSchema>;
 
 type wsExecuteRequestPayload = {
-  channel: Channel;
+  version: Version;
   mode: Mode;
   edition: Edition;
   crateType: string;
@@ -47,14 +47,12 @@ const wsExecuteResponse = createWebsocketResponseAction<wsExecuteResponsePayload
 const sliceName = 'output/execute';
 
 export interface ExecuteRequestBody {
-  channel: string;
   mode: string;
   crateType: string;
   tests: boolean;
   code: string;
   edition: string;
   backtrace: boolean;
-  preview: boolean;
 }
 
 interface ExecuteResponseBody {

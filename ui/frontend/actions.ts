@@ -9,10 +9,7 @@ import {
 } from './selectors';
 import State from './state';
 import {
-  AssemblyFlavor,
   Backtrace,
-  Channel,
-  DemangleAssembly,
   Edition,
   Editor,
   Focus,
@@ -29,7 +26,6 @@ import {
   Position,
   makePosition,
   Version,
-  Crate,
 } from './types';
 
 import { ExecuteRequestBody, performCommonExecute, wsExecuteRequest } from './reducers/output/execute';
@@ -39,18 +35,10 @@ export const routes = {
   compile: '/compile',
   execute: '/execute',
   format: '/format',
-  clippy: '/clippy',
-  miri: '/miri',
-  macroExpansion: '/macro-expansion',
   meta: {
-    crates: '/meta/crates',
     version: {
-      stable: '/meta/version/stable',
-      beta: '/meta/version/beta',
-      nightly: '/meta/version/nightly',
-      rustfmt: '/meta/version/rustfmt',
-      clippy: '/meta/version/clippy',
-      miri: '/meta/version/miri',
+      java17: '/meta/version/java17_',
+      java18: '/meta/version/java28_',
       java19: '/meta/version/java19_',
       java20: '/meta/version/java20_',
     },
@@ -153,20 +141,12 @@ export const changePairCharacters = (pairCharacters: PairCharacters) =>
 export const changeOrientation = (orientation: Orientation) =>
   createAction(ActionType.ChangeOrientation, { orientation });
 
-export const changeAssemblyFlavor = (assemblyFlavor: AssemblyFlavor) =>
-  createAction(ActionType.ChangeAssemblyFlavor, { assemblyFlavor });
-
-export const changeDemangleAssembly = (demangleAssembly: DemangleAssembly) =>
-  createAction(ActionType.ChangeDemangleAssembly, { demangleAssembly });
 
 export const changeProcessAssembly = (processAssembly: ProcessAssembly) =>
   createAction(ActionType.ChangeProcessAssembly, { processAssembly });
 
 const changePrimaryAction = (primaryAction: PrimaryAction) =>
   createAction(ActionType.ChangePrimaryAction, { primaryAction });
-
-export const changeChannel = (channel: Channel) =>
-  createAction(ActionType.ChangeChannel, { channel });
 
 export const changeMode = (mode: Mode) =>
   createAction(ActionType.ChangeMode, { mode });
@@ -317,7 +297,6 @@ function performCompileShow(
     const state = getState();
     const code = codeSelector(state);
     const { configuration: {
-      channel,
       mode,
       edition,
       assemblyFlavor,
@@ -327,9 +306,7 @@ function performCompileShow(
     const crateType = getCrateType(state);
     const tests = runAsTest(state);
     const backtrace = state.configuration.backtrace === Backtrace.Enabled;
-    const preview = state.configuration.preview === Preview.Enabled;
     const body: CompileRequestBody = {
-      channel,
       mode,
       edition,
       crateType,
@@ -340,7 +317,6 @@ function performCompileShow(
       demangleAssembly,
       processAssembly,
       backtrace,
-      preview
     };
 
     return jsonPost<CompileResponseBody>(routes.compile, body)
@@ -349,106 +325,11 @@ function performCompileShow(
   };
 }
 
-const requestCompileAssembly = () =>
-  createAction(ActionType.CompileAssemblyRequest);
-
-const receiveCompileAssemblySuccess = ({ code, stdout, stderr }: CompileSuccess) =>
-  createAction(ActionType.CompileAssemblySucceeded, { code, stdout, stderr });
-
-const receiveCompileAssemblyFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.CompileAssemblyFailed, { error });
-
-const performCompileToAssemblyOnly = () =>
-  performCompileShow('asm', {
-    request: requestCompileAssembly,
-    success: receiveCompileAssemblySuccess,
-    failure: receiveCompileAssemblyFailure,
-  });
-
-const requestCompileLlvmIr = () =>
-  createAction(ActionType.CompileLlvmIrRequest);
-
-const receiveCompileLlvmIrSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
-  createAction(ActionType.CompileLlvmIrSucceeded, { code, stdout, stderr });
-
-const receiveCompileLlvmIrFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.CompileLlvmIrFailed, { error });
-
-const performCompileToLLVMOnly = () =>
-  performCompileShow('llvm-ir', {
-    request: requestCompileLlvmIr,
-    success: receiveCompileLlvmIrSuccess,
-    failure: receiveCompileLlvmIrFailure,
-  });
-
-const requestCompileHir = () =>
-  createAction(ActionType.CompileHirRequest);
-
-const receiveCompileHirSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
-  createAction(ActionType.CompileHirSucceeded, { code, stdout, stderr });
-
-const receiveCompileHirFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.CompileHirFailed, { error });
-
-const performCompileToHirOnly = () =>
-  performCompileShow('hir', {
-    request: requestCompileHir,
-    success: receiveCompileHirSuccess,
-    failure: receiveCompileHirFailure,
-  });
-
-const performCompileToNightlyHirOnly = (): ThunkAction => dispatch => {
-  dispatch(changeChannel(Channel.Nightly));
-  dispatch(performCompileToHirOnly());
-};
-
-const requestCompileMir = () =>
-  createAction(ActionType.CompileMirRequest);
-
-const receiveCompileMirSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
-  createAction(ActionType.CompileMirSucceeded, { code, stdout, stderr });
-
-const receiveCompileMirFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.CompileMirFailed, { error });
-
-const performCompileToMirOnly = () =>
-  performCompileShow('mir', {
-    request: requestCompileMir,
-    success: receiveCompileMirSuccess,
-    failure: receiveCompileMirFailure,
-  });
-
-const requestCompileWasm = () =>
-  createAction(ActionType.CompileWasmRequest);
-
-const receiveCompileWasmSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
-  createAction(ActionType.CompileWasmSucceeded, { code, stdout, stderr });
-
-const receiveCompileWasmFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.CompileWasmFailed, { error });
-
-const performCompileToWasm = () =>
-  performCompileShow('wasm', {
-    request: requestCompileWasm,
-    success: receiveCompileWasmSuccess,
-    failure: receiveCompileWasmFailure,
-  });
-
-const performCompileToNightlyWasmOnly = (): ThunkAction => dispatch => {
-  dispatch(changeChannel(Channel.Nightly));
-  dispatch(performCompileToWasm());
-};
 
 const PRIMARY_ACTIONS: { [index in PrimaryAction]: () => ThunkAction } = {
-  [PrimaryActionCore.Asm]: performCompileToAssemblyOnly,
   [PrimaryActionCore.Compile]: performCompileOnly,
   [PrimaryActionCore.Execute]: performExecuteOnly,
-  [PrimaryActionCore.Test]: performTestOnly,
   [PrimaryActionAuto.Auto]: performAutoOnly,
-  [PrimaryActionCore.LlvmIr]: performCompileToLLVMOnly,
-  [PrimaryActionCore.Hir]: performCompileToHirOnly,
-  [PrimaryActionCore.Mir]: performCompileToMirOnly,
-  [PrimaryActionCore.Wasm]: performCompileToNightlyWasmOnly,
 };
 
 export const performPrimaryAction = (): ThunkAction => (dispatch, getState) => {
@@ -466,18 +347,6 @@ export const performExecute =
   performAndSwitchPrimaryAction(performExecuteOnly, PrimaryActionCore.Execute);
 export const performCompile =
   performAndSwitchPrimaryAction(performCompileOnly, PrimaryActionCore.Compile);
-export const performTest =
-  performAndSwitchPrimaryAction(performTestOnly, PrimaryActionCore.Test);
-export const performCompileToAssembly =
-  performAndSwitchPrimaryAction(performCompileToAssemblyOnly, PrimaryActionCore.Asm);
-export const performCompileToLLVM =
-  performAndSwitchPrimaryAction(performCompileToLLVMOnly, PrimaryActionCore.LlvmIr);
-export const performCompileToMir =
-  performAndSwitchPrimaryAction(performCompileToMirOnly, PrimaryActionCore.Mir);
-export const performCompileToNightlyHir =
-  performAndSwitchPrimaryAction(performCompileToNightlyHirOnly, PrimaryActionCore.Hir);
-export const performCompileToNightlyWasm =
-  performAndSwitchPrimaryAction(performCompileToNightlyWasmOnly, PrimaryActionCore.Wasm);
 
 export const editCode = (code: string) =>
   createAction(ActionType.EditCode, { code });
@@ -638,44 +507,32 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  stable, beta, nightly, java19, java20, rustfmt, clippy, miri,
+  java17, java18,  java19, java20,
 }: {
-  stable: Version,
-  beta: Version,
-  nightly: Version,
+  java17: Version,
+  java18: Version,
   java19: Version,
   java20: Version,
-  rustfmt: Version,
-  clippy: Version,
-  miri: Version,
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { stable, beta, nightly, java19, java20, rustfmt, clippy, miri });
+  createAction(ActionType.VersionsLoadSucceeded, { java17, java18, java19, java20});
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
     dispatch(requestVersionsLoad());
 
-    const stable = jsonGet(routes.meta.version.stable);
-    const beta = jsonGet(routes.meta.version.beta);
-    const nightly = jsonGet(routes.meta.version.nightly);
+    const java17 = jsonGet(routes.meta.version.java17);
+    const java18 = jsonGet(routes.meta.version.java18);
     const java19 = jsonGet(routes.meta.version.java19);
     const java20 = jsonGet(routes.meta.version.java20);
-    const rustfmt = jsonGet(routes.meta.version.rustfmt);
-    const clippy = jsonGet(routes.meta.version.clippy);
-    const miri = jsonGet(routes.meta.version.miri);
-
-    const all = Promise.all([stable, beta, nightly, java19, java20, rustfmt, clippy, miri]);
+  
+    const all = Promise.all([java17, java18, java19, java20]);
 
     return all
-      .then(([stable, beta, nightly, java19, java20, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
-        stable,
-        beta,
-        nightly,
+      .then(([java17, java18, java19, java20]) => dispatch(receiveVersionsLoadSuccess({
+        java17,
+        java18,
         java19,
         java20,
-        rustfmt,
-        clippy,
-        miri,
       })));
     // TODO: Failure case
   };
