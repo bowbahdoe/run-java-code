@@ -80,6 +80,11 @@ const primaryActionSelector = createSelector(
   ),
 );
 
+const LABELS =
+{
+  Compile: 'compile',
+  Execute: 'execute',
+}
 
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
 
@@ -338,8 +343,7 @@ export const websocketStatusSelector = createSelector(
 export const executeRequestPayloadSelector = createSelector(
   codeSelector,
   (state: State) => state.configuration,
-  (_state: State, { crateType, tests }: { crateType: string, tests: boolean }) => ({ crateType, tests }),
-  (code, configuration) => ({
+  (_state: State) => (code, configuration) => ({
     channel: configuration.channel,
     mode: configuration.mode,
     edition: configuration.edition,

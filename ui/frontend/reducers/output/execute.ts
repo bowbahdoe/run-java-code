@@ -34,7 +34,6 @@ type wsExecuteRequestPayload = {
   version:Version;
   mode: Mode;
   edition: Edition;
-  crateType: string;
   tests: boolean;
   code: string;
   backtrace: boolean;
@@ -48,7 +47,7 @@ const sliceName = 'output/execute';
 
 export interface ExecuteRequestBody {
   mode: string;
-  crateType: string;
+  version: string;
   tests: boolean;
   code: string;
   edition: string;
@@ -121,7 +120,7 @@ export const performCommonExecute =
   (crateType: string, tests: boolean): SimpleThunkAction =>
   (dispatch, getState) => {
     const state = getState();
-    const body = executeRequestPayloadSelector(state, { crateType, tests });
+    const body = executeRequestPayloadSelector(state);
     const useWebSocket = useWebsocketSelector(state);
 
     if (useWebSocket) {
