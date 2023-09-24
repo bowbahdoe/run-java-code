@@ -528,43 +528,37 @@ fn stream_stdio(
 
     let mut set = JoinSet::new();
 
-    set.spawn(async move {
-        loop {
-            set.spawn(async move {
-                loop {
-                    let Some(data) = stdin_rx.recv().await else {
-                        break;
-                    };
-                    stdin.write_all(data.as_bytes()).await
-                }
-            });
-            stdin
-                .write_all(data.as_bytes())
-                .await
+set.spawn(async move {
+    loop {
+        set.spawn(async move {
+            loop {
+                let Some(data) = stdin_rx.recv().await else {
+                    break;
+                };
+                stdin.write_all(data.as_bytes()).await
+            }
+        });
+        stdin
+            .write_all(data.as_bytes())
+            .await
+            .context(UnableToWriteStdinSnafu)?;
+        stdin.flush().await.context(UnableToFlushStdinSnafu)?;
     }
-    });
-            stdin
-                .write_all(data.as_bytes())
-                .await
-                .context(UnableToWriteStdinSnafu)?;
-            stdin.flush().await.context(UnableToFlushStdinSnafu)?;
-        }
 
-        Ok(())
-    });
+    Ok(())
+});
 
-    set.spawn({
-        copy_child_output(stdout, coordinator_tx.clone(), WorkerMessage::StdoutPacket)
-            .context(CopyStdoutSnafu)
-    });
+set.spawn({
+    copy_child_output(stdout, coordinator_tx.clone(), WorkerMessage::StdoutPacket)
+        .context(CopyStdoutSnafu)
+});
 
-    set.spawn({
-        copy_child_output(stderr, coordinator_tx, WorkerMessage::StderrPacket)
-            .context(CopyStderrSnafu)
-    });
+set.spawn({
+    copy_child_output(stderr, coordinator_tx, WorkerMessage::StderrPacket)
+        .context(CopyStderrSnafu)
+});
 
-    set
-}
+set
 
 #[derive(Debug, Snafu)]
 #[snafu(module)]
