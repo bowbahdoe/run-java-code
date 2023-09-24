@@ -687,5 +687,3 @@ pub enum IoQueueError {
     #[snafu(display("Failed to flush stdout"))]
     UnableToFlushStdout { source: std::io::Error },
 }
-
-}
