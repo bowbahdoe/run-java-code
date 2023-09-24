@@ -200,12 +200,12 @@ async fn handle_core(mut socket: WebSocket) {
 }
 
 async fn connect_handshake(socket: &mut WebSocket) -> bool {
-    let Some(Ok(Message::Text(txt))) = socket.recv().await else { 
+    let Some(Ok(Message::Text(txt))) = socket.recv().await else {
         return false;
     };
-    let Ok(HandshakeMessage::Connected { payload, .. }) = 
+    let Ok(HandshakeMessage::Connected { payload, .. }) =
         serde_json::from_str::<HandshakeMessage>(&txt)
-    else { 
+    else {
         return false;
     };
     if !payload.i_accept_this_is_an_unsupported_api {
