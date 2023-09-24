@@ -393,6 +393,6 @@ export const executeRequestPayloadSelector = createSelector(
     tests,
     code,
     backtrace: configuration.backtrace === Backtrace.Enabled,
-    preview: configuration.preview == Preview.Enabled
+    preview: configuration.preview == Preview.Enabled,
   }),
 );

@@ -1,9 +1,11 @@
 import { Action, ActionType } from '../actions';
-import { performGistLoad } from './output/gist'
-import { performFormat } from './output/format'
+import { performFormat } from './output/format';
+import { performGistLoad } from './output/gist';
 
-const DEFAULT: State = `fn main() {
-    println!("Hello, world!");
+const DEFAULT: State = `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, world!");
+    }
 }`;
 
 export type State = string;
@@ -17,10 +19,12 @@ export default function code(state = DEFAULT, action: Action): State {
       return `${state}\n\n${DEFAULT}`;
 
     case ActionType.AddImport:
-      return action.code + state;
+      return `${action.code}\n${state}`;
+
 
     case ActionType.EnableFeatureGate:
-      return `#![feature(${action.featureGate})]\n${state}`;
+      // Feature gates are not applicable in Java, keeping it unchanged
+      return state;
 
     default: {
       if (performGistLoad.pending.match(action)) {

@@ -527,10 +527,16 @@ fn stream_stdio(
     use stdio_error::*;
 
     let mut set = JoinSet::new();
-
     set.spawn(async move {
         loop {
-            let Some(data) = stdin_rx.recv().await else { break };
+            set.spawn(async move {
+                loop {
+                    let Some(data) = stdin_rx.recv().await else {
+                        break;
+                    };
+                    stdin.write_all(data.as_bytes()).await
+                }
+            });
             stdin
                 .write_all(data.as_bytes())
                 .await
