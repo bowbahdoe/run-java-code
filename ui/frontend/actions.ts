@@ -340,7 +340,7 @@ function performCompileShow(
       demangleAssembly,
       processAssembly,
       backtrace,
-      preview
+      preview,
     };
 
     return jsonPost<CompileResponseBody>(routes.compile, body)

@@ -56,7 +56,7 @@ const DEFAULT: State = {
   mode: Mode.Debug,
   edition: Edition.Rust2021,
   backtrace: Backtrace.Disabled,
-  preview: Preview.Disabled
+  preview: Preview.Disabled,
 };
 
 export default function configuration(state = DEFAULT, action: Action): State {
