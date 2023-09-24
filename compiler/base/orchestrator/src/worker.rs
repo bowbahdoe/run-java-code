@@ -544,20 +544,20 @@ fn stream_stdio(
             stdin.flush().await.context(UnableToFlushStdinSnafu)?;
         }
 
-    Ok(())
-});
+        Ok(())
+    });
 
-set.spawn({
-    copy_child_output(stdout, coordinator_tx.clone(), WorkerMessage::StdoutPacket)
-        .context(CopyStdoutSnafu)
-});
+    set.spawn({
+        copy_child_output(stdout, coordinator_tx.clone(), WorkerMessage::StdoutPacket)
+            .context(CopyStdoutSnafu)
+    });
 
-set.spawn({
-    copy_child_output(stderr, coordinator_tx, WorkerMessage::StderrPacket)
-        .context(CopyStderrSnafu)
-});
+    set.spawn({
+        copy_child_output(stderr, coordinator_tx, WorkerMessage::StderrPacket)
+            .context(CopyStderrSnafu)
+    });
 
-set
+    set
 }
 
 #[derive(Debug, Snafu)]
@@ -663,7 +663,7 @@ fn spawn_io_queue(
                 .context(UnableToSerializeWorkerMessageSnafu)?;
 
             stdout.flush().context(UnableToFlushStdoutSnafu)?;
-    }
+        }
     });
 
     tasks
