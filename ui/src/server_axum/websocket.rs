@@ -205,8 +205,8 @@ async fn connect_handshake(socket: &mut WebSocket) -> bool {
     };
     let Ok(HandshakeMessage::Connected { payload, .. }) = 
         serde_json::from_str::<HandshakeMessage>(&txt)
-        else { 
-            return false;
+    else { 
+        return false;
     };
     if !payload.i_accept_this_is_an_unsupported_api {
         return false;
