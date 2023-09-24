@@ -1,11 +1,12 @@
 import { editCode } from '../actions';
 import reducer from '../reducers';
 
-
 export const hasMainFunctionSelector = (state: any): boolean => {
   const code = state.code;
+  const codeWithoutSingleLineComments = code.replace(/\/\/.*$/gm, ''); // Remove single-line comments
+  const codeWithoutComments = codeWithoutSingleLineComments.replace(/\/\*[\s\S]*?\*\//gm, ''); // Remove block comments
   const mainMethodPattern = /public\s+static\s+void\s+main\s*\(\s*String\s*\[\]\s+args\s*\)/;
-  return mainMethodPattern.test(code);
+  return mainMethodPattern.test(codeWithoutComments);
 };
 
 const buildState = (code: string) => {
@@ -18,11 +19,11 @@ describe('checking for a main function', () => {
     expect(hasMainFunctionSelector(buildState(''))).toBe(false);
   });
 
-test('a plain main counts', () => {
-  const code = 'public static void main(String[] args)';
-  const state = buildState(code);
-  expect(hasMainFunctionSelector(state)).toBe(true);
-});
+  test('a plain main counts', () => {
+    const code = 'public static void main(String[] args)';
+    const state = buildState(code);
+    expect(hasMainFunctionSelector(state)).toBe(true);
+  });
 
   test('extra space everywhere is ignored', () => {
     expect(
