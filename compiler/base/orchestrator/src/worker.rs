@@ -541,7 +541,7 @@ fn stream_stdio(
             stdin
                 .write_all(data.as_bytes())
                 .await
-        }
+    }
     });
             stdin
                 .write_all(data.as_bytes())
@@ -669,7 +669,7 @@ fn spawn_io_queue(
                 .context(UnableToSerializeWorkerMessageSnafu)?;
 
             stdout.flush().context(UnableToFlushStdoutSnafu)?;
-        }
+    }
     });
 
     tasks
