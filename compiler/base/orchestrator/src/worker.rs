@@ -527,7 +527,6 @@ fn stream_stdio(
     use stdio_error::*;
 
     let mut set = JoinSet::new();
-
 set.spawn(async move {
     loop {
         set.spawn(async move {
@@ -559,6 +558,7 @@ set.spawn({
 });
 
 set
+}
 
 #[derive(Debug, Snafu)]
 #[snafu(module)]
@@ -686,4 +686,6 @@ pub enum IoQueueError {
 
     #[snafu(display("Failed to flush stdout"))]
     UnableToFlushStdout { source: std::io::Error },
+}
+
 }
