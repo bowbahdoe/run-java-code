@@ -7,12 +7,9 @@ RSpec.feature "Automatically selecting the primary action", type: :feature, js: 
   scenario "when the crate is a binary" do
     editor.set <<~EOF
       #![crate_type="bin"]
-      public class HelloWorld {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-    }
-}
-
+      fn main() {
+          println!("Hello, world");
+      }
     EOF
     click_on("Run")
 
