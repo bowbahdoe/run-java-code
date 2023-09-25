@@ -1272,9 +1272,11 @@ mod test {
     }
 
     const HELLO_WORLD_CODE: &'static str = r#"
-    fn main() {
-        println!("Hello, world!");
+    public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
     }
+}
     "#;
 
     impl Default for ExecuteRequest {

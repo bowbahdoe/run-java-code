@@ -4,6 +4,9 @@ name = "ui"
 version = "0.1.0"
 edition = "2018"
 
+[profile.dev]
+incremental = true
+
 [features]
 default = ['fork-bomb-prevention']
 fork-bomb-prevention = []
