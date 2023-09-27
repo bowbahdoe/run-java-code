@@ -91,11 +91,15 @@ impl Config {
             warn!("Environment variable {} is not set, so reading and writing GitHub gists will not work", PLAYGROUND_GITHUB_TOKEN);
         }
 
-        let metrics_token = env::var("PLAYGROUND_METRICS_TOKEN").ok();
-
-        let cors_enabled = env::var_os("PLAYGROUND_CORS_ENABLED").is_some();
-
-        let orchestrator_enabled = env::var_os("PLAYGROUND_ORCHESTRATOR_ENABLED").is_some();
+        // Attempt to retrieve the environment variable values
+        let metrics_token = std::env::var("PLAYGROUND_METRICS_TOKEN").ok();
+        let cors_enabled = std::env::var_os("PLAYGROUND_CORS_ENABLED").is_some();
+        let orchestrator_enabled = std::env::var_os("PLAYGROUND_ORCHESTRATOR_ENABLED").is_some();
+    
+        // Print the values to the console
+        println!("Metrics Token: {:?}", metrics_token);
+        println!("CORS Enabled: {}", cors_enabled);
+        println!("Orchestrator Enabled: {}", orchestrator_enabled);
 
         Self {
             address,

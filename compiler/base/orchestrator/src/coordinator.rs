@@ -30,49 +30,11 @@ use crate::{
     DropErrorDetailsExt,
 };
 
-// These shouldn't apply to Java
-
-// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-// pub enum AssemblyFlavor {
-//     Att,
-//     Intel,
-// }
-
-// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-// pub enum DemangleAssembly {
-//     Demangle,
-//     Mangle,
-// }
-
-// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-// pub enum ProcessAssembly {
-//     Filter,
-//     Raw,
-// }
-
-// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-// pub enum CompileTarget {
-//     Assembly(AssemblyFlavor, DemangleAssembly, ProcessAssembly),
-//     Hir,
-//     LlvmIr,
-//     Mir,
-//     Wasm,
-// }
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum CompileTarget {
     Bytecode,
     Jar,
 }
-
-// Java doesn't use channels, silly.
-
-// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-// pub enum Channel {
-//     Stable,
-//     Beta,
-//     Nightly,
-// }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum JavaVersion {
@@ -84,19 +46,52 @@ pub enum JavaVersion {
     // ... add other versions as needed
 }
 
-// silly rust channels , we don't have those in Java land!
-// impl Channel {
-//     pub(crate) const ALL: [Self; 3] = [Self::Stable, Self::Beta, Self::Nightly];
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum JavaRelease {
+    Release8,
+    Release9,
+    Release10,
+    Release11,
+    Release12,
+    Release13,
+    Release14,
+    Release15,
+    Release16,
+    Release17,
+    Release18,
+    Release19,
+    Release20,
+    Release21,
+    // ... add other releases as needed
+}
 
-//     #[cfg(test)]
-//     pub(crate) fn to_str(self) -> &'static str {
-//         match self {
-//             Channel::Stable => "stable",
-//             Channel::Beta => "beta",
-//             Channel::Nightly => "nightly",
-//         }
-//     }
-// }
+impl JavaRelease {
+    pub(crate) const ALL: [Self; 14] = [
+        Self::Release8, Self::Release9, Self::Release10, Self::Release11,
+        Self::Release12, Self::Release13, Self::Release14, Self::Release15,
+        Self::Release16, Self::Release17, Self::Release18, Self::Release19,
+        Self::Release20, Self::Release21,
+    ];
+
+    pub(crate) fn to_str(self) -> &'static str {
+        match self {
+            JavaRelease::Release8 => "8",
+            JavaRelease::Release9 => "9",
+            JavaRelease::Release10 => "10",
+            JavaRelease::Release11 => "11",
+            JavaRelease::Release12 => "12",
+            JavaRelease::Release13 => "13",
+            JavaRelease::Release14 => "14",
+            JavaRelease::Release15 => "15",
+            JavaRelease::Release16 => "16",
+            JavaRelease::Release17 => "17",
+            JavaRelease::Release18 => "18",
+            JavaRelease::Release19 => "19",
+            JavaRelease::Release20 => "20",
+            JavaRelease::Release21 => "21",
+        }
+    }
+}
 
 impl JavaVersion {
     pub(crate) const ALL: [Self; 5] = [Self::Java17, Self::Java18, Self::Java19, Self::Java20, Self::Java21];
@@ -113,207 +108,68 @@ impl JavaVersion {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Mode {
-    Debug,
-    Release,
-}
-
-// Since Java doesn't have editions like Rust, the Edition enumeration is not needed.
-// The JavaVersion enumeration defined earlier should suffice for handling different versions of Java.
-
+// deleting this for now, could be added back later if needed
+// for now we'll always use the -g flag 
 // #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-// pub enum Edition {
-//     Rust2015,
-//     Rust2018,
-//     Rust2021,
+// pub enum Mode {
+//     Debug,
+//     Release,
 // }
 
-// impl Edition {
-//     #[cfg(test)]
-//     pub(crate) const ALL: [Self; 3] = [Self::Rust2015, Self::Rust2018, Self::Rust2021];
+// Everything will be a class file for now, no need for different package types
+// pub enum JavaPackageType {
+//     Class,
+//     Jar,
+//     ExecutableJar,
+//     War,  // Web application archive
+// }
 
-//     pub(crate) fn to_str(self) -> &'static str {
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum JavaLibraryType {
+//     Jar,
+//     War,
+// }
+
+// impl JavaLibraryType {
+//     pub(crate) fn to_build_tool_key(self) -> &'static str {
 //         match self {
-//             Edition::Rust2015 => "2015",
-//             Edition::Rust2018 => "2018",
-//             Edition::Rust2021 => "2021",
+//             JavaLibraryType::Jar => "jar",
+//             JavaLibraryType::War => "war",
 //         }
 //     }
-
-//     pub(crate) fn to_cargo_toml_key(self) -> &'static str {
-//         self.to_str()
-//     }
 // }
-
-// yeah, Java doesn't have crates however packages are a thing
-// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-// pub enum CrateType {
-//     Binary,
-//     Library(LibraryType),
-// }
-
-pub enum JavaPackageType {
-    Class,
-    Jar,
-    ExecutableJar,
-    War,  // Web application archive
-}
-
-// impl CrateType {
-//     pub(crate) fn is_binary(self) -> bool {
-//         self == CrateType::Binary
-//     }
-
-//     pub(crate) fn to_cargo_toml_key(self) -> &'static str {
-//         use {CrateType::*, LibraryType::*};
-
-//         match self {
-//             Binary => "bin",
-//             Library(Lib) => "lib",
-//             Library(Dylib) => "dylib",
-//             Library(Rlib) => "rlib",
-//             Library(Staticlib) => "staticlib",
-//             Library(Cdylib) => "cdylib",
-//             Library(ProcMacro) => "proc-macro",
-//         }
-//     }
-
-impl JavaPackageType {
-    pub(crate) fn is_executable_jar(self) -> bool {
-        self == JavaPackageType::ExecutableJar
-    }
-
-    pub(crate) fn to_build_tool_key(self) -> &'static str {
-        use JavaPackageType::*;
-
-        match self {
-            Class => "class",
-            Jar => "jar",
-            ExecutableJar => "executable-jar",
-            War => "war",
-        }
-    }
-}
-
-    // pub(crate) fn to_library_cargo_toml_key(self) -> Option<&'static str> {
-    //     if self == Self::Binary {
-    //         None
-    //     } else {
-    //         Some(self.to_cargo_toml_key())
-    //     }
-    // }
-
-    // Java doesn't have a direct equivalent to Rust's different library types. 
-    // A .jar file in Java can be used both as a library and as an executable archive.
-    pub(crate) fn to_library_build_tool_key(self) -> Option<&'static str> {
-    match self {
-        JavaPackageType::Class | JavaPackageType::ExecutableJar => None,
-        JavaPackageType::Jar | JavaPackageType::War => Some(self.to_build_tool_key()),
-    }
-}
-
-// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-// pub enum LibraryType {
-//     Lib,
-//     Dylib,
-//     Rlib,
-//     Staticlib,
-//     Cdylib,
-//     ProcMacro,
-// }
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum JavaLibraryType {
-    Jar,
-    War,
-}
-
-impl JavaLibraryType {
-    pub(crate) fn to_build_tool_key(self) -> &'static str {
-        match self {
-            JavaLibraryType::Jar => "jar",
-            JavaLibraryType::War => "war",
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct CompileRequest {
-    pub target: CompileTarget,
-    pub channel: Channel,
-    pub crate_type: CrateType,
-    pub mode: Mode,
-    pub edition: Edition,
-    // TODO: Remove `tests` and `backtrace` -- don't make sense for compiling.
-    pub tests: bool,
-    pub backtrace: bool,
-    pub preview: bool,
-    pub code: String,
+    pub version: JavaVersion,           // Specifies the Java version to use for compilation
+    pub release: JavaRelease,           // Specifies the edition of the Java version
+    pub code: String,                   // The Java source code to compile
+    // ...maybe others added later?
 }
 
 impl CompileRequest {
-    pub(crate) fn write_main_request(&self) -> WriteFileRequest {
-        write_primary_file_request(self.crate_type, &self.code)
-    }
+    pub(crate) fn execute_compile_request(&self, output_path: &str) -> ExecuteCommandRequest {
+        // Initializes the argument list with the Java compiler command 'javac'.
+        let mut args = vec!["javac"];
+        
+        // Adds the -g flag to generate all debugging info.
+        args.push("-g");
+        
+        // Adds arguments to specify the output directory for class files.
+        args.extend(&["-d", output_path]);
 
-    pub(crate) fn execute_cargo_request(&self, output_path: &str) -> ExecuteCommandRequest {
-        use CompileTarget::*;
-
-        let mut args = if let Wasm = self.target {
-            vec!["wasm"]
-        } else {
-            vec!["rustc"]
-        };
-        if let Mode::Release = self.mode {
-            args.push("--release");
-        }
-
-        match self.target {
-            Assembly(flavor, _, _) => {
-                args.extend(&["--", "--emit", "asm=compilation"]);
-
-                // Enable extra assembly comments for nightly builds
-                if let Channel::Nightly = self.channel {
-                    args.push("-Z");
-                    args.push("asm-comments");
-                }
-
-                args.push("-C");
-                match flavor {
-                    AssemblyFlavor::Att => args.push("llvm-args=-x86-asm-syntax=att"),
-                    AssemblyFlavor::Intel => args.push("llvm-args=-x86-asm-syntax=intel"),
-                }
-            }
-            LlvmIr => args.extend(&["--", "--emit", "llvm-ir=compilation"]),
-            Mir => args.extend(&["--", "--emit", "mir=compilation"]),
-            Hir => args.extend(&["--", "-Zunpretty=hir", "-o", output_path]),
-            Wasm => args.extend(&["-o", output_path]),
-        }
-        let mut envs = HashMap::new();
-        if self.backtrace {
-            envs.insert("RUST_BACKTRACE".to_owned(), "1".to_owned());
-        }
-
+        // Prepares the ExecuteCommandRequest to execute the 'javac' command.
         ExecuteCommandRequest {
-            cmd: "cargo".to_owned(),
+            cmd: "javac".to_owned(),
             args: args.into_iter().map(|s| s.to_owned()).collect(),
-            envs,
-            cwd: None,
-        }
+            envs: HashMap::new(),  // No special environment variables are set for this request
+            cwd: None,  // No specific working directory is set for this request
+        };
     }
 
     pub(crate) fn postprocess_result(&self, mut code: String) -> String {
-        if let CompileTarget::Assembly(_, demangle, process) = self.target {
-            if demangle == DemangleAssembly::Demangle {
-                code = asm_cleanup::demangle_asm(&code);
-            }
-
-            if process == ProcessAssembly::Filter {
-                code = asm_cleanup::filter_asm(&code);
-            }
-        }
-
+        // Assumes any post-processing if needed.
+        // For now, just returns the code as-is.
         code
     }
 }
@@ -401,81 +257,119 @@ enum DemultiplexCommand {
 #[derive(Debug)]
 pub struct Coordinator<B> {
     backend: B,
-    // Consider making these lazily-created and/or idly time out
-    stable: Container,
-    beta: Container,
-    nightly: Container,
+    java17: Container,
+    java18: Container,
+    java19: Container,
+    java20: Container,
+    java21: Container,
     token: CancellationToken,
 }
 
+// The Coordinator is a generic struct over a Backend.
 impl<B> Coordinator<B>
 where
     B: Backend,
 {
+    // Asynchronous constructor for a new Coordinator instance.
     pub async fn new(backend: B) -> Result<Self, Error> {
+        // Create a new cancellation token for managing container lifecycles.
         let token = CancellationToken::new();
 
-        let [stable, beta, nightly] =
-            Channel::ALL.map(|channel| Container::new(channel, token.clone(), &backend));
+        // Asynchronously create new Container instances for each Java version.
+        let java17 = Container::new(JavaVersion::Java17, token.clone(), &backend);
+        let java18 = Container::new(JavaVersion::Java18, token.clone(), &backend);
+        let java19 = Container::new(JavaVersion::Java19, token.clone(), &backend);
+        let java20 = Container::new(JavaVersion::Java20, token.clone(), &backend);
+        let java21 = Container::new(JavaVersion::Java21, token.clone(), &backend);
 
-        let (stable, beta, nightly) = join!(stable, beta, nightly);
+        // Wait for all Container instances to be created.
+        let (java17, java18, java19, java20, java21) = join!(java17, java18, java19, java20, java21);
 
-        let stable = stable?;
-        let beta = beta?;
-        let nightly = nightly?;
+        // Unwrap the results, propagating any errors.
+        let java17 = java17?;
+        let java18 = java18?;
+        let java19 = java19?;
+        let java20 = java20?;
+        let java21 = java21?;
 
+        // Return a new Coordinator instance.
         Ok(Self {
             backend,
-            stable,
-            beta,
-            nightly,
+            java17,
+            java18,
+            java19,
+            java20,
+            java21,
             token,
         })
     }
 
+    // Method to handle a compile request.
     pub async fn compile(
         &self,
         request: CompileRequest,
     ) -> Result<WithOutput<CompileResponse>, CompileError> {
-        self.select_channel(request.channel).compile(request).await
+        // Select the appropriate Container based on the requested Java version, then initiate compilation.
+        self.select_version(request.version).compile(request).await
     }
 
+    // Method to begin a new compilation.
     pub async fn begin_compile(
         &self,
         request: CompileRequest,
     ) -> Result<ActiveCompilation, CompileError> {
-        self.select_channel(request.channel)
+        // Select the appropriate Container based on the requested Java version, then begin compilation.
+        self.select_version(request.version)
             .begin_compile(request)
             .await
     }
 
+    // Helper method to select a Container based on a JavaVersion.
+    fn select_version(&self, version: JavaVersion) -> &Container {
+        match version {
+            JavaVersion::Java17 => &self.java17,
+            JavaVersion::Java18 => &self.java18,
+            JavaVersion::Java19 => &self.java19,
+            JavaVersion::Java20 => &self.java20,
+            JavaVersion::Java21 => &self.java21,
+        }
+    }
+
+    // Asynchronous method to shut down the Coordinator and all its Containers.
     pub async fn shutdown(self) -> Result<B> {
         let Self {
             backend,
-            stable,
-            beta,
-            nightly,
+            java17,
+            java18,
+            java19,
+            java20,
+            java21,
             token,
         } = self;
+        // Cancel the cancellation token, signaling all Containers to shut down.
         token.cancel();
 
-        let (stable, beta, nightly) = join!(stable.shutdown(), beta.shutdown(), nightly.shutdown());
+        // Wait for all Containers to shut down.
+        let (java17, java18, java19, java20, java21) = join!(
+            java17.shutdown(),
+            java18.shutdown(),
+            java19.shutdown(),
+            java20.shutdown(),
+            java21.shutdown()
+        );
 
-        stable?;
-        beta?;
-        nightly?;
+        // Propagate any errors from shutting down the Containers.
+        java17?;
+        java18?;
+        java19?;
+        java20?;
+        java21?;
 
+        // Return the backend, effectively consuming the Coordinator.
         Ok(backend)
     }
-
-    fn select_channel(&self, channel: Channel) -> &Container {
-        match channel {
-            Channel::Stable => &self.stable,
-            Channel::Beta => &self.beta,
-            Channel::Nightly => &self.nightly,
-        }
-    }
 }
+
 
 impl Coordinator<DockerBackend> {
     pub async fn new_docker() -> Result<Self, Error> {
@@ -1064,12 +958,14 @@ impl Backend for DockerBackend {
     }
 }
 
-impl Channel {
+impl JavaVersion {
     fn to_container_name(self) -> &'static str {
         match self {
-            Channel::Stable => "rust-stable",
-            Channel::Beta => "rust-beta",
-            Channel::Nightly => "rust-nightly",
+            JavaVersion::Java17 => "java-17",
+            JavaVersion::Java18 => "java-18",
+            JavaVersion::Java19 => "java-19",
+            JavaVersion::Java20 => "java-20",
+            JavaVersion::Java21 => "java-21",
         }
     }
 }
