@@ -84,7 +84,7 @@ export enum PrimaryActionCore {
 export type PrimaryAction = PrimaryActionCore | PrimaryActionAuto;
 
 export enum Channel {
-  Stable = 'stable',
+  Stable = 'java17',
   Beta = 'beta',
   Nightly = 'nightly',
   Java19 = 'java19',
