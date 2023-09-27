@@ -30,49 +30,85 @@ use crate::{
     DropErrorDetailsExt,
 };
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AssemblyFlavor {
-    Att,
-    Intel,
-}
+// These shouldn't apply to Java
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum DemangleAssembly {
-    Demangle,
-    Mangle,
-}
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum AssemblyFlavor {
+//     Att,
+//     Intel,
+// }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ProcessAssembly {
-    Filter,
-    Raw,
-}
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum DemangleAssembly {
+//     Demangle,
+//     Mangle,
+// }
+
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum ProcessAssembly {
+//     Filter,
+//     Raw,
+// }
+
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum CompileTarget {
+//     Assembly(AssemblyFlavor, DemangleAssembly, ProcessAssembly),
+//     Hir,
+//     LlvmIr,
+//     Mir,
+//     Wasm,
+// }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum CompileTarget {
-    Assembly(AssemblyFlavor, DemangleAssembly, ProcessAssembly),
-    Hir,
-    LlvmIr,
-    Mir,
-    Wasm,
+    Bytecode,
+    Jar,
 }
+
+// Java doesn't use channels, silly.
+
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum Channel {
+//     Stable,
+//     Beta,
+//     Nightly,
+// }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Channel {
-    Stable,
-    Beta,
-    Nightly,
+pub enum JavaVersion {
+    Java17,
+    Java18,
+    Java19,
+    Java20,
+    Java21,
+    // ... add other versions as needed
 }
 
-impl Channel {
-    pub(crate) const ALL: [Self; 3] = [Self::Stable, Self::Beta, Self::Nightly];
+// silly rust channels , we don't have those in Java land!
+// impl Channel {
+//     pub(crate) const ALL: [Self; 3] = [Self::Stable, Self::Beta, Self::Nightly];
+
+//     #[cfg(test)]
+//     pub(crate) fn to_str(self) -> &'static str {
+//         match self {
+//             Channel::Stable => "stable",
+//             Channel::Beta => "beta",
+//             Channel::Nightly => "nightly",
+//         }
+//     }
+// }
+
+impl JavaVersion {
+    pub(crate) const ALL: [Self; 5] = [Self::Java17, Self::Java18, Self::Java19, Self::Java20, Self::Java21];
 
     #[cfg(test)]
     pub(crate) fn to_str(self) -> &'static str {
         match self {
-            Channel::Stable => "stable",
-            Channel::Beta => "beta",
-            Channel::Nightly => "nightly",
+            JavaVersion::Java17 => "17",
+            JavaVersion::Java18 => "18",
+            JavaVersion::Java19 => "19",
+            JavaVersion::Java20 => "20",
+            JavaVersion::Java21 => "21",
         }
     }
 }
@@ -83,72 +119,123 @@ pub enum Mode {
     Release,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Edition {
-    Rust2015,
-    Rust2018,
-    Rust2021,
+// Since Java doesn't have editions like Rust, the Edition enumeration is not needed.
+// The JavaVersion enumeration defined earlier should suffice for handling different versions of Java.
+
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum Edition {
+//     Rust2015,
+//     Rust2018,
+//     Rust2021,
+// }
+
+// impl Edition {
+//     #[cfg(test)]
+//     pub(crate) const ALL: [Self; 3] = [Self::Rust2015, Self::Rust2018, Self::Rust2021];
+
+//     pub(crate) fn to_str(self) -> &'static str {
+//         match self {
+//             Edition::Rust2015 => "2015",
+//             Edition::Rust2018 => "2018",
+//             Edition::Rust2021 => "2021",
+//         }
+//     }
+
+//     pub(crate) fn to_cargo_toml_key(self) -> &'static str {
+//         self.to_str()
+//     }
+// }
+
+// yeah, Java doesn't have crates however packages are a thing
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum CrateType {
+//     Binary,
+//     Library(LibraryType),
+// }
+
+pub enum JavaPackageType {
+    Class,
+    Jar,
+    ExecutableJar,
+    War,  // Web application archive
 }
 
-impl Edition {
-    #[cfg(test)]
-    pub(crate) const ALL: [Self; 3] = [Self::Rust2015, Self::Rust2018, Self::Rust2021];
+// impl CrateType {
+//     pub(crate) fn is_binary(self) -> bool {
+//         self == CrateType::Binary
+//     }
 
-    pub(crate) fn to_str(self) -> &'static str {
+//     pub(crate) fn to_cargo_toml_key(self) -> &'static str {
+//         use {CrateType::*, LibraryType::*};
+
+//         match self {
+//             Binary => "bin",
+//             Library(Lib) => "lib",
+//             Library(Dylib) => "dylib",
+//             Library(Rlib) => "rlib",
+//             Library(Staticlib) => "staticlib",
+//             Library(Cdylib) => "cdylib",
+//             Library(ProcMacro) => "proc-macro",
+//         }
+//     }
+
+impl JavaPackageType {
+    pub(crate) fn is_executable_jar(self) -> bool {
+        self == JavaPackageType::ExecutableJar
+    }
+
+    pub(crate) fn to_build_tool_key(self) -> &'static str {
+        use JavaPackageType::*;
+
         match self {
-            Edition::Rust2015 => "2015",
-            Edition::Rust2018 => "2018",
-            Edition::Rust2021 => "2021",
+            Class => "class",
+            Jar => "jar",
+            ExecutableJar => "executable-jar",
+            War => "war",
         }
     }
+}
 
-    pub(crate) fn to_cargo_toml_key(self) -> &'static str {
-        self.to_str()
+    // pub(crate) fn to_library_cargo_toml_key(self) -> Option<&'static str> {
+    //     if self == Self::Binary {
+    //         None
+    //     } else {
+    //         Some(self.to_cargo_toml_key())
+    //     }
+    // }
+
+    // Java doesn't have a direct equivalent to Rust's different library types. 
+    // A .jar file in Java can be used both as a library and as an executable archive.
+    pub(crate) fn to_library_build_tool_key(self) -> Option<&'static str> {
+    match self {
+        JavaPackageType::Class | JavaPackageType::ExecutableJar => None,
+        JavaPackageType::Jar | JavaPackageType::War => Some(self.to_build_tool_key()),
     }
 }
+
+// #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+// pub enum LibraryType {
+//     Lib,
+//     Dylib,
+//     Rlib,
+//     Staticlib,
+//     Cdylib,
+//     ProcMacro,
+// }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum CrateType {
-    Binary,
-    Library(LibraryType),
+pub enum JavaLibraryType {
+    Jar,
+    War,
 }
 
-impl CrateType {
-    pub(crate) fn is_binary(self) -> bool {
-        self == CrateType::Binary
-    }
-
-    pub(crate) fn to_cargo_toml_key(self) -> &'static str {
-        use {CrateType::*, LibraryType::*};
-
+impl JavaLibraryType {
+    pub(crate) fn to_build_tool_key(self) -> &'static str {
         match self {
-            Binary => "bin",
-            Library(Lib) => "lib",
-            Library(Dylib) => "dylib",
-            Library(Rlib) => "rlib",
-            Library(Staticlib) => "staticlib",
-            Library(Cdylib) => "cdylib",
-            Library(ProcMacro) => "proc-macro",
+            JavaLibraryType::Jar => "jar",
+            JavaLibraryType::War => "war",
         }
     }
-
-    pub(crate) fn to_library_cargo_toml_key(self) -> Option<&'static str> {
-        if self == Self::Binary {
-            None
-        } else {
-            Some(self.to_cargo_toml_key())
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum LibraryType {
-    Lib,
-    Dylib,
-    Rlib,
-    Staticlib,
-    Cdylib,
-    ProcMacro,
 }
 
 #[derive(Debug, Clone)]
