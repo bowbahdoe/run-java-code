@@ -33,49 +33,49 @@ const ChannelMenu: React.FC<ChannelMenuProps> = props => {
 
   return (
     <Fragment>
-      <MenuGroup title="Channel &mdash; Choose the rust version">
+      <MenuGroup title="Channel &mdash; Choose the Java version">
         <SelectOne
-          name="Stable channel"
+          name="Java 17"
           currentValue={channel}
           thisValue={Channel.Stable}
           changeValue={changeChannel}
         >
-          <Desc>Build using the Stable version: {stableVersion}</Desc>
+          <Desc>Build using Java 17: {stableVersion}</Desc>
         </SelectOne>
         <SelectOne
-          name="Beta channel"
+          name="Java 18"
           currentValue={channel}
           thisValue={Channel.Beta}
           changeValue={changeChannel}
         >
-          <Desc>Build using the Beta version: {betaVersion}</Desc>
+          <Desc>Build using Java 18: {betaVersion}</Desc>
           <Desc>({betaVersionDetails})</Desc>
-        </SelectOne>
-        <SelectOne
-          name="Nightly channel"
-          currentValue={channel}
-          thisValue={Channel.Nightly}
-          changeValue={changeChannel}
-        >
-          <Desc>Build using the Nightly version: {nightlyVersion}</Desc>
-          <Desc>({nightlyVersionDetails})</Desc>
         </SelectOne>
         <SelectOne
           name="Java 19"
           currentValue={channel}
-          thisValue={Channel.Java19}
+          thisValue={Channel.Nightly}
           changeValue={changeChannel}
         >
-          <Desc>Build using Java 19</Desc>
-          <Desc>({java19Version})</Desc>
+          <Desc>Build using Java 19: {nightlyVersion}</Desc>
+          <Desc>({nightlyVersionDetails})</Desc>
         </SelectOne>
         <SelectOne
           name="Java 20"
           currentValue={channel}
-          thisValue={Channel.Java20}
+          thisValue={Channel.Java19}
           changeValue={changeChannel}
         >
           <Desc>Build using Java 20</Desc>
+          <Desc>({java19Version})</Desc>
+        </SelectOne>
+        <SelectOne
+          name="Java 21"
+          currentValue={channel}
+          thisValue={Channel.Java20}
+          changeValue={changeChannel}
+        >
+          <Desc>Build using Java 21</Desc>
           <Desc>({java20Version})</Desc>
 
         </SelectOne>
