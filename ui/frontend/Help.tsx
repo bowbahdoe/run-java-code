@@ -241,9 +241,9 @@ const Help: React.FC = () => {
           </p>
 
           <p>
-            You can choose which channel to compile with using the
+            You can choose which runtime to compile with using the
             {' '}
-            <strong>Channel</strong> menu.
+            <strong>Runtime</strong> menu.
           </p>
         </LinkableSection>
 

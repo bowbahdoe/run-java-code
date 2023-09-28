@@ -150,90 +150,35 @@ fn basic_secure_docker_command() -> Command {
 
 fn build_execution_command(
     target: Option<CompileTarget>,
-    channel: Channel,
-    mode: Mode,
+    release: Release,
+    runtime: Runtime,
     req: impl CrateTypeRequest,
     tests: bool,
     preview: bool
 ) -> Vec<&'static str> {
     use self::CompileTarget::*;
     use self::CrateType::*;
-    use self::Mode::*;
 
-    match channel.java_version() {
-        Some(version) => {
-            let mut cmd = vec![
-                "java",
-            ];
-            cmd.extend(&["--source", version]);
-            // Enable using java.lang.foreign w/o warnings
-            cmd.push("--enable-native-access=ALL-UNNAMED");
+    let mut cmd = vec![
+        "java",
+    ];
+    cmd.extend(&["--source", release.java_release()]);
+    // Enable using java.lang.foreign w/o warnings
+    cmd.push("--enable-native-access=ALL-UNNAMED");
 
-            if preview {
-                cmd.push("--enable-preview");
-            }
-
-            cmd.push("src/main.rs");
-            cmd
-        }
-        _ => {
-            let mut cmd = vec!["cargo"];
-
-            match (target, req.crate_type(), tests) {
-                (Some(Wasm), _, _) => cmd.push("wasm"),
-                (Some(_), _, _) => cmd.push("rustc"),
-                (_, _, true) => cmd.push("test"),
-                (_, Library(_), _) => cmd.push("build"),
-                (_, _, _) => cmd.push("run"),
-            }
-
-            if mode == Release {
-                cmd.push("--release");
-            }
-
-            if let Some(target) = target {
-                cmd.extend(&["--", "-o"]);
-                if target == Hir {
-                    // -Zunpretty=hir only emits the HIR, not the binary itself
-                    cmd.push("/playground-result/compilation.hir");
-                } else {
-                    cmd.push("/playground-result/compilation");
-                }
-
-                match target {
-                    Assembly(flavor, _, _) => {
-                        use self::AssemblyFlavor::*;
-
-                        cmd.push("--emit=asm");
-
-                        // Enable extra assembly comments for nightly builds
-                        if let Channel::Nightly = channel {
-                            cmd.push("-Z");
-                            cmd.push("asm-comments");
-                        }
-
-                        cmd.push("-C");
-                        match flavor {
-                            Att => cmd.push("llvm-args=-x86-asm-syntax=att"),
-                            Intel => cmd.push("llvm-args=-x86-asm-syntax=intel"),
-                        }
-                    }
-                    LlvmIr => cmd.push("--emit=llvm-ir"),
-                    Mir => cmd.push("--emit=mir"),
-                    Hir => cmd.push("-Zunpretty=hir"),
-                    Wasm => { /* handled by cargo-wasm wrapper */ }
-                }
-            }
-
-            cmd
-        }
+    if preview {
+        cmd.push("--enable-preview");
     }
+
+    cmd.push("src/main.rs");
+    cmd
+
 }
 
 fn set_execution_environment(
     cmd: &mut Command,
     target: Option<CompileTarget>,
-    req: impl CrateTypeRequest + EditionRequest + BacktraceRequest,
+    req: impl CrateTypeRequest + ReleaseRequest,
 ) {
     use self::CompileTarget::*;
 
@@ -243,8 +188,6 @@ fn set_execution_environment(
     }
 
     cmd.apply_crate_type(&req);
-    cmd.apply_edition(&req);
-    cmd.apply_backtrace(&req);
 }
 
 pub struct Sandbox {
@@ -284,7 +227,7 @@ impl Sandbox {
     pub async fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
         self.write_source_code(&req.code).await?;
 
-        let command = self.compile_command(req.target, req.channel, req.mode, req.tests, req);
+        let command = self.compile_command(req.target, req.release.unwrap_or(req.runtime.default_release()), req.runtime, req.tests, req);
 
         let output = run_command_with_timeout(command).await?;
 
@@ -354,7 +297,7 @@ impl Sandbox {
 
     pub async fn execute(&self, req: &ExecuteRequest) -> Result<ExecuteResponse> {
         self.write_source_code(&req.code).await?;
-        let command = self.execute_command(req.channel, req.mode, req.tests, req);
+        let command = self.execute_command(req.release.unwrap_or(req.runtime.default_release()), req.runtime, req.tests, req);
 
         let output = run_command_with_timeout(command).await?;
 
@@ -407,25 +350,9 @@ impl Sandbox {
         })
     }
 
-    pub async fn macro_expansion(
-        &self,
-        req: &MacroExpansionRequest,
-    ) -> Result<MacroExpansionResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.macro_expansion_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(MacroExpansionResponse {
-            success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
     pub async fn crates(&self) -> Result<Vec<CrateInformation>> {
-        let mut command = basic_secure_docker_command();
-        command.args(&[Channel::Stable.container_name()]);
+        /* let mut command = basic_secure_docker_command();
+        command.args(&[Runtime::Stable.container_name()]);
         command.args(&["cat", "crate-information.json"]);
 
         let output = run_command_with_timeout(command).await?;
@@ -434,66 +361,31 @@ impl Sandbox {
             ::serde_json::from_slice(&output.stdout).context(UnableToParseCrateInformationSnafu)?;
 
         let crates = crate_info.into_iter().map(Into::into).collect();
-
         Ok(crates)
+        */
+
+        Ok(vec![])
     }
 
-    pub async fn version(&self, channel: Channel) -> Result<Version> {
-        if channel.is_java() {
-            let mut command = basic_secure_docker_command();
-            command.args(&[channel.container_name()]);
-            command.args(&["java", "--version"]);
+    pub async fn version(&self, runtime: Runtime) -> Result<Version> {
+        let mut command = basic_secure_docker_command();
+        command.args(&[runtime.container_name()]);
+        command.args(&["java", "--version"]);
 
 
-            let output = run_command_with_timeout(command).await?;
+        let output = run_command_with_timeout(command).await?;
 
-            let version_output = vec_to_str(output.stdout)?;
+        let version_output = vec_to_str(output.stdout)?;
 
-            let version = version_output.lines()
-                .take(1)
-                .fold(String::new(), |a, b| a + " " + b);
+        let version = version_output.lines()
+            .take(1)
+            .fold(String::new(), |a, b| a + " " + b);
 
-            Ok(Version {
-                release: version.to_string(),
-                commit_hash: version.to_string(),
-                commit_date: version.to_string(),
-            })
-        }
-        else {
-            let mut command = basic_secure_docker_command();
-            command.args(&[channel.container_name()]);
-            command.args(&["rustc", "--version", "--verbose"]);
-
-            let output = run_command_with_timeout(command).await?;
-            let version_output = vec_to_str(output.stdout)?;
-
-            let mut info: BTreeMap<String, String> = version_output
-                .lines()
-                .skip(1)
-                .filter_map(|line| {
-                    let mut pieces = line.splitn(2, ':').fuse();
-                    match (pieces.next(), pieces.next()) {
-                        (Some(name), Some(value)) => Some((name.trim().into(), value.trim().into())),
-                        _ => None,
-                    }
-                })
-                .collect();
-
-            let release = info.remove("release").context(VersionReleaseMissingSnafu)?;
-            let commit_hash = info
-                .remove("commit-hash")
-                .context(VersionHashMissingSnafu)?;
-            let commit_date = info
-                .remove("commit-date")
-                .context(VersionDateMissingSnafu)?;
-
-            Ok(Version {
-                release,
-                commit_hash,
-                commit_date,
-            })
-        }
-
+        Ok(Version {
+            release: version.trim().to_string(),
+            commit_hash: version.trim().to_string(),
+            commit_date: version.trim().to_string(),
+        })
     }
 
     pub async fn version_rustfmt(&self) -> Result<Version> {
@@ -552,23 +444,24 @@ impl Sandbox {
     fn compile_command(
         &self,
         target: CompileTarget,
-        channel: Channel,
-        mode: Mode,
+        release: Release,
+        runtime: Runtime,
         tests: bool,
-        req: impl CrateTypeRequest + EditionRequest + BacktraceRequest + PreviewRequest,
+        req: impl CrateTypeRequest + ReleaseRequest + PreviewRequest,
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.crate_type()));
         set_execution_environment(&mut cmd, Some(target), &req);
         let execution_cmd = build_execution_command(
             Some(target),
-            channel,
-            mode,
+            release,
+            runtime,
             &req,
             tests,
+
             req.preview()
         );
 
-        cmd.arg(&channel.container_name()).args(&execution_cmd);
+        cmd.arg(&runtime.container_name()).args(&execution_cmd);
 
         debug!("Compilation command is {:?}", cmd);
 
@@ -577,36 +470,34 @@ impl Sandbox {
 
     fn execute_command(
         &self,
-        channel: Channel,
-        mode: Mode,
+        release: Release,
+        runtime: Runtime,
         tests: bool,
-        req: impl CrateTypeRequest + EditionRequest + BacktraceRequest + PreviewRequest,
+        req: impl CrateTypeRequest + ReleaseRequest + PreviewRequest,
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.crate_type()));
         set_execution_environment(&mut cmd, None, &req);
 
         let execution_cmd = build_execution_command(
             None,
-            channel,
-            mode,
+            release,
+            runtime,
             &req,
             tests,
         req.preview()
         );
 
-        cmd.arg(&channel.container_name()).args(&execution_cmd);
+        cmd.arg(&runtime.container_name()).args(&execution_cmd);
 
         debug!("Execution command is {:?}", cmd);
 
         cmd
     }
 
-    fn format_command(&self, req: impl EditionRequest) -> Command {
+    fn format_command(&self, req: impl ReleaseRequest) -> Command {
         let crate_type = CrateType::Binary;
 
         let mut cmd = self.docker_command(Some(crate_type));
-
-        cmd.apply_edition(req);
 
         cmd.arg("rustfmt").args(&["cargo", "fmt"]);
 
@@ -615,11 +506,10 @@ impl Sandbox {
         cmd
     }
 
-    fn clippy_command(&self, req: impl CrateTypeRequest + EditionRequest) -> Command {
+    fn clippy_command(&self, req: impl CrateTypeRequest + ReleaseRequest) -> Command {
         let mut cmd = self.docker_command(Some(req.crate_type()));
 
         cmd.apply_crate_type(&req);
-        cmd.apply_edition(&req);
 
         cmd.arg("clippy").args(&["cargo", "clippy"]);
 
@@ -628,29 +518,12 @@ impl Sandbox {
         cmd
     }
 
-    fn miri_command(&self, req: impl EditionRequest) -> Command {
+    fn miri_command(&self, req: impl ReleaseRequest) -> Command {
         let mut cmd = self.docker_command(None);
-        cmd.apply_edition(req);
 
         cmd.arg("miri").args(&["cargo", "miri-playground"]);
 
         debug!("Miri command is {:?}", cmd);
-
-        cmd
-    }
-
-    fn macro_expansion_command(&self, req: impl EditionRequest) -> Command {
-        let mut cmd = self.docker_command(None);
-        cmd.apply_edition(req);
-
-        cmd.arg(&Channel::Nightly.container_name()).args(&[
-            "cargo",
-            "rustc",
-            "--",
-            "-Zunpretty=expanded",
-        ]);
-
-        debug!("Macro expansion command is {:?}", cmd);
 
         cmd
     }
@@ -808,63 +681,70 @@ impl fmt::Display for CompileTarget {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum Channel {
-    Stable,
-    Beta,
-    Nightly,
-    Java19,
+pub enum Runtime {
+    Latest,
     Java20
 }
 
-impl Channel {
-    fn java_version(&self) -> Option<&'static str> {
-        use self::Channel::*;
+impl Runtime {
+    pub fn latest() -> Runtime {
+        Runtime::Latest
+    }
 
+    fn default_release(&self) -> Release {
         match *self {
-            Java19 => Some("19"),
-            Java20 => Some("20"),
-            _ => None
+            Runtime::Latest => Release::_19,
+            Runtime::Java20 => Release::_20,
         }
     }
 
-    fn is_java(&self) -> bool{
-        self.java_version().is_some()
-    }
-
     fn container_name(&self) -> &'static str {
-        use self::Channel::*;
+        use self::Runtime::*;
 
         match *self {
-            Stable => "rust-stable",
-            Beta => "rust-beta",
-            Nightly => "rust-nightly",
-            Java19 => "amazoncorretto:19",
+            Latest => "amazoncorretto:19",
             Java20 => "amazoncorretto:20"
         }
     }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum Mode {
-    Debug,
-    Release,
+pub enum Release {
+    _8,
+    _9,
+    _10,
+    _11,
+    _12,
+    _13,
+    _14,
+    _15,
+    _16,
+    _17,
+    _18,
+    _19,
+    _20,
+    _21,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum Edition {
-    Rust2015,
-    Rust2018,
-    Rust2021, // TODO - add parallel tests for 2021
-}
-
-impl Edition {
-    fn cargo_ident(&self) -> &'static str {
-        use self::Edition::*;
+impl Release {
+    fn java_release(&self) -> &'static str {
+        use self::Release::*;
 
         match *self {
-            Rust2015 => "2015",
-            Rust2018 => "2018",
-            Rust2021 => "2021",
+            _8 => "8",
+            _9 => "9",
+            _10 => "10",
+            _11 => "11",
+            _12 => "12",
+            _13 => "13",
+            _14 => "14",
+            _15 => "15",
+            _16 => "16",
+            _17 => "17",
+            _18 => "18",
+            _19 => "19",
+            _20 => "20",
+            _21 => "21"
         }
     }
 }
@@ -913,8 +793,7 @@ impl LibraryType {
 
 trait DockerCommandExt {
     fn apply_crate_type(&mut self, req: impl CrateTypeRequest);
-    fn apply_edition(&mut self, req: impl EditionRequest);
-    fn apply_backtrace(&mut self, req: impl BacktraceRequest);
+    fn apply_release(&mut self, req: impl ReleaseRequest);
 }
 
 impl DockerCommandExt for Command {
@@ -927,18 +806,12 @@ impl DockerCommandExt for Command {
         }
     }
 
-    fn apply_edition(&mut self, req: impl EditionRequest) {
-        if let Some(edition) = req.edition() {
+    fn apply_release(&mut self, req: impl ReleaseRequest) {
+        if let Some(release) = req.release() {
             self.args(&[
-                "--env",
-                &format!("PLAYGROUND_EDITION={}", edition.cargo_ident()),
+                "--release",
+                release.java_release()
             ]);
-        }
-    }
-
-    fn apply_backtrace(&mut self, req: impl BacktraceRequest) {
-        if req.backtrace() {
-            self.args(&["--env", "RUST_BACKTRACE=1"]);
         }
     }
 }
@@ -953,23 +826,13 @@ impl<R: CrateTypeRequest> CrateTypeRequest for &'_ R {
     }
 }
 
-trait EditionRequest {
-    fn edition(&self) -> Option<Edition>;
+trait ReleaseRequest {
+    fn release(&self) -> Option<Release>;
 }
 
-impl<R: EditionRequest> EditionRequest for &'_ R {
-    fn edition(&self) -> Option<Edition> {
-        (*self).edition()
-    }
-}
-
-trait BacktraceRequest {
-    fn backtrace(&self) -> bool;
-}
-
-impl<R: BacktraceRequest> BacktraceRequest for &'_ R {
-    fn backtrace(&self) -> bool {
-        (*self).backtrace()
+impl<R: ReleaseRequest> ReleaseRequest for &'_ R {
+    fn release(&self) -> Option<Release> {
+        (*self).release()
     }
 }
 
@@ -986,12 +849,10 @@ impl<R: PreviewRequest> PreviewRequest for &'_ R {
 #[derive(Debug, Clone)]
 pub struct CompileRequest {
     pub target: CompileTarget,
-    pub channel: Channel,
+    pub runtime: Runtime,
     pub crate_type: CrateType,
-    pub mode: Mode,
-    pub edition: Option<Edition>,
+    pub release: Option<Release>,
     pub tests: bool,
-    pub backtrace: bool,
     pub preview: bool,
     pub code: String,
 }
@@ -1002,15 +863,9 @@ impl CrateTypeRequest for CompileRequest {
     }
 }
 
-impl EditionRequest for CompileRequest {
-    fn edition(&self) -> Option<Edition> {
-        self.edition
-    }
-}
-
-impl BacktraceRequest for CompileRequest {
-    fn backtrace(&self) -> bool {
-        self.backtrace
+impl ReleaseRequest for CompileRequest {
+    fn release(&self) -> Option<Release> {
+        self.release
     }
 }
 
@@ -1030,12 +885,10 @@ pub struct CompileResponse {
 
 #[derive(Debug, Clone)]
 pub struct ExecuteRequest {
-    pub channel: Channel,
-    pub mode: Mode,
-    pub edition: Option<Edition>,
+    pub runtime: Runtime,
+    pub release: Option<Release>,
     pub crate_type: CrateType,
     pub tests: bool,
-    pub backtrace: bool,
     pub preview: bool,
     pub code: String,
 }
@@ -1046,15 +899,9 @@ impl CrateTypeRequest for ExecuteRequest {
     }
 }
 
-impl EditionRequest for ExecuteRequest {
-    fn edition(&self) -> Option<Edition> {
-        self.edition
-    }
-}
-
-impl BacktraceRequest for ExecuteRequest {
-    fn backtrace(&self) -> bool {
-        self.backtrace
+impl ReleaseRequest for ExecuteRequest {
+    fn release(&self) -> Option<Release> {
+        self.release
     }
 }
 
@@ -1074,12 +921,12 @@ pub struct ExecuteResponse {
 #[derive(Debug, Clone)]
 pub struct FormatRequest {
     pub code: String,
-    pub edition: Option<Edition>,
+    pub release: Option<Release>,
 }
 
-impl EditionRequest for FormatRequest {
-    fn edition(&self) -> Option<Edition> {
-        self.edition
+impl ReleaseRequest for FormatRequest {
+    fn release(&self) -> Option<Release> {
+        self.release
     }
 }
 
@@ -1094,7 +941,7 @@ pub struct FormatResponse {
 #[derive(Debug, Clone)]
 pub struct ClippyRequest {
     pub code: String,
-    pub edition: Option<Edition>,
+    pub release: Option<Release>,
     pub crate_type: CrateType,
 }
 
@@ -1104,9 +951,9 @@ impl CrateTypeRequest for ClippyRequest {
     }
 }
 
-impl EditionRequest for ClippyRequest {
-    fn edition(&self) -> Option<Edition> {
-        self.edition
+impl ReleaseRequest for ClippyRequest {
+    fn release(&self) -> Option<Release> {
+        self.release
     }
 }
 
@@ -1120,12 +967,12 @@ pub struct ClippyResponse {
 #[derive(Debug, Clone)]
 pub struct MiriRequest {
     pub code: String,
-    pub edition: Option<Edition>,
+    pub release: Option<Release>,
 }
 
-impl EditionRequest for MiriRequest {
-    fn edition(&self) -> Option<Edition> {
-        self.edition
+impl ReleaseRequest for MiriRequest {
+    fn release(&self) -> Option<Release> {
+        self.release
     }
 }
 
@@ -1134,18 +981,6 @@ pub struct MiriResponse {
     pub success: bool,
     pub stdout: String,
     pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct MacroExpansionRequest {
-    pub code: String,
-    pub edition: Option<Edition>,
-}
-
-impl EditionRequest for MacroExpansionRequest {
-    fn edition(&self) -> Option<Edition> {
-        self.edition
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -1184,13 +1019,11 @@ mod test {
     impl Default for ExecuteRequest {
         fn default() -> Self {
             ExecuteRequest {
-                channel: Channel::Stable,
+                runtime: Runtime::latest(),
                 crate_type: CrateType::Binary,
-                mode: Mode::Debug,
                 tests: false,
                 code: HELLO_WORLD_CODE.to_string(),
-                edition: None,
-                backtrace: false,
+                release: None,
                 preview: false,
             }
         }
@@ -1200,13 +1033,11 @@ mod test {
         fn default() -> Self {
             CompileRequest {
                 target: CompileTarget::LlvmIr,
-                channel: Channel::Stable,
+                runtime: Runtime::latest(),
                 crate_type: CrateType::Binary,
-                mode: Mode::Debug,
                 tests: false,
                 code: HELLO_WORLD_CODE.to_string(),
-                edition: None,
-                backtrace: false,
+                release: None,
                 preview: false,
             }
         }
@@ -1217,7 +1048,7 @@ mod test {
             ClippyRequest {
                 code: HELLO_WORLD_CODE.to_string(),
                 crate_type: CrateType::Binary,
-                edition: None,
+                release: None,
             }
         }
     }
@@ -1263,7 +1094,6 @@ mod test {
     async fn release_mode() {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
-            mode: Mode::Release,
             code: COMPILATION_MODE_CODE.to_string(),
             ..ExecuteRequest::default()
         };
@@ -1285,10 +1115,10 @@ mod test {
     "#;
 
     #[tokio::test]
-    async fn stable_channel() {
+    async fn stable_runtime() {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
-            channel: Channel::Stable,
+            runtime: Runtime::latest(),
             code: VERSION_CODE.to_string(),
             ..ExecuteRequest::default()
         };
@@ -1302,10 +1132,10 @@ mod test {
     }
 
     #[tokio::test]
-    async fn beta_channel() {
+    async fn beta_runtime() {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
-            channel: Channel::Beta,
+            runtime: Runtime::latest(),
             code: VERSION_CODE.to_string(),
             ..ExecuteRequest::default()
         };
@@ -1319,10 +1149,10 @@ mod test {
     }
 
     #[tokio::test]
-    async fn nightly_channel() {
+    async fn nightly_runtime() {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
-            channel: Channel::Nightly,
+            runtime: Runtime::latest(),
             code: VERSION_CODE.to_string(),
             ..ExecuteRequest::default()
         };
@@ -1345,10 +1175,10 @@ mod test {
     const EDITION_ERROR: &str = "found keyword `async`";
 
     #[tokio::test]
-    async fn rust_edition_default() -> Result<()> {
+    async fn rust_release_default() -> Result<()> {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
-            channel: Channel::Nightly,
+            runtime: Runtime::latest(),
             code: EDITION_CODE.to_string(),
             ..ExecuteRequest::default()
         };
@@ -1360,12 +1190,12 @@ mod test {
     }
 
     #[tokio::test]
-    async fn rust_edition_2015() -> Result<()> {
+    async fn rust_release_2015() -> Result<()> {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
-            channel: Channel::Nightly,
+            runtime: Runtime::latest(),
             code: EDITION_CODE.to_string(),
-            edition: Some(Edition::Rust2015),
+            release: Some(Release::Rust2015),
             ..ExecuteRequest::default()
         };
 
@@ -1376,12 +1206,12 @@ mod test {
     }
 
     #[tokio::test]
-    async fn rust_edition_2018() -> Result<()> {
+    async fn rust_release_2018() -> Result<()> {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
-            channel: Channel::Nightly,
+            runtime: Runtime::latest(),
             code: EDITION_CODE.to_string(),
-            edition: Some(Edition::Rust2018),
+            release: Some(Release::Rust2018),
             ..ExecuteRequest::default()
         };
 
@@ -1409,7 +1239,6 @@ mod test {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
             code: BACKTRACE_CODE.to_string(),
-            backtrace: false,
             ..ExecuteRequest::default()
         };
 
@@ -1431,7 +1260,6 @@ mod test {
         let _singleton = one_test_at_a_time();
         let req = ExecuteRequest {
             code: BACKTRACE_CODE.to_string(),
-            backtrace: true,
             ..ExecuteRequest::default()
         };
 
@@ -1533,7 +1361,7 @@ mod test {
         let _singleton = one_test_at_a_time();
         let req = FormatRequest {
             code: "fn foo () { method_call(); }".to_string(),
-            edition: None,
+            release: None,
         };
 
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
@@ -1552,11 +1380,11 @@ mod test {
     const FORMAT_ERROR: &str = r#"error: expected identifier, found `"1"`"#;
 
     #[tokio::test]
-    async fn formatting_code_edition_2015() -> Result<()> {
+    async fn formatting_code_release_2015() -> Result<()> {
         let _singleton = one_test_at_a_time();
         let req = FormatRequest {
             code: FORMAT_IN_EDITION_2018.to_string(),
-            edition: Some(Edition::Rust2015),
+            release: Some(Release::Rust2015),
         };
 
         let resp = Sandbox::new().await?.format(&req).await?;
@@ -1566,11 +1394,11 @@ mod test {
     }
 
     #[tokio::test]
-    async fn formatting_code_edition_2018() -> Result<()> {
+    async fn formatting_code_release_2018() -> Result<()> {
         let _singleton = one_test_at_a_time();
         let req = FormatRequest {
             code: FORMAT_IN_EDITION_2018.to_string(),
-            edition: Some(Edition::Rust2018),
+            release: Some(Release::Rust2018),
         };
 
         let resp = Sandbox::new().await?.format(&req).await?;
@@ -1615,7 +1443,7 @@ mod test {
     async fn linting_code_options() {
         let _singleton = one_test_at_a_time();
         let code = r#"
-        use itertools::Itertools; // Edition 2018 feature
+        use itertools::Itertools; // Release 2018 feature
 
         fn example() {
             let a = 0.0 / 0.0;
@@ -1626,7 +1454,7 @@ mod test {
         let req = ClippyRequest {
             code: code.to_string(),
             crate_type: CrateType::Library(LibraryType::Rlib),
-            edition: Some(Edition::Rust2018),
+            release: Some(Release::Rust2018),
         };
 
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
@@ -1648,7 +1476,7 @@ mod test {
 
         let req = MiriRequest {
             code: code.to_string(),
-            edition: None,
+            release: None,
         };
 
         let sb = Sandbox::new().await?;

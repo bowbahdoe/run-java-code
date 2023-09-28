@@ -3,7 +3,7 @@ import { Draft, PayloadAction, createAsyncThunk, createSlice } from '@reduxjs/to
 import { jsonGet, jsonPost, routes } from '../../actions';
 import { baseUrlSelector, codeSelector } from '../../selectors';
 import RootState from '../../state';
-import { Channel, Edition, Mode } from '../../types';
+import { Runtime, Release } from '../../types';
 import { RequestsInProgress } from './sharedStateManagement';
 
 const sliceName = 'output/gist';
@@ -18,9 +18,8 @@ interface State extends RequestsInProgress {
   code?: string;
   stdout?: string;
   stderr?: string;
-  channel?: Channel;
-  mode?: Mode;
-  edition?: Edition;
+  runtime?: Runtime;
+  release?: Release;
 }
 
 interface SuccessProps {
@@ -29,9 +28,8 @@ interface SuccessProps {
   code: string;
   stdout: string;
   stderr: string;
-  channel: Channel;
-  mode: Mode;
-  edition: Edition;
+  runtime: Runtime;
+  release: Release;
 }
 
 type PerformGistLoadProps = Pick<
@@ -49,14 +47,14 @@ export const performGistLoad = createAsyncThunk<
   SuccessProps,
   PerformGistLoadProps,
   { state: RootState }
->(`${sliceName}/load`, async ({ id, channel, mode, edition }, { getState }) => {
+>(`${sliceName}/load`, async ({ id, runtime, release }, { getState }) => {
   const state = getState();
   const baseUrl = baseUrlSelector(state);
   const gistUrl = new URL(routes.meta.gistLoad, baseUrl);
   const u = new URL(id, gistUrl);
 
   const gist = await jsonGet(u);
-  return { channel, mode, edition, ...gist };
+  return { runtime: runtime, release: release, ...gist };
 });
 
 export const performGistSave = createAsyncThunk<SuccessProps, void, { state: RootState }>(
@@ -65,14 +63,14 @@ export const performGistSave = createAsyncThunk<SuccessProps, void, { state: Roo
     const state = getState();
     const code = codeSelector(state);
     const {
-      configuration: { channel, mode, edition },
+      configuration: { runtime, release },
       output: {
         execute: { stdout = '', stderr = '' },
       },
     } = state;
 
     const json = await jsonPost<GistResponseBody>(routes.meta.gistSave, { code });
-    return { ...json, code, stdout, stderr, channel, mode, edition };
+    return { ...json, code, stdout, stderr, runtime: runtime, release: release };
   },
 );
 

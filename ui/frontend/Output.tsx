@@ -47,7 +47,7 @@ interface PaneWithCodeProps extends SimplePaneProps {
 
 const Output: React.FC = () => {
   const somethingToShow = useSelector(selectors.getSomethingToShow);
-  const { meta: { focus }, execute, format, clippy, miri, macroExpansion, assembly, llvmIr, mir, hir, wasm, gist } =
+  const { meta: { focus }, execute, format, clippy, miri, assembly, llvmIr, mir, hir, wasm, gist } =
     useSelector((state: State) => state.output);
 
   const dispatch = useDispatch();
@@ -56,7 +56,6 @@ const Output: React.FC = () => {
   const focusFormat = useCallback(() => dispatch(actions.changeFocus(Focus.Format)), [dispatch]);
   const focusClippy = useCallback(() => dispatch(actions.changeFocus(Focus.Clippy)), [dispatch]);
   const focusMiri = useCallback(() => dispatch(actions.changeFocus(Focus.Miri)), [dispatch]);
-  const focusMacroExpansion = useCallback(() => dispatch(actions.changeFocus(Focus.MacroExpansion)), [dispatch]);
   const focusAssembly = useCallback(() => dispatch(actions.changeFocus(Focus.Asm)), [dispatch]);
   const focusLlvmIr = useCallback(() => dispatch(actions.changeFocus(Focus.LlvmIr)), [dispatch]);
   const focusMir = useCallback(() => dispatch(actions.changeFocus(Focus.Mir)), [dispatch]);
@@ -79,7 +78,6 @@ const Output: React.FC = () => {
         {focus === Focus.Format && <SimplePane {...format} kind="format" />}
         {focus === Focus.Clippy && <SimplePane {...clippy} kind="clippy" />}
         {focus === Focus.Miri && <SimplePane {...miri} kind="miri" />}
-        {focus === Focus.MacroExpansion && <SimplePane {...macroExpansion} kind="macro-expansion" />}
         {focus === Focus.Asm && <PaneWithCode {...assembly} kind="asm" />}
         {focus === Focus.LlvmIr && <PaneWithCode {...llvmIr} kind="llvm-ir" />}
         {focus === Focus.Mir && <PaneWithMir {...mir} kind="mir" />}
@@ -109,10 +107,6 @@ const Output: React.FC = () => {
           label="Miri"
           onClick={focusMiri}
           tabProps={miri} />
-        <Tab kind={Focus.MacroExpansion} focus={focus}
-          label="Macro expansion"
-          onClick={focusMacroExpansion}
-          tabProps={macroExpansion} />
         <Tab kind={Focus.Asm} focus={focus}
           label="ASM"
           onClick={focusAssembly}

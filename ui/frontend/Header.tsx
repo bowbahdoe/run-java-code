@@ -3,11 +3,10 @@ import { useSelector } from 'react-redux';
 
 import AdvancedOptionsMenu from './AdvancedOptionsMenu';
 import BuildMenu from './BuildMenu';
-import ChannelMenu from './ChannelMenu';
+import RuntimeMenu from './RuntimeMenu';
 import ConfigMenu from './ConfigMenu';
 import HeaderButton from './HeaderButton';
 import { BuildIcon, ConfigIcon, HelpIcon, MoreOptionsActiveIcon, MoreOptionsIcon } from './Icon';
-import ModeMenu from './ModeMenu';
 import PopButton from './PopButton';
 import { SegmentedButton, SegmentedButtonSet, SegmentedLink } from './SegmentedButton';
 import ToolsMenu from './ToolsMenu';
@@ -29,7 +28,7 @@ const Header: React.FC = () => (
     </HeaderSet>
     <HeaderSet id="channel-mode">
       <SegmentedButtonSet>
-        <ChannelMenuButton />
+        <RuntimeMenuButton />
         <AdvancedOptionsMenuButton />
       </SegmentedButtonSet>
     </HeaderSet>
@@ -62,7 +61,7 @@ interface HeaderSetProps {
 }
 
 const HeaderSet: React.FC<HeaderSetProps> = ({ id, children }) => (
-  <div className={id == 'channel-mode' ? styles.setChannelMode : styles.set}>{children}</div>
+  <div className={id == 'channel-mode' ? styles.setRuntimeMode : styles.set}>{children}</div>
 );
 
 const ExecuteButton: React.FC = () => {
@@ -91,30 +90,17 @@ const BuildMenuButton: React.FC = () => {
   return <PopButton Button={Button} Menu={BuildMenu} />;
 };
 
-const ModeMenuButton: React.FC = () => {
-  const label = useSelector(selectors.getModeLabel);
+const RuntimeMenuButton: React.FC = () => {
+  const label = useSelector(selectors.getRuntimeLabel);
 
   const Button = React.forwardRef<HTMLButtonElement, { toggle: () => void }>(({ toggle }, ref) => (
-    <SegmentedButton title="Mode &mdash; Choose the optimization level" ref={ref} onClick={toggle}>
+    <SegmentedButton title="Runtime &mdash; Choose the Rust version" ref={ref} onClick={toggle}>
       <HeaderButton isExpandable>{label}</HeaderButton>
     </SegmentedButton>
   ));
-  Button.displayName = 'ModeMenuButton.Button';
+  Button.displayName = 'RuntimeMenuButton.Button';
 
-  return <PopButton Button={Button} Menu={ModeMenu} />;
-};
-
-const ChannelMenuButton: React.FC = () => {
-  const label = useSelector(selectors.getChannelLabel);
-
-  const Button = React.forwardRef<HTMLButtonElement, { toggle: () => void }>(({ toggle }, ref) => (
-    <SegmentedButton title="Channel &mdash; Choose the Rust version" ref={ref} onClick={toggle}>
-      <HeaderButton isExpandable>{label}</HeaderButton>
-    </SegmentedButton>
-  ));
-  Button.displayName = 'ChannelMenuButton.Button';
-
-  return <PopButton Button={Button} Menu={ChannelMenu} />;
+  return <PopButton Button={Button} Menu={RuntimeMenu} />;
 }
 
 const AdvancedOptionsMenuButton: React.FC = () => {

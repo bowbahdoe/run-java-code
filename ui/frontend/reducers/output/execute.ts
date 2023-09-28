@@ -3,7 +3,7 @@ import * as z from 'zod';
 
 import { SimpleThunkAction, adaptFetchError, jsonPost, routes } from '../../actions';
 import { executeRequestPayloadSelector, useWebsocketSelector } from '../../selectors';
-import { Channel, Edition, Mode } from '../../types';
+import { Runtime, Release } from '../../types';
 import {
   WsPayloadAction,
   createWebsocketResponseAction,
@@ -31,13 +31,11 @@ const wsExecuteResponsePayloadSchema = z.object({
 type wsExecuteResponsePayload = z.infer<typeof wsExecuteResponsePayloadSchema>;
 
 type wsExecuteRequestPayload = {
-  channel: Channel;
-  mode: Mode;
-  edition: Edition;
+  runtime: Runtime;
+  release: Release;
   crateType: string;
   tests: boolean;
   code: string;
-  backtrace: boolean;
 };
 
 const wsExecuteResponse = createWebsocketResponseAction<wsExecuteResponsePayload>(
@@ -47,13 +45,11 @@ const wsExecuteResponse = createWebsocketResponseAction<wsExecuteResponsePayload
 const sliceName = 'output/execute';
 
 export interface ExecuteRequestBody {
-  channel: string;
-  mode: string;
+  runtime: string;
   crateType: string;
   tests: boolean;
   code: string;
-  edition: string;
-  backtrace: boolean;
+  release: string;
   preview: boolean;
 }
 

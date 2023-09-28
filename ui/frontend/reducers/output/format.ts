@@ -18,7 +18,7 @@ interface State {
 
 interface FormatRequestBody {
   code: string;
-  edition: string;
+  release: string;
 }
 
 interface FormatResponseBody {

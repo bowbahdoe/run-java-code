@@ -35,10 +35,6 @@ const ToolsMenu: React.FC<ToolsMenuProps> = props => {
     dispatch(performFormat());
     props.close();
   }, [dispatch, props]);
-  const expandMacros = useCallback(() => {
-    dispatch(actions.performMacroExpansion());
-    props.close();
-  }, [dispatch, props]);
 
   return (
     <MenuGroup title="Tools">

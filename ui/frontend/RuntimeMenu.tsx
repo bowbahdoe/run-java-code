@@ -7,22 +7,22 @@ import SelectOne from './SelectOne';
 import * as actions from './actions';
 import * as selectors from './selectors';
 import State from './state';
-import { Channel } from './types';
+import { Runtime } from './types';
 
-import styles from './ChannelMenu.module.css';
+import styles from './RuntimeMenu.module.css';
 
-interface ChannelMenuProps {
+interface RuntimeMenuProps {
   close: () => void;
 }
 
-const ChannelMenu: React.FC<ChannelMenuProps> = props => {
-  const channel = useSelector((state: State) => state.configuration.channel);
-  const java19Version = useSelector(selectors.java19VersionText);
+const RuntimeMenu: React.FC<RuntimeMenuProps> = props => {
+  const runtime = useSelector((state: State) => state.configuration.runtime);
+  const latestVersion = useSelector(selectors.latestVersionText);
   const java20Version = useSelector(selectors.java20VersionText);
 
   const dispatch = useDispatch();
-  const changeChannel = useCallback((channel: Channel) => {
-    dispatch(actions.changeChannel(channel));
+  const changeRuntime = useCallback((runtime: Runtime) => {
+    dispatch(actions.changeRuntime(runtime));
     props.close();
   }, [dispatch, props]);
 
@@ -30,19 +30,19 @@ const ChannelMenu: React.FC<ChannelMenuProps> = props => {
     <Fragment>
       <MenuGroup title="Choose the Java runtime">
         <SelectOne
-          name="Java 19"
-          currentValue={channel}
-          thisValue={Channel.Java19}
-          changeValue={changeChannel}
+          name="Latest"
+          currentValue={runtime}
+          thisValue={Runtime.Latest}
+          changeValue={changeRuntime}
         >
           <Desc>Build using Java 19</Desc>
-          <Desc>({java19Version})</Desc>
+          <Desc>({latestVersion})</Desc>
         </SelectOne>
         <SelectOne
           name="Java 20"
-          currentValue={channel}
-          thisValue={Channel.Java20}
-          changeValue={changeChannel}
+          currentValue={runtime}
+          thisValue={Runtime.Java20}
+          changeValue={changeRuntime}
         >
           <Desc>Build using Java 20</Desc>
           <Desc>({java20Version})</Desc>
@@ -58,4 +58,4 @@ const Desc: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <p className={styles.description}>{children}</p>
 );
 
-export default ChannelMenu;
+export default RuntimeMenu;

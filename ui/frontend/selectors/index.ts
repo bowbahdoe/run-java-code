@@ -4,9 +4,8 @@ import { createSelector } from '@reduxjs/toolkit';
 import { State } from '../reducers';
 import {
   AceResizeKey,
-  Backtrace,
-  Channel,
-  Edition,
+  Runtime,
+  Release,
   Orientation,
   Preview,
   PrimaryActionAuto,
@@ -95,14 +94,14 @@ const LABELS: { [index in PrimaryActionCore]: string } = {
 
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
 
-const getJava19 = (state: State) => state.versions?.java19;
+const getLatest = (state: State) => state.versions?.latest;
 const getJava20 = (state: State) => state.versions?.java20;
 const getRustfmt = (state: State) => state.versions?.rustfmt;
 const getClippy = (state: State) => state.versions?.clippy;
 const getMiri = (state: State) => state.versions?.miri;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
-export const java19VersionText = createSelector(getJava19, versionNumber);
+export const latestVersionText = createSelector(getLatest, versionNumber);
 export const java20VersionText = createSelector(getJava20, versionNumber);
 export const clippyVersionText = createSelector(getClippy, versionNumber);
 export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
@@ -114,28 +113,19 @@ export const clippyVersionDetailsText = createSelector(getClippy, versionDetails
 export const rustfmtVersionDetailsText = createSelector(getRustfmt, versionDetails);
 export const miriVersionDetailsText = createSelector(getMiri, versionDetails);
 
-const editionSelector = (state: State) => state.configuration.edition;
+const releaseSelector = (state: State) => state.configuration.release;
 
 export const isWasmAvailable = false;
 export const isHirAvailable = false;
 
-export const getModeLabel = (state: State) => {
-  const { configuration: { mode } } = state;
-  return `${mode}`;
+export const getRuntimeLabel = (state: State) => {
+  const { configuration: { runtime } } = state;
+  return `${runtime}`;
 };
 
-export const getChannelLabel = (state: State) => {
-  const { configuration: { channel } } = state;
-  return `${channel}`;
-};
-
-export const isEditionDefault = createSelector(
-  editionSelector,
-  edition => edition == Edition.Rust2021,
-);
-
-export const getBacktraceSet = (state: State) => (
-  state.configuration.backtrace !== Backtrace.Disabled
+export const isReleaseDefault = createSelector(
+  releaseSelector,
+  release => release == Release.Java21,
 );
 
 export const getPreviewSet = (state: State) => (
@@ -143,9 +133,9 @@ export const getPreviewSet = (state: State) => (
 );
 
 export const getAdvancedOptionsSet = createSelector(
-  isEditionDefault, getBacktraceSet,
-  (editionDefault, backtraceSet) => (
-    !editionDefault || backtraceSet
+    isReleaseDefault,
+  (releaseDefault) => (
+    !releaseDefault
   ),
 );
 
@@ -161,7 +151,6 @@ const getOutputs = (state: State) => [
   state.output.mir,
   state.output.hir,
   state.output.miri,
-  state.output.macroExpansion,
   state.output.wasm,
 ];
 
@@ -181,9 +170,8 @@ const urlQuerySelector = createSelector(
   gistSelector,
   gist => {
     const res = new URLSearchParams();
-    if (gist.channel) { res.set('version', gist.channel) }
-    if (gist.mode) { res.set('mode', gist.mode) }
-    if (gist.edition) { res.set('edition', gist.edition) }
+    if (gist.runtime) { res.set('version', gist.runtime) }
+    if (gist.release) { res.set('release', gist.release) }
     return res;
   },
 );
@@ -291,15 +279,15 @@ export const anyNotificationsToShowSelector = createSelector(
 
 export const clippyRequestSelector = createSelector(
   codeSelector,
-  editionSelector,
+  releaseSelector,
   getCrateType,
-  (code, edition, crateType) => ({ code, edition, crateType }),
+  (code, release, crateType) => ({ code, release, crateType }),
 );
 
 export const formatRequestSelector = createSelector(
   codeSelector,
-  editionSelector,
-  (code, edition) => ({ code, edition }),
+  releaseSelector,
+  (code, release) => ({ code, release }),
 );
 
 const focus = (state: State) => state.output.meta.focus;
@@ -337,8 +325,8 @@ export const acePairCharacters = createSelector(aceConfig, c => c.pairCharacters
 export const aceTheme = createSelector(aceConfig, c => c.theme);
 
 export const offerCrateAutocompleteOnUse = createSelector(
-  editionSelector,
-  (edition) => edition !== Edition.Rust2015,
+  releaseSelector,
+  (release) => release !== Release.Java21,
 );
 
 const websocket = (state: State) => state.websocket;
@@ -369,13 +357,11 @@ export const executeRequestPayloadSelector = createSelector(
   (state: State) => state.configuration,
   (_state: State, { crateType, tests }: { crateType: string, tests: boolean }) => ({ crateType, tests }),
   (code, configuration, { crateType, tests }) => ({
-    channel: configuration.channel,
-    mode: configuration.mode,
-    edition: configuration.edition,
+    runtime: configuration.runtime,
+    release: configuration.release,
     crateType,
     tests,
     code,
-    backtrace: configuration.backtrace === Backtrace.Enabled,
     preview: configuration.preview == Preview.Enabled
   }),
 );

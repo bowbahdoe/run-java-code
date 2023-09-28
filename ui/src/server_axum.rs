@@ -5,12 +5,12 @@ use crate::{
         track_metric_no_request_async, Endpoint, GenerateLabels, HasLabelsCore, Outcome,
         SuccessDetails, UNAVAILABLE_WS,
     },
-    sandbox::{self, Channel, Sandbox, DOCKER_PROCESS_TIMEOUT_SOFT},
+    sandbox::{self, Runtime, Sandbox, DOCKER_PROCESS_TIMEOUT_SOFT},
     CachingSnafu, ClippyRequest, ClippyResponse, CompilationSnafu, CompileRequest, CompileResponse, Config, Error, ErrorJson, EvaluateRequest,
     EvaluateResponse, EvaluationSnafu, ExecuteRequest, ExecuteResponse, ExecutionSnafu,
-    ExpansionSnafu, FormatRequest, FormatResponse, FormattingSnafu, GhToken, GistCreationSnafu,
-    GistLoadingSnafu, InterpretingSnafu, LintingSnafu, MacroExpansionRequest,
-    MacroExpansionResponse, MetaCratesResponse, MetaGistCreateRequest, MetaGistResponse,
+    FormatRequest, FormatResponse, FormattingSnafu, GhToken, GistCreationSnafu,
+    GistLoadingSnafu, InterpretingSnafu, LintingSnafu,
+    MetaCratesResponse, MetaGistCreateRequest, MetaGistResponse,
     MetaVersionResponse, MetricsToken, MiriRequest, MiriResponse, Result, SandboxCreationSnafu,
 };
 use async_trait::async_trait;
@@ -74,12 +74,8 @@ pub(crate) async fn serve(config: Config) {
         .route("/format", post(format))
         .route("/clippy", post(clippy))
         .route("/miri", post(miri))
-        .route("/macro-expansion", post(macro_expansion))
         .route("/meta/crates", get_or_post(meta_crates))
-        .route("/meta/version/stable", get_or_post(meta_version_stable))
-        .route("/meta/version/beta", get_or_post(meta_version_beta))
-        .route("/meta/version/nightly", get_or_post(meta_version_nightly))
-        .route("/meta/version/java19_", get_or_post(meta_version_java19))
+        .route("/meta/version/latest", get_or_post(meta_version_latest))
         .route("/meta/version/java20_", get_or_post(meta_version_java20))
         .route("/meta/version/rustfmt", get_or_post(meta_version_rustfmt))
         .route("/meta/version/clippy", get_or_post(meta_version_clippy))
@@ -211,18 +207,6 @@ async fn miri(Json(req): Json<MiriRequest>) -> Result<Json<MiriResponse>> {
     .map(Json)
 }
 
-async fn macro_expansion(
-    Json(req): Json<MacroExpansionRequest>,
-) -> Result<Json<MacroExpansionResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.macro_expansion(req).await }.boxed(),
-        ExpansionSnafu,
-    )
-    .await
-    .map(Json)
-}
-
 async fn with_sandbox<F, Req, Resp, SbReq, SbResp, Ctx>(req: Req, f: F, ctx: Ctx) -> Result<Resp>
 where
     for<'req> F: FnOnce(Sandbox, &'req SbReq) -> BoxFuture<'req, sandbox::Result<SbResp>>,
@@ -282,41 +266,12 @@ async fn meta_crates(
     apply_timestamped_caching(value, if_none_match)
 }
 
-async fn meta_version_stable(
+async fn meta_version_latest(
     Extension(cache): Extension<Arc<SandboxCache>>,
     if_none_match: Option<TypedHeader<IfNoneMatch>>,
 ) -> Result<impl IntoResponse> {
     let value =
-        track_metric_no_request_async(Endpoint::MetaVersionStable, || cache.version_stable())
-            .await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_beta(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionBeta, || cache.version_beta()).await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_nightly(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionNightly, || cache.version_nightly())
-            .await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_java19(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionJava19, || cache.version_java19())
+        track_metric_no_request_async(Endpoint::MetaVersionLatest, || cache.version_latest())
             .await?;
     apply_timestamped_caching(value, if_none_match)
 }
@@ -503,10 +458,7 @@ type Stamped<T> = (T, SystemTime);
 #[derive(Debug, Default)]
 struct SandboxCache {
     crates: CacheOne<MetaCratesResponse>,
-    version_stable: CacheOne<MetaVersionResponse>,
-    version_beta: CacheOne<MetaVersionResponse>,
-    version_nightly: CacheOne<MetaVersionResponse>,
-    version_java19: CacheOne<MetaVersionResponse>,
+    version_latest: CacheOne<MetaVersionResponse>,
     version_java20: CacheOne<MetaVersionResponse>,
     version_rustfmt: CacheOne<MetaVersionResponse>,
     version_clippy: CacheOne<MetaVersionResponse>,
@@ -522,44 +474,11 @@ impl SandboxCache {
             .await
     }
 
-    async fn version_stable(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_stable
+    async fn version_latest(&self) -> Result<Stamped<MetaVersionResponse>> {
+        self.version_latest
             .fetch(|sandbox| async move {
                 let version = sandbox
-                    .version(Channel::Stable)
-                    .await
-                    .context(CachingSnafu)?;
-                Ok(version.into())
-            })
-            .await
-    }
-
-    async fn version_beta(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_beta
-            .fetch(|sandbox| async move {
-                let version = sandbox.version(Channel::Beta).await.context(CachingSnafu)?;
-                Ok(version.into())
-            })
-            .await
-    }
-
-    async fn version_nightly(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_nightly
-            .fetch(|sandbox| async move {
-                let version = sandbox
-                    .version(Channel::Nightly)
-                    .await
-                    .context(CachingSnafu)?;
-                Ok(version.into())
-            })
-            .await
-    }
-
-    async fn version_java19(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_java19
-            .fetch(|sandbox| async move {
-                let version = sandbox
-                    .version(Channel::Java19)
+                    .version(Runtime::Latest)
                     .await
                     .context(CachingSnafu)?;
                 Ok(version.into())
@@ -571,7 +490,7 @@ impl SandboxCache {
         self.version_java20
             .fetch(|sandbox| async move {
                 let version = sandbox
-                    .version(Channel::Java20)
+                    .version(Runtime::Java20)
                     .await
                     .context(CachingSnafu)?;
                 Ok(version.into())

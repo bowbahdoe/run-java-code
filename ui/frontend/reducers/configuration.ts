@@ -1,12 +1,10 @@
 import { Action, ActionType } from '../actions';
 import {
   AssemblyFlavor,
-  Backtrace,
-  Channel,
+  Runtime,
   DemangleAssembly,
-  Edition,
+  Release,
   Editor,
-  Mode,
   Orientation,
   PairCharacters,
   Preview,
@@ -30,10 +28,8 @@ export interface State {
   demangleAssembly: DemangleAssembly;
   processAssembly: ProcessAssembly;
   primaryAction: PrimaryAction;
-  channel: Channel;
-  mode: Mode;
-  edition: Edition;
-  backtrace: Backtrace;
+  runtime: Runtime;
+  release: Release;
   preview: Preview;
 }
 
@@ -52,10 +48,8 @@ const DEFAULT: State = {
   demangleAssembly: DemangleAssembly.Demangle,
   processAssembly: ProcessAssembly.Filter,
   primaryAction: PrimaryActionAuto.Auto,
-  channel: Channel.Java19,
-  mode: Mode.Debug,
-  edition: Edition.Rust2021,
-  backtrace: Backtrace.Disabled,
+  runtime: Runtime.Latest,
+  release: Release.Java21,
   preview: Preview.Disabled
 };
 
@@ -90,16 +84,12 @@ export default function configuration(state = DEFAULT, action: Action): State {
       return { ...state, processAssembly: action.processAssembly };
     case ActionType.ChangePrimaryAction:
       return { ...state, primaryAction: action.primaryAction };
-    case ActionType.ChangeChannel: {
-      return { ...state, channel: action.channel };
+    case ActionType.ChangeRuntime: {
+      return { ...state, runtime: action.runtime };
     }
-    case ActionType.ChangeMode:
-      return { ...state, mode: action.mode };
-    case ActionType.ChangeEdition: {
-      return { ...state, edition: action.edition };
+    case ActionType.ChangeRelease: {
+      return { ...state, release: action.release };
     }
-    case ActionType.ChangeBacktrace:
-      return { ...state, backtrace: action.backtrace };
     case ActionType.ChangePreview:
       return { ...state, preview: action.preview };
     default:

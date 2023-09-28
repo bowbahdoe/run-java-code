@@ -19,8 +19,8 @@ fn main() {
     let mut cargo_toml: Value = toml::from_str(&input)
         .unwrap_or_else(|e| panic!("Cannot parse {} as TOML: {}", input_filename.display(), e));
 
-    if let Ok(edition) = env::var("PLAYGROUND_EDITION") {
-        cargo_toml = set_edition(cargo_toml, &edition);
+    if let Ok(release) = env::var("PLAYGROUND_EDITION") {
+        cargo_toml = set_release(cargo_toml, &release);
     }
 
     if env::var_os("PLAYGROUND_NO_DEPENDENCIES").is_some() {

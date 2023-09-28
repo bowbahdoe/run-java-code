@@ -1,9 +1,8 @@
 use crate::{
-    metrics, parse_channel, parse_crate_type, parse_edition, parse_mode,
+    metrics, parse_runtime, parse_crate_type, parse_release,
     sandbox::{self, Sandbox},
     Error, ExecutionSnafu, Result, SandboxCreationSnafu, WebSocketTaskPanicSnafu,
 };
-
 use axum::extract::ws::{Message, WebSocket};
 use snafu::prelude::*;
 use std::{
@@ -41,13 +40,11 @@ enum WSMessageRequest {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ExecuteRequest {
-    channel: String,
-    mode: String,
-    edition: String,
+    runtime: String,
+    release: String,
     crate_type: String,
     tests: bool,
     code: String,
-    backtrace: bool,
     preview: bool
 }
 
@@ -56,23 +53,19 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
 
     fn try_from(value: ExecuteRequest) -> Result<Self, Self::Error> {
         let ExecuteRequest {
-            channel,
-            mode,
-            edition,
+            runtime,
+            release,
             crate_type,
             tests,
             code,
-            backtrace,
             preview
         } = value;
 
         Ok(sandbox::ExecuteRequest {
-            channel: parse_channel(&channel)?,
-            mode: parse_mode(&mode)?,
-            edition: parse_edition(&edition)?,
+            runtime: parse_runtime(&runtime)?,
+            release: parse_release(&release)?,
             crate_type: parse_crate_type(&crate_type)?,
             tests,
-            backtrace,
             preview,
             code,
         })
@@ -240,13 +233,13 @@ async fn handle_msg(
             tasks.spawn(async move {
                 let resp = handle_execute(payload).await;
                 let resp = resp.map(|payload| MessageResponse::ExecuteResponse { payload, meta });
-                tx.send(resp).await.ok(/* We don't care if the channel is closed */);
+                tx.send(resp).await.ok(/* We don't care if the runtime is closed */);
                 Ok(())
             });
         }
         Err(e) => {
             let resp = Err(e);
-            tx.send(resp).await.ok(/* We don't care if the channel is closed */);
+            tx.send(resp).await.ok(/* We don't care if the runtime is closed */);
         }
     }
 }
