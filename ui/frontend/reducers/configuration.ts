@@ -52,7 +52,7 @@ const DEFAULT: State = {
   demangleAssembly: DemangleAssembly.Demangle,
   processAssembly: ProcessAssembly.Filter,
   primaryAction: PrimaryActionAuto.Auto,
-  channel: Channel.Stable,
+  channel: Channel.Java19,
   mode: Mode.Debug,
   edition: Edition.Rust2021,
   backtrace: Backtrace.Disabled,

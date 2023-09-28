@@ -71,22 +71,13 @@ export enum PrimaryActionAuto {
 }
 
 export enum PrimaryActionCore {
-  Asm = 'asm',
   Compile = 'compile',
   Execute = 'execute',
-  LlvmIr = 'llvm-ir',
-  Hir = 'hir',
-  Mir = 'mir',
-  Test = 'test',
-  Wasm = 'wasm',
 }
 
 export type PrimaryAction = PrimaryActionCore | PrimaryActionAuto;
 
 export enum Channel {
-  Stable = 'stable',
-  Beta = 'beta',
-  Nightly = 'nightly',
   Java19 = 'java19',
   Java20 = 'java20'
 }

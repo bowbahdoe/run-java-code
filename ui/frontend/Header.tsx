@@ -29,7 +29,6 @@ const Header: React.FC = () => (
     </HeaderSet>
     <HeaderSet id="channel-mode">
       <SegmentedButtonSet>
-        <ModeMenuButton />
         <ChannelMenuButton />
         <AdvancedOptionsMenuButton />
       </SegmentedButtonSet>
@@ -39,11 +38,11 @@ const Header: React.FC = () => (
         <ShareButton />
       </SegmentedButtonSet>
     </HeaderSet>
-    <HeaderSet id="tools">
+    {/* <HeaderSet id="tools">
       <SegmentedButtonSet>
         <ToolsMenuButton />
       </SegmentedButtonSet>
-    </HeaderSet>
+    </HeaderSet>  */}
     <HeaderSet id="config">
       <SegmentedButtonSet>
         <ConfigMenuButton />

@@ -40,9 +40,9 @@ const autoPrimaryActionSelector = createSelector(
         return PrimaryActionCore.Compile;
       }
     } else {
-      if (hasTests) {
+      /* if (hasTests) {
         return PrimaryActionCore.Test;
-      } else if (hasMainFunction) {
+      } else */ if (hasMainFunction) {
         return PrimaryActionCore.Execute;
       } else {
         return PrimaryActionCore.Compile;
@@ -51,10 +51,10 @@ const autoPrimaryActionSelector = createSelector(
   },
 );
 
-export const runAsTest = createSelector(
+/* export const runAsTest = createSelector(
   autoPrimaryActionSelector,
   primaryAction => primaryAction === PrimaryActionCore.Test,
-);
+); */
 
 export const getCrateType = createSelector(
   crateTypeSelector,
@@ -89,21 +89,11 @@ const primaryActionSelector = createSelector(
 );
 
 const LABELS: { [index in PrimaryActionCore]: string } = {
-  [PrimaryActionCore.Asm]: 'Show Assembly',
   [PrimaryActionCore.Compile]: 'Build',
   [PrimaryActionCore.Execute]: 'Run',
-  [PrimaryActionCore.LlvmIr]: 'Show LLVM IR',
-  [PrimaryActionCore.Hir]: 'Show HIR',
-  [PrimaryActionCore.Mir]: 'Show MIR',
-  [PrimaryActionCore.Test]: 'Test',
-  [PrimaryActionCore.Wasm]: 'Show WASM',
 };
 
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
-
-const getStable = (state: State) => state.versions?.stable;
-const getBeta = (state: State) => state.versions?.beta;
-const getNightly = (state: State) => state.versions?.nightly;
 
 const getJava19 = (state: State) => state.versions?.java19;
 const getJava20 = (state: State) => state.versions?.java20;
@@ -112,9 +102,6 @@ const getClippy = (state: State) => state.versions?.clippy;
 const getMiri = (state: State) => state.versions?.miri;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
-export const stableVersionText = createSelector(getStable, versionNumber);
-export const betaVersionText = createSelector(getBeta, versionNumber);
-export const nightlyVersionText = createSelector(getNightly, versionNumber);
 export const java19VersionText = createSelector(getJava19, versionNumber);
 export const java20VersionText = createSelector(getJava20, versionNumber);
 export const clippyVersionText = createSelector(getClippy, versionNumber);
@@ -122,19 +109,15 @@ export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
 export const miriVersionText = createSelector(getMiri, versionNumber);
 
 const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
-export const betaVersionDetailsText = createSelector(getBeta, versionDetails);
-export const nightlyVersionDetailsText = createSelector(getNightly, versionDetails);
+
 export const clippyVersionDetailsText = createSelector(getClippy, versionDetails);
 export const rustfmtVersionDetailsText = createSelector(getRustfmt, versionDetails);
 export const miriVersionDetailsText = createSelector(getMiri, versionDetails);
 
 const editionSelector = (state: State) => state.configuration.edition;
 
-export const isNightlyChannel = (state: State) => (
-  state.configuration.channel === Channel.Nightly
-);
-export const isWasmAvailable = isNightlyChannel;
-export const isHirAvailable = isNightlyChannel;
+export const isWasmAvailable = false;
+export const isHirAvailable = false;
 
 export const getModeLabel = (state: State) => {
   const { configuration: { mode } } = state;

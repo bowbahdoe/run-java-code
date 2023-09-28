@@ -21,8 +21,6 @@ const ToolsMenu: React.FC<ToolsMenuProps> = props => {
   const clippyVersion = useSelector(selectors.clippyVersionText);
   const miriVersionDetails = useSelector(selectors.miriVersionDetailsText);
   const miriVersion = useSelector(selectors.miriVersionText);
-  const nightlyVersion = useSelector(selectors.nightlyVersionText);
-  const nightlyVersionDetails = useSelector(selectors.nightlyVersionDetailsText);
 
   const dispatch = useAppDispatch();
   const clippy = useCallback(() => {
@@ -64,14 +62,6 @@ const ToolsMenu: React.FC<ToolsMenuProps> = props => {
           cases of undefined behavior (like out-of-bounds memory access).
         </div>
         <MenuAside>{miriVersion} ({miriVersionDetails})</MenuAside>
-      </ButtonMenuItem>
-      <ButtonMenuItem
-        name="Expand macros"
-        onClick={expandMacros}>
-        <div>
-          Expand macros in code using the nightly compiler.
-        </div>
-        <MenuAside>{nightlyVersion} ({nightlyVersionDetails})</MenuAside>
       </ButtonMenuItem>
     </MenuGroup>
   );

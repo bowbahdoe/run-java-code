@@ -5,7 +5,7 @@ import {
   codeSelector,
   clippyRequestSelector,
   getCrateType,
-  runAsTest,
+  // runAsTest,
 } from './selectors';
 import State from './state';
 import {
@@ -45,9 +45,6 @@ export const routes = {
   meta: {
     crates: '/meta/crates',
     version: {
-      stable: '/meta/version/stable',
-      beta: '/meta/version/beta',
-      nightly: '/meta/version/nightly',
       rustfmt: '/meta/version/rustfmt',
       clippy: '/meta/version/clippy',
       miri: '/meta/version/miri',
@@ -274,9 +271,9 @@ function performAutoOnly(): ThunkAction {
   return function(dispatch, getState) {
     const state = getState();
     const crateType = getCrateType(state);
-    const tests = runAsTest(state);
+    // const tests = runAsTest(state);
 
-    return dispatch(performCommonExecute(crateType, tests));
+    return dispatch(performCommonExecute(crateType, false /* tests */));
   };
 }
 
@@ -325,7 +322,7 @@ function performCompileShow(
       processAssembly,
     } } = state;
     const crateType = getCrateType(state);
-    const tests = runAsTest(state);
+    const tests = false; // runAsTest(state);
     const backtrace = state.configuration.backtrace === Backtrace.Enabled;
     const preview = state.configuration.preview === Preview.Enabled;
     const body: CompileRequestBody = {
@@ -397,11 +394,6 @@ const performCompileToHirOnly = () =>
     failure: receiveCompileHirFailure,
   });
 
-const performCompileToNightlyHirOnly = (): ThunkAction => dispatch => {
-  dispatch(changeChannel(Channel.Nightly));
-  dispatch(performCompileToHirOnly());
-};
-
 const requestCompileMir = () =>
   createAction(ActionType.CompileMirRequest);
 
@@ -434,21 +426,10 @@ const performCompileToWasm = () =>
     failure: receiveCompileWasmFailure,
   });
 
-const performCompileToNightlyWasmOnly = (): ThunkAction => dispatch => {
-  dispatch(changeChannel(Channel.Nightly));
-  dispatch(performCompileToWasm());
-};
-
 const PRIMARY_ACTIONS: { [index in PrimaryAction]: () => ThunkAction } = {
-  [PrimaryActionCore.Asm]: performCompileToAssemblyOnly,
   [PrimaryActionCore.Compile]: performCompileOnly,
   [PrimaryActionCore.Execute]: performExecuteOnly,
-  [PrimaryActionCore.Test]: performTestOnly,
   [PrimaryActionAuto.Auto]: performAutoOnly,
-  [PrimaryActionCore.LlvmIr]: performCompileToLLVMOnly,
-  [PrimaryActionCore.Hir]: performCompileToHirOnly,
-  [PrimaryActionCore.Mir]: performCompileToMirOnly,
-  [PrimaryActionCore.Wasm]: performCompileToNightlyWasmOnly,
 };
 
 export const performPrimaryAction = (): ThunkAction => (dispatch, getState) => {
@@ -466,18 +447,6 @@ export const performExecute =
   performAndSwitchPrimaryAction(performExecuteOnly, PrimaryActionCore.Execute);
 export const performCompile =
   performAndSwitchPrimaryAction(performCompileOnly, PrimaryActionCore.Compile);
-export const performTest =
-  performAndSwitchPrimaryAction(performTestOnly, PrimaryActionCore.Test);
-export const performCompileToAssembly =
-  performAndSwitchPrimaryAction(performCompileToAssemblyOnly, PrimaryActionCore.Asm);
-export const performCompileToLLVM =
-  performAndSwitchPrimaryAction(performCompileToLLVMOnly, PrimaryActionCore.LlvmIr);
-export const performCompileToMir =
-  performAndSwitchPrimaryAction(performCompileToMirOnly, PrimaryActionCore.Mir);
-export const performCompileToNightlyHir =
-  performAndSwitchPrimaryAction(performCompileToNightlyHirOnly, PrimaryActionCore.Hir);
-export const performCompileToNightlyWasm =
-  performAndSwitchPrimaryAction(performCompileToNightlyWasmOnly, PrimaryActionCore.Wasm);
 
 export const editCode = (code: string) =>
   createAction(ActionType.EditCode, { code });
@@ -638,39 +607,30 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  stable, beta, nightly, java19, java20, rustfmt, clippy, miri,
+  java19, java20, rustfmt, clippy, miri,
 }: {
-  stable: Version,
-  beta: Version,
-  nightly: Version,
   java19: Version,
   java20: Version,
   rustfmt: Version,
   clippy: Version,
   miri: Version,
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { stable, beta, nightly, java19, java20, rustfmt, clippy, miri });
+  createAction(ActionType.VersionsLoadSucceeded, { java19, java20, rustfmt, clippy, miri });
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
     dispatch(requestVersionsLoad());
 
-    const stable = jsonGet(routes.meta.version.stable);
-    const beta = jsonGet(routes.meta.version.beta);
-    const nightly = jsonGet(routes.meta.version.nightly);
     const java19 = jsonGet(routes.meta.version.java19);
     const java20 = jsonGet(routes.meta.version.java20);
     const rustfmt = jsonGet(routes.meta.version.rustfmt);
     const clippy = jsonGet(routes.meta.version.clippy);
     const miri = jsonGet(routes.meta.version.miri);
 
-    const all = Promise.all([stable, beta, nightly, java19, java20, rustfmt, clippy, miri]);
+    const all = Promise.all([ java19, java20, rustfmt, clippy, miri]);
 
     return all
-      .then(([stable, beta, nightly, java19, java20, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
-        stable,
-        beta,
-        nightly,
+      .then(([ java19, java20, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
         java19,
         java20,
         rustfmt,
@@ -694,12 +654,6 @@ export const splitRatioChanged = () =>
 
 function parseChannel(s?: string): Channel | null {
   switch (s) {
-    case 'stable':
-      return Channel.Stable;
-    case 'beta':
-      return Channel.Beta;
-    case 'nightly':
-      return Channel.Nightly;
     default:
       return null;
   }
@@ -737,7 +691,7 @@ export function indexPageLoad({
   edition: editionString,
 }: { code?: string, gist?: string, version?: string, mode?: string, edition?: string }): ThunkAction {
   return function(dispatch) {
-    const channel = parseChannel(version) || Channel.Stable;
+    const channel = parseChannel(version) || Channel.Java19;
     const mode = parseMode(modeString) || Mode.Debug;
     let maybeEdition = parseEdition(editionString);
 
