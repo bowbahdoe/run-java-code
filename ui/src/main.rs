@@ -220,21 +220,6 @@ pub enum Error {
     #[snafu(display("The WebSocket worker panicked: {}", text))]
     WebSocketTaskPanic { text: String },
 
-    #[snafu(display("Unable to create the coordinator"))]
-    CreateCoordinator {
-        source: orchestrator::coordinator::Error,
-    },
-
-    #[snafu(display("Unable to shutdown the coordinator"))]
-    ShutdownCoordinator {
-        source: orchestrator::coordinator::Error,
-    },
-
-    #[snafu(display("Unable to convert the compile request"))]
-    Compile {
-        source: orchestrator::coordinator::CompileError,
-    },
-
     #[snafu(display("The operation timed out"))]
     Timeout { source: tokio::time::error::Elapsed },
 }

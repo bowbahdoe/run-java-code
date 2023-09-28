@@ -1,6 +1,5 @@
 use futures::future::BoxFuture;
 use lazy_static::lazy_static;
-use orchestrator::coordinator;
 use prometheus::{
     self, register_histogram, register_histogram_vec, register_int_counter, register_int_gauge,
     Histogram, HistogramVec, IntCounter, IntGauge,
@@ -95,7 +94,7 @@ pub(crate) struct Labels {
 }
 
 impl Labels {
-    const COUNT: usize = 9;
+    const COUNT: usize = 10;
 
     const LABELS: &'static [&'static str; Self::COUNT] = &[
         "endpoint",
@@ -107,6 +106,7 @@ impl Labels {
         "crate_type",
         "tests",
         "backtrace",
+        "preview"
     ];
 
     fn as_values(&self) -> [&'static str; Self::COUNT] {
@@ -140,9 +140,6 @@ impl Labels {
         let backtrace = b(backtrace);
         let preview = b(preview);
 
-        // TODO: Include preview in values
-        std::mem::forget(preview);
-
         [
             endpoint.into(),
             outcome.into(),
@@ -152,7 +149,8 @@ impl Labels {
             edition,
             crate_type,
             tests,
-            backtrace
+            backtrace,
+            preview
         ]
     }
 
@@ -504,33 +502,6 @@ where
 
 pub(crate) trait HasLabelsCore {
     fn labels_core(&self) -> LabelsCore;
-}
-
-impl HasLabelsCore for coordinator::CompileRequest {
-    fn labels_core(&self) -> LabelsCore {
-        let Self {
-            target,
-            channel,
-            crate_type,
-            mode,
-            edition,
-            tests,
-            backtrace,
-            preview,
-            code: _,
-        } = *self;
-
-        LabelsCore {
-            target: Some(target.into()),
-            channel: Some(channel.into()),
-            mode: Some(mode.into()),
-            edition: Some(Some(edition.into())),
-            crate_type: Some(crate_type.into()),
-            tests: Some(tests),
-            backtrace: Some(backtrace),
-            preview: Some(preview)
-        }
-    }
 }
 
 pub(crate) fn record_metric(
