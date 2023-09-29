@@ -94,7 +94,7 @@ const RuntimeMenuButton: React.FC = () => {
   const label = useSelector(selectors.getRuntimeLabel);
 
   const Button = React.forwardRef<HTMLButtonElement, { toggle: () => void }>(({ toggle }, ref) => (
-    <SegmentedButton title="Runtime &mdash; Choose the Rust version" ref={ref} onClick={toggle}>
+    <SegmentedButton title="Runtime &mdash; Choose the Java runtime" ref={ref} onClick={toggle}>
       <HeaderButton isExpandable>{label}</HeaderButton>
     </SegmentedButton>
   ));

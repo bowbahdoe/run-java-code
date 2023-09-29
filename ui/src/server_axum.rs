@@ -76,7 +76,7 @@ pub(crate) async fn serve(config: Config) {
         .route("/miri", post(miri))
         .route("/meta/crates", get_or_post(meta_crates))
         .route("/meta/version/latest", get_or_post(meta_version_latest))
-        .route("/meta/version/java20_", get_or_post(meta_version_java20))
+        .route("/meta/version/valhalla", get_or_post(meta_version_valhalla))
         .route("/meta/version/rustfmt", get_or_post(meta_version_rustfmt))
         .route("/meta/version/clippy", get_or_post(meta_version_clippy))
         .route("/meta/version/miri", get_or_post(meta_version_miri))
@@ -276,12 +276,12 @@ async fn meta_version_latest(
     apply_timestamped_caching(value, if_none_match)
 }
 
-async fn meta_version_java20(
+async fn meta_version_valhalla(
     Extension(cache): Extension<Arc<SandboxCache>>,
     if_none_match: Option<TypedHeader<IfNoneMatch>>,
 ) -> Result<impl IntoResponse> {
     let value =
-        track_metric_no_request_async(Endpoint::MetaVersionJava20, || cache.version_java20())
+        track_metric_no_request_async(Endpoint::MetaVersionValhalla, || cache.version_valhalla())
             .await?;
     apply_timestamped_caching(value, if_none_match)
 }
@@ -459,7 +459,7 @@ type Stamped<T> = (T, SystemTime);
 struct SandboxCache {
     crates: CacheOne<MetaCratesResponse>,
     version_latest: CacheOne<MetaVersionResponse>,
-    version_java20: CacheOne<MetaVersionResponse>,
+    version_valhalla: CacheOne<MetaVersionResponse>,
     version_rustfmt: CacheOne<MetaVersionResponse>,
     version_clippy: CacheOne<MetaVersionResponse>,
     version_miri: CacheOne<MetaVersionResponse>,
@@ -486,11 +486,11 @@ impl SandboxCache {
             .await
     }
 
-    async fn version_java20(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_java20
+    async fn version_valhalla(&self) -> Result<Stamped<MetaVersionResponse>> {
+        self.version_valhalla
             .fetch(|sandbox| async move {
                 let version = sandbox
-                    .version(Runtime::Java20)
+                    .version(Runtime::Valhalla)
                     .await
                     .context(CachingSnafu)?;
                 Ok(version.into())

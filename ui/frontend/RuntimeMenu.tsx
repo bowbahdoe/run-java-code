@@ -18,7 +18,7 @@ interface RuntimeMenuProps {
 const RuntimeMenu: React.FC<RuntimeMenuProps> = props => {
   const runtime = useSelector((state: State) => state.configuration.runtime);
   const latestVersion = useSelector(selectors.latestVersionText);
-  const java20Version = useSelector(selectors.java20VersionText);
+  const valhallaVersion = useSelector(selectors.valhallaVersionText);
 
   const dispatch = useDispatch();
   const changeRuntime = useCallback((runtime: Runtime) => {
@@ -35,18 +35,17 @@ const RuntimeMenu: React.FC<RuntimeMenuProps> = props => {
           thisValue={Runtime.Latest}
           changeValue={changeRuntime}
         >
-          <Desc>Build using Java 19</Desc>
+          <Desc>Build using the latest version</Desc>
           <Desc>({latestVersion})</Desc>
         </SelectOne>
         <SelectOne
-          name="Java 20"
+          name="Valhalla"
           currentValue={runtime}
-          thisValue={Runtime.Java20}
+          thisValue={Runtime.Valhalla}
           changeValue={changeRuntime}
         >
-          <Desc>Build using Java 20</Desc>
-          <Desc>({java20Version})</Desc>
-
+          <Desc>Build using an early release Valhalla prototype</Desc>
+          <Desc>({valhallaVersion})</Desc>
         </SelectOne>
       </MenuGroup>
     </Fragment>

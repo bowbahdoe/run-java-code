@@ -47,7 +47,7 @@ pub(crate) enum Endpoint {
     Clippy,
     MetaCrates,
     MetaVersionLatest,
-    MetaVersionJava20,
+    MetaVersionValhalla,
     MetaVersionRustfmt,
     MetaVersionClippy,
     MetaVersionMiri,

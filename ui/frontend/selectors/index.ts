@@ -95,14 +95,14 @@ const LABELS: { [index in PrimaryActionCore]: string } = {
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
 
 const getLatest = (state: State) => state.versions?.latest;
-const getJava20 = (state: State) => state.versions?.java20;
+const getValhalla = (state: State) => state.versions?.valhalla;
 const getRustfmt = (state: State) => state.versions?.rustfmt;
 const getClippy = (state: State) => state.versions?.clippy;
 const getMiri = (state: State) => state.versions?.miri;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
 export const latestVersionText = createSelector(getLatest, versionNumber);
-export const java20VersionText = createSelector(getJava20, versionNumber);
+export const valhallaVersionText = createSelector(getValhalla, versionNumber);
 export const clippyVersionText = createSelector(getClippy, versionNumber);
 export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
 export const miriVersionText = createSelector(getMiri, versionNumber);
@@ -170,8 +170,9 @@ const urlQuerySelector = createSelector(
   gistSelector,
   gist => {
     const res = new URLSearchParams();
-    if (gist.runtime) { res.set('version', gist.runtime) }
+    if (gist.runtime) { res.set('runtime', gist.runtime) }
     if (gist.release) { res.set('release', gist.release) }
+    if (gist.preview) { res.set('preview', gist.preview) }
     return res;
   },
 );

@@ -42,7 +42,7 @@ export const routes = {
       clippy: '/meta/version/clippy',
       miri: '/meta/version/miri',
       latest: '/meta/version/latest',
-      java20: '/meta/version/java20_',
+      valhalla: '/meta/version/valhalla',
     },
     gistSave: '/meta/gist',
     gistLoad: '/meta/gist/id',
@@ -541,32 +541,32 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  latest, java20, rustfmt, clippy, miri,
+  latest, valhalla, rustfmt, clippy, miri,
 }: {
   latest: Version,
-  java20: Version,
+  valhalla: Version,
   rustfmt: Version,
   clippy: Version,
   miri: Version,
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { latest, java20, rustfmt, clippy, miri });
+  createAction(ActionType.VersionsLoadSucceeded, { latest, valhalla, rustfmt, clippy, miri });
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
     dispatch(requestVersionsLoad());
 
     const latest = jsonGet(routes.meta.version.latest);
-    const java20 = jsonGet(routes.meta.version.java20);
+    const valhalla = jsonGet(routes.meta.version.valhalla);
     const rustfmt = jsonGet(routes.meta.version.rustfmt);
     const clippy = jsonGet(routes.meta.version.clippy);
     const miri = jsonGet(routes.meta.version.miri);
 
-    const all = Promise.all([ latest, java20, rustfmt, clippy, miri]);
+    const all = Promise.all([ latest, valhalla, rustfmt, clippy, miri]);
 
     return all
-      .then(([ latest, java20, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
+      .then(([ latest, valhalla, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
         latest,
-        java20,
+        valhalla,
         rustfmt,
         clippy,
         miri,
@@ -590,8 +590,8 @@ function parseRuntime(s?: string): Runtime | null {
   switch (s) {
     case 'latest':
       return Runtime.Latest
-    case 'java20':
-      return Runtime.Java20
+    case 'valhalla':
+      return Runtime.Valhalla
     default:
       return null;
   }
@@ -632,27 +632,40 @@ function parseRelease(s?: string): Release | null {
   }
 }
 
+function parsePreview(s?: string): Preview | null {
+  switch (s) {
+    case 'true':
+      return Preview.Enabled;
+    case 'false':
+      return Preview.Disabled;
+    default:
+      return null;
+  }
+}
+
 export function indexPageLoad({
   code,
   gist,
-  version,
-  mode: modeString,
+  runtime: runtimeString,
   release: releaseString,
-}: { code?: string, gist?: string, version?: string, mode?: string, release?: string }): ThunkAction {
+  preview: previewString
+}: { code?: string, gist?: string, runtime?: string, release?: string, preview?: string }): ThunkAction {
   return function(dispatch) {
-    const runtime = parseRuntime(version) || Runtime.Latest;
+    const runtime = parseRuntime(runtimeString) || Runtime.Latest;
     let release = parseRelease(releaseString) || Release.Java21;
+    let preview = parsePreview(previewString) || Preview.Disabled;
 
     dispatch(navigateToIndex());
 
     if (code) {
       dispatch(editCode(code));
     } else if (gist) {
-      dispatch(performGistLoad({ id: gist, runtime: runtime, release: release }));
+      dispatch(performGistLoad({ id: gist, runtime, release, preview }));
     }
 
     dispatch(changeRuntime(runtime));
     dispatch(changeRelease(release));
+    dispatch(changePreview(preview));
   };
 }
 

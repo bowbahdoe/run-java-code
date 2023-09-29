@@ -3,7 +3,7 @@ import { Draft, PayloadAction, createAsyncThunk, createSlice } from '@reduxjs/to
 import { jsonGet, jsonPost, routes } from '../../actions';
 import { baseUrlSelector, codeSelector } from '../../selectors';
 import RootState from '../../state';
-import { Runtime, Release } from '../../types';
+import {Runtime, Release, Preview} from '../../types';
 import { RequestsInProgress } from './sharedStateManagement';
 
 const sliceName = 'output/gist';
@@ -20,6 +20,7 @@ interface State extends RequestsInProgress {
   stderr?: string;
   runtime?: Runtime;
   release?: Release;
+  preview?: Preview;
 }
 
 interface SuccessProps {
@@ -30,6 +31,7 @@ interface SuccessProps {
   stderr: string;
   runtime: Runtime;
   release: Release;
+  preview: Preview;
 }
 
 type PerformGistLoadProps = Pick<
@@ -63,14 +65,14 @@ export const performGistSave = createAsyncThunk<SuccessProps, void, { state: Roo
     const state = getState();
     const code = codeSelector(state);
     const {
-      configuration: { runtime, release },
+      configuration: { runtime, release, preview },
       output: {
         execute: { stdout = '', stderr = '' },
       },
     } = state;
 
     const json = await jsonPost<GistResponseBody>(routes.meta.gistSave, { code });
-    return { ...json, code, stdout, stderr, runtime: runtime, release: release };
+    return { ...json, code, stdout, stderr, runtime, release, preview };
   },
 );
 

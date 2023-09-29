@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { createBrowserHistory as createHistory, Path, Location } from 'history';
-import { createRouter, PlainOrThunk } from './uss-router';
+import {createBrowserHistory as createHistory, Location, Path} from 'history';
+import {createRouter, PlainOrThunk} from './uss-router';
 import UssRouter from './uss-router/Router';
 
 import qs from 'qs';
@@ -9,7 +9,7 @@ import Route from 'route-parser';
 
 import * as actions from './actions';
 import State from './state';
-import { Runtime, Release, Page } from './types';
+import {Page, Preview, Release, Runtime} from './types';
 
 const homeRoute = new Route('/');
 const helpRoute = new Route('/help');
@@ -19,6 +19,7 @@ interface Substate {
   configuration: {
     runtime: Runtime;
     release: Release;
+    preview: Preview;
   };
   output: {
     gist: {
@@ -27,11 +28,12 @@ interface Substate {
   }
 }
 
-const stateSelector = ({ page, configuration: { runtime, release }, output }: State): Substate => ({
+const stateSelector = ({ page, configuration: { runtime, release, preview }, output }: State): Substate => ({
   page,
   configuration: {
     runtime: runtime,
     release: release,
+    preview: preview
   },
   output: {
     gist: {
@@ -49,11 +51,19 @@ const stateToLocation = ({ page, configuration, output }: Substate): Partial<Pat
     }
 
     default: {
-      const query = {
-        version: configuration.runtime,
+      const query: Record<string, any> = {
         release: configuration.release,
         gist: output.gist.id,
       };
+
+      if (configuration.runtime !== Runtime.Latest) {
+        query.runtime = configuration.runtime;
+      }
+
+      if (configuration.preview === Preview.Enabled) {
+        query.preview = true;
+      }
+
       return {
         pathname: `/?${qs.stringify(query)}`,
       };

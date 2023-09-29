@@ -79,7 +79,7 @@ export type PrimaryAction = PrimaryActionCore | PrimaryActionAuto;
 
 export enum Runtime {
   Latest = 'latest',
-  Java20 = 'java20'
+  Valhalla = 'valhalla'
 }
 
 export enum Release {

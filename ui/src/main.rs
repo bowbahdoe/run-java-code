@@ -634,7 +634,7 @@ fn parse_process_assembly(s: &str) -> Result<sandbox::ProcessAssembly> {
 fn parse_runtime(s: &str) -> Result<sandbox::Runtime> {
     Ok(match s {
         "latest" => sandbox::Runtime::Latest,
-        "java20" => sandbox::Runtime::Java20,
+        "valhalla" => sandbox::Runtime::Valhalla,
         
         value => InvalidRuntimeSnafu { value }.fail()?,
     })

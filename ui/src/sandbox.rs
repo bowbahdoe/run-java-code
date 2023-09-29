@@ -170,7 +170,7 @@ fn build_execution_command(
         cmd.push("--enable-preview");
     }
 
-    cmd.push("src/main.rs");
+    cmd.push("src/Main.java");
     cmd
 
 }
@@ -683,7 +683,7 @@ impl fmt::Display for CompileTarget {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
 pub enum Runtime {
     Latest,
-    Java20
+    Valhalla
 }
 
 impl Runtime {
@@ -693,8 +693,8 @@ impl Runtime {
 
     fn default_release(&self) -> Release {
         match *self {
-            Runtime::Latest => Release::_19,
-            Runtime::Java20 => Release::_20,
+            Runtime::Latest => Release::_21,
+            Runtime::Valhalla => Release::_20,
         }
     }
 
@@ -702,8 +702,8 @@ impl Runtime {
         use self::Runtime::*;
 
         match *self {
-            Latest => "amazoncorretto:19",
-            Java20 => "amazoncorretto:20"
+            Latest => "amazoncorretto:21",
+            Valhalla => "shipilev/openjdk:valhalla"
         }
     }
 }
@@ -760,8 +760,8 @@ impl CrateType {
         use self::CrateType::*;
 
         match *self {
-            Binary => "src/main.rs",
-            Library(_) => "src/lib.rs",
+            Binary => "src/Main.java",
+            Library(_) => "src/Main.java",
         }
     }
 }
