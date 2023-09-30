@@ -1,39 +1,32 @@
 import fetch from 'isomorphic-fetch';
-import { ThunkAction as ReduxThunkAction, AnyAction } from '@reduxjs/toolkit';
+import {AnyAction, ThunkAction as ReduxThunkAction} from '@reduxjs/toolkit';
 
-import {
-  codeSelector,
-  clippyRequestSelector,
-  getCrateType,
-  runAsTest,
-} from './selectors';
+import {clippyRequestSelector, codeSelector, getCrateType,} from './selectors';
 import State from './state';
 import {
   AssemblyFlavor,
-  Backtrace,
-  Channel,
+  Crate,
   DemangleAssembly,
-  Edition,
   Editor,
   Focus,
-  Mode,
+  makePosition,
   Notification,
   Orientation,
   Page,
   PairCharacters,
+  Position,
   Preview,
   PrimaryAction,
   PrimaryActionAuto,
   PrimaryActionCore,
   ProcessAssembly,
-  Position,
-  makePosition,
+  Release,
+  Runtime,
   Version,
-  Crate,
 } from './types';
 
-import { ExecuteRequestBody, performCommonExecute, wsExecuteRequest } from './reducers/output/execute';
-import { performGistLoad } from './reducers/output/gist';
+import {ExecuteRequestBody, performCommonExecute, wsExecuteRequest} from './reducers/output/execute';
+import {performGistLoad} from './reducers/output/gist';
 
 export const routes = {
   compile: '/compile',
@@ -45,14 +38,11 @@ export const routes = {
   meta: {
     crates: '/meta/crates',
     version: {
-      stable: '/meta/version/stable',
-      beta: '/meta/version/beta',
-      nightly: '/meta/version/nightly',
       rustfmt: '/meta/version/rustfmt',
       clippy: '/meta/version/clippy',
       miri: '/meta/version/miri',
-      java19: '/meta/version/java19_',
-      java20: '/meta/version/java20_',
+      latest: '/meta/version/latest',
+      valhalla: '/meta/version/valhalla',
     },
     gistSave: '/meta/gist',
     gistLoad: '/meta/gist/id',
@@ -78,12 +68,10 @@ export enum ActionType {
   ChangeOrientation = 'CHANGE_ORIENTATION',
   ChangeAssemblyFlavor = 'CHANGE_ASSEMBLY_FLAVOR',
   ChangePrimaryAction = 'CHANGE_PRIMARY_ACTION',
-  ChangeChannel = 'CHANGE_CHANNEL',
+  ChangeRuntime = 'CHANGE_RUNTIME',
   ChangeDemangleAssembly = 'CHANGE_DEMANGLE_ASSEMBLY',
   ChangeProcessAssembly = 'CHANGE_PROCESS_ASSEMBLY',
-  ChangeMode = 'CHANGE_MODE',
-  ChangeEdition = 'CHANGE_EDITION',
-  ChangeBacktrace = 'CHANGE_BACKTRACE',
+  ChangeRelease = 'CHANGE_RELEASE',
   ChangePreview = 'CHANGE_PREVIEW',
   ChangeFocus = 'CHANGE_FOCUS',
   CompileAssemblyRequest = 'COMPILE_ASSEMBLY_REQUEST',
@@ -113,9 +101,6 @@ export enum ActionType {
   RequestMiri = 'REQUEST_MIRI',
   MiriSucceeded = 'MIRI_SUCCEEDED',
   MiriFailed = 'MIRI_FAILED',
-  RequestMacroExpansion = 'REQUEST_MACRO_EXPANSION',
-  MacroExpansionSucceeded = 'MACRO_EXPANSION_SUCCEEDED',
-  MacroExpansionFailed = 'MACRO_EXPANSION_FAILED',
   RequestCratesLoad = 'REQUEST_CRATES_LOAD',
   CratesLoadSucceeded = 'CRATES_LOAD_SUCCEEDED',
   RequestVersionsLoad = 'REQUEST_VERSIONS_LOAD',
@@ -165,25 +150,14 @@ export const changeProcessAssembly = (processAssembly: ProcessAssembly) =>
 const changePrimaryAction = (primaryAction: PrimaryAction) =>
   createAction(ActionType.ChangePrimaryAction, { primaryAction });
 
-export const changeChannel = (channel: Channel) =>
-  createAction(ActionType.ChangeChannel, { channel });
+export const changeRuntime = (runtime: Runtime) =>
+  createAction(ActionType.ChangeRuntime, { runtime });
 
-export const changeMode = (mode: Mode) =>
-  createAction(ActionType.ChangeMode, { mode });
-
-export const changeEdition = (edition: Edition) =>
-  createAction(ActionType.ChangeEdition, { edition });
-
-export const changeBacktrace = (backtrace: Backtrace) =>
-  createAction(ActionType.ChangeBacktrace, { backtrace });
+export const changeRelease = (release: Release) =>
+  createAction(ActionType.ChangeRelease, { release });
 
 export const changePreview = (preview: Preview) =>
   createAction(ActionType.ChangePreview, { preview });
-
-export const reExecuteWithBacktrace = (): ThunkAction => dispatch => {
-  dispatch(changeBacktrace(Backtrace.Enabled));
-  dispatch(performExecuteOnly());
-};
 
 export const changeFocus = (focus?: Focus) =>
   createAction(ActionType.ChangeFocus, { focus });
@@ -274,9 +248,9 @@ function performAutoOnly(): ThunkAction {
   return function(dispatch, getState) {
     const state = getState();
     const crateType = getCrateType(state);
-    const tests = runAsTest(state);
+    // const tests = runAsTest(state);
 
-    return dispatch(performCommonExecute(crateType, tests));
+    return dispatch(performCommonExecute(crateType, false /* tests */));
   };
 }
 
@@ -317,21 +291,18 @@ function performCompileShow(
     const state = getState();
     const code = codeSelector(state);
     const { configuration: {
-      channel,
-      mode,
-      edition,
+      runtime,
+      release,
       assemblyFlavor,
       demangleAssembly,
       processAssembly,
     } } = state;
     const crateType = getCrateType(state);
-    const tests = runAsTest(state);
-    const backtrace = state.configuration.backtrace === Backtrace.Enabled;
+    const tests = false; // runAsTest(state);
     const preview = state.configuration.preview === Preview.Enabled;
     const body: CompileRequestBody = {
-      channel,
-      mode,
-      edition,
+      runtime,
+      release,
       crateType,
       tests,
       code,
@@ -339,7 +310,6 @@ function performCompileShow(
       assemblyFlavor,
       demangleAssembly,
       processAssembly,
-      backtrace,
       preview
     };
 
@@ -397,11 +367,6 @@ const performCompileToHirOnly = () =>
     failure: receiveCompileHirFailure,
   });
 
-const performCompileToNightlyHirOnly = (): ThunkAction => dispatch => {
-  dispatch(changeChannel(Channel.Nightly));
-  dispatch(performCompileToHirOnly());
-};
-
 const requestCompileMir = () =>
   createAction(ActionType.CompileMirRequest);
 
@@ -434,21 +399,10 @@ const performCompileToWasm = () =>
     failure: receiveCompileWasmFailure,
   });
 
-const performCompileToNightlyWasmOnly = (): ThunkAction => dispatch => {
-  dispatch(changeChannel(Channel.Nightly));
-  dispatch(performCompileToWasm());
-};
-
 const PRIMARY_ACTIONS: { [index in PrimaryAction]: () => ThunkAction } = {
-  [PrimaryActionCore.Asm]: performCompileToAssemblyOnly,
   [PrimaryActionCore.Compile]: performCompileOnly,
   [PrimaryActionCore.Execute]: performExecuteOnly,
-  [PrimaryActionCore.Test]: performTestOnly,
   [PrimaryActionAuto.Auto]: performAutoOnly,
-  [PrimaryActionCore.LlvmIr]: performCompileToLLVMOnly,
-  [PrimaryActionCore.Hir]: performCompileToHirOnly,
-  [PrimaryActionCore.Mir]: performCompileToMirOnly,
-  [PrimaryActionCore.Wasm]: performCompileToNightlyWasmOnly,
 };
 
 export const performPrimaryAction = (): ThunkAction => (dispatch, getState) => {
@@ -466,18 +420,6 @@ export const performExecute =
   performAndSwitchPrimaryAction(performExecuteOnly, PrimaryActionCore.Execute);
 export const performCompile =
   performAndSwitchPrimaryAction(performCompileOnly, PrimaryActionCore.Compile);
-export const performTest =
-  performAndSwitchPrimaryAction(performTestOnly, PrimaryActionCore.Test);
-export const performCompileToAssembly =
-  performAndSwitchPrimaryAction(performCompileToAssemblyOnly, PrimaryActionCore.Asm);
-export const performCompileToLLVM =
-  performAndSwitchPrimaryAction(performCompileToLLVMOnly, PrimaryActionCore.LlvmIr);
-export const performCompileToMir =
-  performAndSwitchPrimaryAction(performCompileToMirOnly, PrimaryActionCore.Mir);
-export const performCompileToNightlyHir =
-  performAndSwitchPrimaryAction(performCompileToNightlyHirOnly, PrimaryActionCore.Hir);
-export const performCompileToNightlyWasm =
-  performAndSwitchPrimaryAction(performCompileToNightlyWasmOnly, PrimaryActionCore.Wasm);
 
 export const editCode = (code: string) =>
   createAction(ActionType.EditCode, { code });
@@ -507,7 +449,7 @@ const requestClippy = () =>
 
 interface ClippyRequestBody {
   code: string;
-  edition: string;
+  release: string;
   crateType: string;
 }
 
@@ -543,7 +485,7 @@ const requestMiri = () =>
 
 interface MiriRequestBody {
   code: string;
-  edition: string;
+  release: string;
 }
 
 interface MiriResponseBody {
@@ -568,9 +510,9 @@ export function performMiri(): ThunkAction {
     const state = getState();
     const code = codeSelector(state);
     const { configuration: {
-      edition,
+      release,
     } } = state;
-    const body: MiriRequestBody = { code, edition };
+    const body: MiriRequestBody = { code, release };
 
     return jsonPost<MiriResponseBody>(routes.miri, body)
       .then(json => dispatch(receiveMiriSuccess(json)))
@@ -578,45 +520,6 @@ export function performMiri(): ThunkAction {
   };
 }
 
-const requestMacroExpansion = () =>
-  createAction(ActionType.RequestMacroExpansion);
-
-interface MacroExpansionRequestBody {
-  code: string;
-  edition: string;
-}
-
-interface MacroExpansionResponseBody {
-  success: boolean;
-  stdout: string;
-  stderr: string;
-}
-
-type MacroExpansionSuccess = GeneralSuccess;
-
-const receiveMacroExpansionSuccess = ({ stdout, stderr }: MacroExpansionSuccess) =>
-  createAction(ActionType.MacroExpansionSucceeded, { stdout, stderr });
-
-const receiveMacroExpansionFailure = ({ error }: CompileFailure) =>
-  createAction(ActionType.MacroExpansionFailed, { error });
-
-export function performMacroExpansion(): ThunkAction {
-  // TODO: Check a cache
-  return function(dispatch, getState) {
-    dispatch(requestMacroExpansion());
-
-    const state = getState();
-    const code = codeSelector(state);
-    const { configuration: {
-      edition,
-    } } = state;
-    const body: MacroExpansionRequestBody = { code, edition };
-
-    return jsonPost<MacroExpansionResponseBody>(routes.macroExpansion, body)
-      .then(json => dispatch(receiveMacroExpansionSuccess(json)))
-      .catch(json => dispatch(receiveMacroExpansionFailure(json)));
-  };
-}
 
 const requestCratesLoad = () =>
   createAction(ActionType.RequestCratesLoad);
@@ -638,41 +541,32 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  stable, beta, nightly, java19, java20, rustfmt, clippy, miri,
+  latest, valhalla, rustfmt, clippy, miri,
 }: {
-  stable: Version,
-  beta: Version,
-  nightly: Version,
-  java19: Version,
-  java20: Version,
+  latest: Version,
+  valhalla: Version,
   rustfmt: Version,
   clippy: Version,
   miri: Version,
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { stable, beta, nightly, java19, java20, rustfmt, clippy, miri });
+  createAction(ActionType.VersionsLoadSucceeded, { latest, valhalla, rustfmt, clippy, miri });
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
     dispatch(requestVersionsLoad());
 
-    const stable = jsonGet(routes.meta.version.stable);
-    const beta = jsonGet(routes.meta.version.beta);
-    const nightly = jsonGet(routes.meta.version.nightly);
-    const java19 = jsonGet(routes.meta.version.java19);
-    const java20 = jsonGet(routes.meta.version.java20);
+    const latest = jsonGet(routes.meta.version.latest);
+    const valhalla = jsonGet(routes.meta.version.valhalla);
     const rustfmt = jsonGet(routes.meta.version.rustfmt);
     const clippy = jsonGet(routes.meta.version.clippy);
     const miri = jsonGet(routes.meta.version.miri);
 
-    const all = Promise.all([stable, beta, nightly, java19, java20, rustfmt, clippy, miri]);
+    const all = Promise.all([ latest, valhalla, rustfmt, clippy, miri]);
 
     return all
-      .then(([stable, beta, nightly, java19, java20, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
-        stable,
-        beta,
-        nightly,
-        java19,
-        java20,
+      .then(([ latest, valhalla, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
+        latest,
+        valhalla,
         rustfmt,
         clippy,
         miri,
@@ -692,38 +586,58 @@ export const browserWidthChanged = (isSmall: boolean) =>
 export const splitRatioChanged = () =>
   createAction(ActionType.SplitRatioChanged);
 
-function parseChannel(s?: string): Channel | null {
+function parseRuntime(s?: string): Runtime | null {
   switch (s) {
-    case 'stable':
-      return Channel.Stable;
-    case 'beta':
-      return Channel.Beta;
-    case 'nightly':
-      return Channel.Nightly;
+    case 'latest':
+      return Runtime.Latest
+    case 'valhalla':
+      return Runtime.Valhalla
     default:
       return null;
   }
 }
 
-function parseMode(s?: string): Mode | null {
+function parseRelease(s?: string): Release | null {
   switch (s) {
-    case 'debug':
-      return Mode.Debug;
-    case 'release':
-      return Mode.Release;
+    case '8':
+      return Release.Java8;
+    case '9':
+      return Release.Java9;
+    case '10':
+      return Release.Java10;
+    case '11':
+      return Release.Java11;
+    case '12':
+      return Release.Java12;
+    case '13':
+      return Release.Java13;
+    case '14':
+      return Release.Java14;
+    case '15':
+      return Release.Java15;
+    case '16':
+      return Release.Java16;
+    case '17':
+      return Release.Java17;
+    case '18':
+      return Release.Java18;
+    case '19':
+      return Release.Java19;
+    case '20':
+      return Release.Java20;
+    case '21':
+      return Release.Java21;
     default:
       return null;
   }
 }
 
-function parseEdition(s?: string): Edition | null {
+function parsePreview(s?: string): Preview | null {
   switch (s) {
-    case '2015':
-      return Edition.Rust2015;
-    case '2018':
-      return Edition.Rust2018;
-    case '2021':
-      return Edition.Rust2021;
+    case 'true':
+      return Preview.Enabled;
+    case 'false':
+      return Preview.Disabled;
     default:
       return null;
   }
@@ -732,37 +646,26 @@ function parseEdition(s?: string): Edition | null {
 export function indexPageLoad({
   code,
   gist,
-  version,
-  mode: modeString,
-  edition: editionString,
-}: { code?: string, gist?: string, version?: string, mode?: string, edition?: string }): ThunkAction {
+  runtime: runtimeString,
+  release: releaseString,
+  preview: previewString
+}: { code?: string, gist?: string, runtime?: string, release?: string, preview?: string }): ThunkAction {
   return function(dispatch) {
-    const channel = parseChannel(version) || Channel.Stable;
-    const mode = parseMode(modeString) || Mode.Debug;
-    let maybeEdition = parseEdition(editionString);
+    const runtime = parseRuntime(runtimeString) || Runtime.Latest;
+    let release = parseRelease(releaseString) || Release.Java21;
+    let preview = parsePreview(previewString) || Preview.Disabled;
 
     dispatch(navigateToIndex());
-
-    if (code || gist) {
-      // We need to ensure that any links that predate the existence
-      // of editions will *forever* pick 2015. However, if we aren't
-      // loading code, then allow the edition to remain the default.
-      if (!maybeEdition) {
-        maybeEdition = Edition.Rust2015;
-      }
-    }
-
-    const edition = maybeEdition || Edition.Rust2021;
 
     if (code) {
       dispatch(editCode(code));
     } else if (gist) {
-      dispatch(performGistLoad({ id: gist, channel, mode, edition }));
+      dispatch(performGistLoad({ id: gist, runtime, release, preview }));
     }
 
-    dispatch(changeChannel(channel));
-    dispatch(changeMode(mode));
-    dispatch(changeEdition(edition));
+    dispatch(changeRuntime(runtime));
+    dispatch(changeRelease(release));
+    dispatch(changePreview(preview));
   };
 }
 
@@ -783,15 +686,13 @@ export type Action =
   | ReturnType<typeof setPage>
   | ReturnType<typeof changePairCharacters>
   | ReturnType<typeof changeAssemblyFlavor>
-  | ReturnType<typeof changeBacktrace>
   | ReturnType<typeof changePreview>
-  | ReturnType<typeof changeChannel>
+  | ReturnType<typeof changeRuntime>
   | ReturnType<typeof changeDemangleAssembly>
-  | ReturnType<typeof changeEdition>
+  | ReturnType<typeof changeRelease>
   | ReturnType<typeof changeEditor>
   | ReturnType<typeof changeFocus>
   | ReturnType<typeof changeKeybinding>
-  | ReturnType<typeof changeMode>
   | ReturnType<typeof changeOrientation>
   | ReturnType<typeof changePrimaryAction>
   | ReturnType<typeof changeProcessAssembly>
@@ -824,9 +725,6 @@ export type Action =
   | ReturnType<typeof requestMiri>
   | ReturnType<typeof receiveMiriSuccess>
   | ReturnType<typeof receiveMiriFailure>
-  | ReturnType<typeof requestMacroExpansion>
-  | ReturnType<typeof receiveMacroExpansionSuccess>
-  | ReturnType<typeof receiveMacroExpansionFailure>
   | ReturnType<typeof requestCratesLoad>
   | ReturnType<typeof receiveCratesLoadSuccess>
   | ReturnType<typeof requestVersionsLoad>

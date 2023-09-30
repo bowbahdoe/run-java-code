@@ -26,7 +26,7 @@ fn ensure_string_in_vec(values: &mut Vec<String>, val: &str) {
     }
 }
 
-pub fn set_edition(cargo_toml: Value, edition: &str) -> Value {
+pub fn set_release(cargo_toml: Value, release: &str) -> Value {
     #[derive(Debug, Serialize, Deserialize)]
     #[serde(rename_all = "kebab-case")]
     struct CargoToml {
@@ -39,13 +39,13 @@ pub fn set_edition(cargo_toml: Value, edition: &str) -> Value {
     #[serde(rename_all = "kebab-case")]
     struct Package {
         #[serde(default)]
-        edition: String,
+        release: String,
         #[serde(flatten)]
         other: Other,
     }
 
     modify(cargo_toml, |mut cargo_toml: CargoToml| {
-        cargo_toml.package.edition = edition.into();
+        cargo_toml.package.release = release.into();
         cargo_toml
     })
 }

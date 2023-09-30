@@ -71,40 +71,32 @@ export enum PrimaryActionAuto {
 }
 
 export enum PrimaryActionCore {
-  Asm = 'asm',
   Compile = 'compile',
   Execute = 'execute',
-  LlvmIr = 'llvm-ir',
-  Hir = 'hir',
-  Mir = 'mir',
-  Test = 'test',
-  Wasm = 'wasm',
 }
 
 export type PrimaryAction = PrimaryActionCore | PrimaryActionAuto;
 
-export enum Channel {
-  Stable = 'java17',
-  Beta = 'beta',
-  Nightly = 'nightly',
-  Java19 = 'java19',
-  Java20 = 'java20'
+export enum Runtime {
+  Latest = 'latest',
+  Valhalla = 'valhalla'
 }
 
-export enum Mode {
-  Debug = 'debug',
-  Release = 'release',
-}
-
-export enum Edition {
-  Rust2015 = '2015',
-  Rust2018 = '2018',
-  Rust2021 = '2021',
-}
-
-export enum Backtrace {
-  Disabled = 'disabled',
-  Enabled = 'enabled',
+export enum Release {
+  Java8 = '8',
+  Java9 = '9',
+  Java10 = '10',
+  Java11 = '11',
+  Java12 = '12',
+  Java13 = '13',
+  Java14 = '14',
+  Java15 = '15',
+  Java16 = '16',
+  Java17 = '17',
+  Java18 = '18',
+  Java19 = '19',
+  Java20 = '20',
+  Java21 = '21'
 }
 
 export enum Preview {
@@ -115,7 +107,6 @@ export enum Preview {
 export enum Focus {
   Clippy = 'clippy',
   Miri = 'miri',
-  MacroExpansion = 'macro-expansion',
   LlvmIr = 'llvm-ir',
   Mir = 'mir',
   Hir = 'hir',

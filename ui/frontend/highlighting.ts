@@ -1,22 +1,20 @@
 import Prism from 'prismjs';
-import { Channel, makePosition, Position } from './types';
+import { Runtime, makePosition, Position } from './types';
 
 interface ConfigureRustErrorsArgs {
   enableFeatureGate: (feature: string) => void;
-  getChannel: () => Channel;
+  getRuntime: () => Runtime;
   gotoPosition: (line: string | number, column: string | number) => void;
   selectText: (start: Position, end: Position) => void;
   addImport: (code: string) => void;
-  reExecuteWithBacktrace: () => void;
 }
 
 export function configureRustErrors({
   enableFeatureGate,
-  getChannel,
+  getRuntime,
   gotoPosition,
   selectText,
-  addImport,
-  reExecuteWithBacktrace,
+  addImport
 }: ConfigureRustErrorsArgs) {
   Prism.languages.rust_errors = {
     'warning': {
@@ -50,13 +48,6 @@ export function configureRustErrors({
         'feature-gate': /add `#\!\[feature\(.+?\)\]`/,
       },
     },
-    'backtrace': {
-      pattern: /at \.\/src\/.*\n/,
-      inside: {
-        'backtrace-location': /src\/main.rs:(\d+)/,
-      },
-    },
-    'backtrace-enable': /Run with `RUST_BACKTRACE=1` environment variable to display a backtrace/i,
   };
 
   Prism.languages.rust_mir = {
@@ -69,7 +60,7 @@ export function configureRustErrors({
       if (errorMatch) {
         const [errorCode] = errorMatch;
         env.tag = 'a';
-        env.attributes.href = `https://doc.rust-lang.org/${getChannel()}/error_codes/${errorCode}.html`;
+        env.attributes.href = `https://doc.rust-lang.org/${getRuntime()}/error_codes/${errorCode}.html`;
         env.attributes.target = '_blank';
       }
     }
@@ -115,21 +106,6 @@ export function configureRustErrors({
         env.tag = 'a';
         env.attributes.href = '#';
         env.attributes['data-feature-gate'] = featureGate;
-      }
-    }
-    if (env.type === 'backtrace-enable') {
-      env.tag = 'a';
-      env.attributes.href = '#';
-      env.attributes['data-backtrace-enable'] = 'true';
-    }
-    if (env.type === 'backtrace-location') {
-      const errorMatch = /:(\d+)/.exec(env.content);
-      if (errorMatch) {
-        const [_, line] = errorMatch;
-        env.tag = 'a';
-        env.attributes.href = '#';
-        env.attributes['data-line'] = line;
-        env.attributes['data-col'] = '1';
       }
     }
     if (env.type === 'mir-source') {
@@ -180,16 +156,6 @@ export function configureRustErrors({
             enableFeatureGate(link.dataset.featureGate);
             gotoPosition(1, 1);
           }
-        };
-      }
-    });
-
-    const backtraceEnablers = env.element.querySelectorAll('.backtrace-enable');
-    Array.from(backtraceEnablers).forEach(link => {
-      if (link instanceof HTMLAnchorElement) {
-        link.onclick = e => {
-          e.preventDefault();
-          reExecuteWithBacktrace();
         };
       }
     });

@@ -5,15 +5,13 @@ use crate::{
         track_metric_no_request_async, Endpoint, GenerateLabels, HasLabelsCore, Outcome,
         SuccessDetails, UNAVAILABLE_WS,
     },
-    sandbox::{self, Channel, Sandbox, DOCKER_PROCESS_TIMEOUT_SOFT},
-    CachingSnafu, ClippyRequest, ClippyResponse, CompilationSnafu, CompileRequest, CompileResponse,
-    CompileSnafu, Config, CreateCoordinatorSnafu, Error, ErrorJson, EvaluateRequest,
+    sandbox::{self, Runtime, Sandbox, DOCKER_PROCESS_TIMEOUT_SOFT},
+    CachingSnafu, ClippyRequest, ClippyResponse, CompilationSnafu, CompileRequest, CompileResponse, Config, Error, ErrorJson, EvaluateRequest,
     EvaluateResponse, EvaluationSnafu, ExecuteRequest, ExecuteResponse, ExecutionSnafu,
-    ExpansionSnafu, FormatRequest, FormatResponse, FormattingSnafu, GhToken, GistCreationSnafu,
-    GistLoadingSnafu, InterpretingSnafu, LintingSnafu, MacroExpansionRequest,
-    MacroExpansionResponse, MetaCratesResponse, MetaGistCreateRequest, MetaGistResponse,
+    FormatRequest, FormatResponse, FormattingSnafu, GhToken, GistCreationSnafu,
+    GistLoadingSnafu, InterpretingSnafu, LintingSnafu,
+    MetaCratesResponse, MetaGistCreateRequest, MetaGistResponse,
     MetaVersionResponse, MetricsToken, MiriRequest, MiriResponse, Result, SandboxCreationSnafu,
-    ShutdownCoordinatorSnafu, TimeoutSnafu,
 };
 use async_trait::async_trait;
 use axum::{
@@ -29,7 +27,6 @@ use axum::{
     Router,
 };
 use futures::{future::BoxFuture, FutureExt};
-use orchestrator::coordinator::{self, DockerBackend};
 use snafu::{prelude::*, IntoError};
 use std::{
     convert::{TryFrom, TryInto},
@@ -77,13 +74,9 @@ pub(crate) async fn serve(config: Config) {
         .route("/format", post(format))
         .route("/clippy", post(clippy))
         .route("/miri", post(miri))
-        .route("/macro-expansion", post(macro_expansion))
         .route("/meta/crates", get_or_post(meta_crates))
-        .route("/meta/version/stable", get_or_post(meta_version_stable))
-        .route("/meta/version/beta", get_or_post(meta_version_beta))
-        .route("/meta/version/nightly", get_or_post(meta_version_nightly))
-        .route("/meta/version/java19_", get_or_post(meta_version_java19))
-        .route("/meta/version/java20_", get_or_post(meta_version_java20))
+        .route("/meta/version/latest", get_or_post(meta_version_latest))
+        .route("/meta/version/valhalla", get_or_post(meta_version_valhalla))
         .route("/meta/version/rustfmt", get_or_post(meta_version_rustfmt))
         .route("/meta/version/clippy", get_or_post(meta_version_clippy))
         .route("/meta/version/miri", get_or_post(meta_version_miri))
@@ -165,19 +158,13 @@ async fn compile(
     Extension(use_orchestrator): Extension<OrchestratorEnabled>,
     Json(req): Json<CompileRequest>,
 ) -> Result<Json<CompileResponse>> {
-    if use_orchestrator.0 {
-        with_coordinator(req, |c, req| c.compile(req).context(CompileSnafu).boxed())
-            .await
-            .map(Json)
-    } else {
-        with_sandbox(
-            req,
-            |sb, req| async move { sb.compile(req).await }.boxed(),
-            CompilationSnafu,
-        )
+    with_sandbox(
+        req,
+        |sb, req| async move { sb.compile(req).await }.boxed(),
+        CompilationSnafu,
+    )
         .await
         .map(Json)
-    }
 }
 
 async fn execute(Json(req): Json<ExecuteRequest>) -> Result<Json<ExecuteResponse>> {
@@ -215,18 +202,6 @@ async fn miri(Json(req): Json<MiriRequest>) -> Result<Json<MiriResponse>> {
         req,
         |sb, req| async move { sb.miri(req).await }.boxed(),
         InterpretingSnafu,
-    )
-    .await
-    .map(Json)
-}
-
-async fn macro_expansion(
-    Json(req): Json<MacroExpansionRequest>,
-) -> Result<Json<MacroExpansionResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.macro_expansion(req).await }.boxed(),
-        ExpansionSnafu,
     )
     .await
     .map(Json)
@@ -281,70 +256,6 @@ trait IsSuccess {
     fn is_success(&self) -> bool;
 }
 
-impl IsSuccess for coordinator::WithOutput<coordinator::CompileResponse> {
-    fn is_success(&self) -> bool {
-        self.success
-    }
-}
-
-async fn with_coordinator<WebReq, WebResp, Req, Resp, F>(req: WebReq, f: F) -> Result<WebResp>
-where
-    WebReq: TryInto<Req, Error = Error>,
-    WebReq: HasEndpoint,
-    Req: HasLabelsCore,
-    Resp: Into<WebResp>,
-    Resp: IsSuccess,
-    for<'f> F:
-        FnOnce(&'f coordinator::Coordinator<DockerBackend>, Req) -> BoxFuture<'f, Result<Resp>>,
-{
-    let coordinator = orchestrator::coordinator::Coordinator::new_docker()
-        .await
-        .context(CreateCoordinatorSnafu)?;
-
-    let job = async {
-        let req = req.try_into()?;
-
-        let labels_core = req.labels_core();
-
-        let start = Instant::now();
-
-        let job = f(&coordinator, req);
-        let resp = tokio::time::timeout(DOCKER_PROCESS_TIMEOUT_SOFT, job).await;
-
-        let elapsed = start.elapsed();
-
-        let outcome = match &resp {
-            Ok(Ok(v)) => {
-                if v.is_success() {
-                    Outcome::Success
-                } else {
-                    Outcome::ErrorUserCode
-                }
-            }
-            Ok(Err(_)) => Outcome::ErrorServer,
-            Err(_) => Outcome::ErrorTimeoutSoft,
-        };
-
-        // Note that any early return before this point won't be
-        // reported in the metrics!
-
-        record_metric(WebReq::ENDPOINT, labels_core, outcome, elapsed);
-
-        let resp = resp.context(TimeoutSnafu)?;
-
-        resp.map(Into::into)
-    };
-
-    let resp = job.await;
-
-    coordinator
-        .shutdown()
-        .await
-        .context(ShutdownCoordinatorSnafu)?;
-
-    resp
-}
-
 async fn meta_crates(
     Extension(cache): Extension<Arc<SandboxCache>>,
     if_none_match: Option<TypedHeader<IfNoneMatch>>,
@@ -355,51 +266,22 @@ async fn meta_crates(
     apply_timestamped_caching(value, if_none_match)
 }
 
-async fn meta_version_stable(
+async fn meta_version_latest(
     Extension(cache): Extension<Arc<SandboxCache>>,
     if_none_match: Option<TypedHeader<IfNoneMatch>>,
 ) -> Result<impl IntoResponse> {
     let value =
-        track_metric_no_request_async(Endpoint::MetaVersionStable, || cache.version_stable())
+        track_metric_no_request_async(Endpoint::MetaVersionLatest, || cache.version_latest())
             .await?;
     apply_timestamped_caching(value, if_none_match)
 }
 
-async fn meta_version_beta(
+async fn meta_version_valhalla(
     Extension(cache): Extension<Arc<SandboxCache>>,
     if_none_match: Option<TypedHeader<IfNoneMatch>>,
 ) -> Result<impl IntoResponse> {
     let value =
-        track_metric_no_request_async(Endpoint::MetaVersionBeta, || cache.version_beta()).await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_nightly(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionNightly, || cache.version_nightly())
-            .await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_java19(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionJava19, || cache.version_java19())
-            .await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_java20(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionJava20, || cache.version_java20())
+        track_metric_no_request_async(Endpoint::MetaVersionValhalla, || cache.version_valhalla())
             .await?;
     apply_timestamped_caching(value, if_none_match)
 }
@@ -576,11 +458,8 @@ type Stamped<T> = (T, SystemTime);
 #[derive(Debug, Default)]
 struct SandboxCache {
     crates: CacheOne<MetaCratesResponse>,
-    version_stable: CacheOne<MetaVersionResponse>,
-    version_beta: CacheOne<MetaVersionResponse>,
-    version_nightly: CacheOne<MetaVersionResponse>,
-    version_java19: CacheOne<MetaVersionResponse>,
-    version_java20: CacheOne<MetaVersionResponse>,
+    version_latest: CacheOne<MetaVersionResponse>,
+    version_valhalla: CacheOne<MetaVersionResponse>,
     version_rustfmt: CacheOne<MetaVersionResponse>,
     version_clippy: CacheOne<MetaVersionResponse>,
     version_miri: CacheOne<MetaVersionResponse>,
@@ -595,11 +474,11 @@ impl SandboxCache {
             .await
     }
 
-    async fn version_stable(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_stable
+    async fn version_latest(&self) -> Result<Stamped<MetaVersionResponse>> {
+        self.version_latest
             .fetch(|sandbox| async move {
                 let version = sandbox
-                    .version(Channel::Stable)
+                    .version(Runtime::Latest)
                     .await
                     .context(CachingSnafu)?;
                 Ok(version.into())
@@ -607,44 +486,11 @@ impl SandboxCache {
             .await
     }
 
-    async fn version_beta(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_beta
-            .fetch(|sandbox| async move {
-                let version = sandbox.version(Channel::Beta).await.context(CachingSnafu)?;
-                Ok(version.into())
-            })
-            .await
-    }
-
-    async fn version_nightly(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_nightly
+    async fn version_valhalla(&self) -> Result<Stamped<MetaVersionResponse>> {
+        self.version_valhalla
             .fetch(|sandbox| async move {
                 let version = sandbox
-                    .version(Channel::Nightly)
-                    .await
-                    .context(CachingSnafu)?;
-                Ok(version.into())
-            })
-            .await
-    }
-
-    async fn version_java19(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_java19
-            .fetch(|sandbox| async move {
-                let version = sandbox
-                    .version(Channel::Java19)
-                    .await
-                    .context(CachingSnafu)?;
-                Ok(version.into())
-            })
-            .await
-    }
-
-    async fn version_java20(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_java20
-            .fetch(|sandbox| async move {
-                let version = sandbox
-                    .version(Channel::Java20)
+                    .version(Runtime::Valhalla)
                     .await
                     .context(CachingSnafu)?;
                 Ok(version.into())
@@ -814,166 +660,5 @@ where
 {
     fn into_response(self) -> axum::response::Response {
         axum::Json(self.0).into_response()
-    }
-}
-
-mod api_orchestrator_integration_impls {
-    use orchestrator::coordinator::*;
-    use std::convert::TryFrom;
-
-    use super::{Error, Result};
-
-    impl TryFrom<crate::CompileRequest> for CompileRequest {
-        type Error = Error;
-
-        fn try_from(other: crate::CompileRequest) -> Result<Self> {
-            let crate::CompileRequest {
-                target,
-                assembly_flavor,
-                demangle_assembly,
-                process_assembly,
-                channel,
-                mode,
-                edition,
-                crate_type,
-                tests,
-                backtrace,
-                preview,
-                code,
-            } = other;
-
-            Ok(Self {
-                target: parse_target(
-                    &target,
-                    assembly_flavor.as_deref(),
-                    demangle_assembly.as_deref(),
-                    process_assembly.as_deref(),
-                )?,
-                channel: parse_channel(&channel)?,
-                crate_type: parse_crate_type(&crate_type)?,
-                mode: parse_mode(&mode)?,
-                edition: parse_edition(&edition)?,
-                tests,
-                backtrace,
-                preview,
-                code,
-            })
-        }
-    }
-
-    impl From<WithOutput<CompileResponse>> for crate::CompileResponse {
-        fn from(other: WithOutput<CompileResponse>) -> Self {
-            let WithOutput {
-                response,
-                stdout,
-                stderr,
-            } = other;
-            let CompileResponse { success, code } = response;
-
-            Self {
-                success,
-                code,
-                stdout,
-                stderr,
-            }
-        }
-    }
-
-    fn parse_target(
-        target: &str,
-        assembly_flavor: Option<&str>,
-        demangle_assembly: Option<&str>,
-        process_assembly: Option<&str>,
-    ) -> Result<CompileTarget> {
-        Ok(match target {
-            "asm" => {
-                let assembly_flavor = match assembly_flavor {
-                    Some(f) => parse_assembly_flavor(f)?,
-                    None => AssemblyFlavor::Att,
-                };
-
-                let demangle = match demangle_assembly {
-                    Some(f) => parse_demangle_assembly(f)?,
-                    None => DemangleAssembly::Demangle,
-                };
-
-                let process_assembly = match process_assembly {
-                    Some(f) => parse_process_assembly(f)?,
-                    None => ProcessAssembly::Filter,
-                };
-
-                CompileTarget::Assembly(assembly_flavor, demangle, process_assembly)
-            }
-            "llvm-ir" => CompileTarget::LlvmIr,
-            "mir" => CompileTarget::Mir,
-            "hir" => CompileTarget::Hir,
-            "wasm" => CompileTarget::Wasm,
-            value => crate::InvalidTargetSnafu { value }.fail()?,
-        })
-    }
-
-    fn parse_assembly_flavor(s: &str) -> Result<AssemblyFlavor> {
-        Ok(match s {
-            "att" => AssemblyFlavor::Att,
-            "intel" => AssemblyFlavor::Intel,
-            value => crate::InvalidAssemblyFlavorSnafu { value }.fail()?,
-        })
-    }
-
-    fn parse_demangle_assembly(s: &str) -> Result<DemangleAssembly> {
-        Ok(match s {
-            "demangle" => DemangleAssembly::Demangle,
-            "mangle" => DemangleAssembly::Mangle,
-            value => crate::InvalidDemangleAssemblySnafu { value }.fail()?,
-        })
-    }
-
-    fn parse_process_assembly(s: &str) -> Result<ProcessAssembly> {
-        Ok(match s {
-            "filter" => ProcessAssembly::Filter,
-            "raw" => ProcessAssembly::Raw,
-            value => crate::InvalidProcessAssemblySnafu { value }.fail()?,
-        })
-    }
-
-    fn parse_channel(s: &str) -> Result<Channel> {
-        Ok(match s {
-            "stable" => Channel::Stable,
-            "beta" => Channel::Beta,
-            "nightly" => Channel::Nightly,
-            value => crate::InvalidChannelSnafu { value }.fail()?,
-        })
-    }
-
-    fn parse_crate_type(s: &str) -> Result<CrateType> {
-        use {CrateType::*, LibraryType::*};
-
-        Ok(match s {
-            "bin" => Binary,
-            "lib" => Library(Lib),
-            "dylib" => Library(Dylib),
-            "rlib" => Library(Rlib),
-            "staticlib" => Library(Staticlib),
-            "cdylib" => Library(Cdylib),
-            "proc-macro" => Library(ProcMacro),
-            value => crate::InvalidCrateTypeSnafu { value }.fail()?,
-        })
-    }
-
-    fn parse_mode(s: &str) -> Result<Mode> {
-        Ok(match s {
-            "debug" => Mode::Debug,
-            "release" => Mode::Release,
-            value => crate::InvalidModeSnafu { value }.fail()?,
-        })
-    }
-
-    fn parse_edition(s: &str) -> Result<Edition> {
-        Ok(match s {
-            "2015" => Edition::Rust2015,
-            "2018" => Edition::Rust2018,
-            "2021" => Edition::Rust2021,
-            value => crate::InvalidEditionSnafu { value }.fail()?,
-        })
     }
 }

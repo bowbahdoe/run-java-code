@@ -1,6 +1,5 @@
 use futures::future::BoxFuture;
 use lazy_static::lazy_static;
-use orchestrator::coordinator;
 use prometheus::{
     self, register_histogram, register_histogram_vec, register_int_counter, register_int_gauge,
     Histogram, HistogramVec, IntCounter, IntGauge,
@@ -11,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::sandbox::{self, Channel, CompileTarget, CrateType, Edition, Mode};
+use crate::sandbox::{self, Runtime, CompileTarget, CrateType, Release};
 
 lazy_static! {
     pub(crate) static ref REQUESTS: HistogramVec = register_histogram_vec!(
@@ -46,13 +45,9 @@ pub(crate) enum Endpoint {
     Format,
     Miri,
     Clippy,
-    MacroExpansion,
     MetaCrates,
-    MetaVersionStable,
-    MetaVersionBeta,
-    MetaVersionNightly,
-    MetaVersionJava19,
-    MetaVersionJava20,
+    MetaVersionLatest,
+    MetaVersionValhalla,
     MetaVersionRustfmt,
     MetaVersionClippy,
     MetaVersionMiri,
@@ -70,12 +65,10 @@ pub(crate) enum Outcome {
 
 pub(crate) struct LabelsCore {
     target: Option<CompileTarget>,
-    channel: Option<Channel>,
-    mode: Option<Mode>,
-    edition: Option<Option<Edition>>,
+    runtime: Option<Runtime>,
+    release: Option<Option<Release>>,
     crate_type: Option<CrateType>,
     tests: Option<bool>,
-    backtrace: Option<bool>,
     preview: Option<bool>
 }
 
@@ -83,30 +76,26 @@ pub(crate) struct LabelsCore {
 pub(crate) struct Labels {
     endpoint: Endpoint,
     outcome: Outcome,
-
     target: Option<CompileTarget>,
-    channel: Option<Channel>,
-    mode: Option<Mode>,
-    edition: Option<Option<Edition>>,
+    runtime: Option<Runtime>,
+    release: Option<Option<Release>>,
     crate_type: Option<CrateType>,
     tests: Option<bool>,
-    backtrace: Option<bool>,
     preview: Option<bool>
 }
 
 impl Labels {
-    const COUNT: usize = 9;
+    const COUNT: usize = 8;
 
     const LABELS: &'static [&'static str; Self::COUNT] = &[
         "endpoint",
         "outcome",
         "target",
-        "channel",
-        "mode",
-        "edition",
+        "runtime",
+        "release",
         "crate_type",
         "tests",
-        "backtrace",
+        "preview"
     ];
 
     fn as_values(&self) -> [&'static str; Self::COUNT] {
@@ -114,12 +103,10 @@ impl Labels {
             endpoint,
             outcome,
             target,
-            channel,
-            mode,
-            edition,
+            runtime,
+            release,
             crate_type,
             tests,
-            backtrace,
             preview
         } = *self;
 
@@ -128,55 +115,45 @@ impl Labels {
         }
 
         let target = target.map_or("", Into::into);
-        let channel = channel.map_or("", Into::into);
-        let mode = mode.map_or("", Into::into);
-        let edition = match edition {
+        let runtime = runtime.map_or("", Into::into);
+        let release = match release {
             None => "",
             Some(None) => "Unspecified",
             Some(Some(v)) => v.into(),
         };
         let crate_type = crate_type.map_or("", Into::into);
         let tests = b(tests);
-        let backtrace = b(backtrace);
         let preview = b(preview);
-
-        // TODO: Include preview in values
-        std::mem::forget(preview);
 
         [
             endpoint.into(),
             outcome.into(),
             target,
-            channel,
-            mode,
-            edition,
+            runtime,
+            release,
             crate_type,
             tests,
-            backtrace
+            preview
         ]
     }
 
     pub(crate) fn complete(endpoint: Endpoint, labels_core: LabelsCore, outcome: Outcome) -> Self {
         let LabelsCore {
             target,
-            channel,
-            mode,
-            edition,
+            runtime,
+            release,
             crate_type,
             tests,
-            backtrace,
             preview
         } = labels_core;
         Self {
             endpoint,
             outcome,
             target,
-            channel,
-            mode,
-            edition,
+            runtime,
+            release,
             crate_type,
             tests,
-            backtrace,
             preview
         }
     }
@@ -199,12 +176,10 @@ impl GenerateLabels for sandbox::CompileRequest {
     fn generate_labels(&self, outcome: Outcome) -> Labels {
         let Self {
             target,
-            channel,
+            runtime,
             crate_type,
-            mode,
-            edition,
+            release,
             tests,
-            backtrace,
             preview,
             code: _,
         } = *self;
@@ -213,12 +188,10 @@ impl GenerateLabels for sandbox::CompileRequest {
             endpoint: Endpoint::Compile,
             outcome,
             target: Some(target),
-            channel: Some(channel),
-            mode: Some(mode),
-            edition: Some(edition),
+            runtime: Some(runtime),
+            release: Some(release),
             crate_type: Some(crate_type),
             tests: Some(tests),
-            backtrace: Some(backtrace),
             preview: Some(preview)
         }
     }
@@ -227,12 +200,10 @@ impl GenerateLabels for sandbox::CompileRequest {
 impl GenerateLabels for sandbox::ExecuteRequest {
     fn generate_labels(&self, outcome: Outcome) -> Labels {
         let Self {
-            channel,
-            mode,
-            edition,
+            runtime,
+            release,
             crate_type,
             tests,
-            backtrace,
             preview,
             code: _,
         } = *self;
@@ -242,12 +213,10 @@ impl GenerateLabels for sandbox::ExecuteRequest {
             outcome,
 
             target: None,
-            channel: Some(channel),
-            mode: Some(mode),
-            edition: Some(edition),
+            runtime: Some(runtime),
+            release: Some(release),
             crate_type: Some(crate_type),
             tests: Some(tests),
-            backtrace: Some(backtrace),
             preview: Some(preview)
         }
     }
@@ -255,19 +224,17 @@ impl GenerateLabels for sandbox::ExecuteRequest {
 
 impl GenerateLabels for sandbox::FormatRequest {
     fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self { edition, code: _ } = *self;
+        let Self { release, code: _ } = *self;
 
         Labels {
             endpoint: Endpoint::Format,
             outcome,
 
             target: None,
-            channel: None,
-            mode: None,
-            edition: Some(edition),
+            runtime: None,
+            release: Some(release),
             crate_type: None,
             tests: None,
-            backtrace: None,
             preview: None
         }
     }
@@ -277,7 +244,7 @@ impl GenerateLabels for sandbox::ClippyRequest {
     fn generate_labels(&self, outcome: Outcome) -> Labels {
         let Self {
             code: _,
-            edition,
+            release,
             crate_type,
         } = *self;
 
@@ -286,12 +253,10 @@ impl GenerateLabels for sandbox::ClippyRequest {
             outcome,
 
             target: None,
-            channel: None,
-            mode: None,
-            edition: Some(edition),
+            runtime: None,
+            release: Some(release),
             crate_type: Some(crate_type),
             tests: None,
-            backtrace: None,
             preview: None
         }
     }
@@ -299,39 +264,17 @@ impl GenerateLabels for sandbox::ClippyRequest {
 
 impl GenerateLabels for sandbox::MiriRequest {
     fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self { code: _, edition } = *self;
+        let Self { code: _, release } = *self;
 
         Labels {
             endpoint: Endpoint::Miri,
             outcome,
 
             target: None,
-            channel: None,
-            mode: None,
-            edition: Some(edition),
+            runtime: None,
+            release: Some(release),
             crate_type: None,
             tests: None,
-            backtrace: None,
-            preview: None
-        }
-    }
-}
-
-impl GenerateLabels for sandbox::MacroExpansionRequest {
-    fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self { code: _, edition } = *self;
-
-        Labels {
-            endpoint: Endpoint::MacroExpansion,
-            outcome,
-
-            target: None,
-            channel: None,
-            mode: None,
-            edition: Some(edition),
-            crate_type: None,
-            tests: None,
-            backtrace: None,
             preview: None
         }
     }
@@ -398,12 +341,6 @@ impl SuccessDetails for sandbox::ClippyResponse {
 }
 
 impl SuccessDetails for sandbox::MiriResponse {
-    fn success_details(&self) -> Outcome {
-        common_success_details(self.success, &self.stderr)
-    }
-}
-
-impl SuccessDetails for sandbox::MacroExpansionResponse {
     fn success_details(&self) -> Outcome {
         common_success_details(self.success, &self.stderr)
     }
@@ -488,12 +425,10 @@ where
         endpoint,
         outcome,
         target: None,
-        channel: None,
-        mode: None,
-        edition: None,
+        runtime: None,
+        release: None,
         crate_type: None,
         tests: None,
-        backtrace: None,
         preview: None
     };
 
@@ -504,33 +439,6 @@ where
 
 pub(crate) trait HasLabelsCore {
     fn labels_core(&self) -> LabelsCore;
-}
-
-impl HasLabelsCore for coordinator::CompileRequest {
-    fn labels_core(&self) -> LabelsCore {
-        let Self {
-            target,
-            channel,
-            crate_type,
-            mode,
-            edition,
-            tests,
-            backtrace,
-            preview,
-            code: _,
-        } = *self;
-
-        LabelsCore {
-            target: Some(target.into()),
-            channel: Some(channel.into()),
-            mode: Some(mode.into()),
-            edition: Some(Some(edition.into())),
-            crate_type: Some(crate_type.into()),
-            tests: Some(tests),
-            backtrace: Some(backtrace),
-            preview: Some(preview)
-        }
-    }
 }
 
 pub(crate) fn record_metric(

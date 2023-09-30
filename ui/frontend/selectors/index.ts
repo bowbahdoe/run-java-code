@@ -4,9 +4,8 @@ import { createSelector } from '@reduxjs/toolkit';
 import { State } from '../reducers';
 import {
   AceResizeKey,
-  Backtrace,
-  Channel,
-  Edition,
+  Runtime,
+  Release,
   Orientation,
   Preview,
   PrimaryActionAuto,
@@ -40,9 +39,9 @@ const autoPrimaryActionSelector = createSelector(
         return PrimaryActionCore.Compile;
       }
     } else {
-      if (hasTests) {
+      /* if (hasTests) {
         return PrimaryActionCore.Test;
-      } else if (hasMainFunction) {
+      } else */ if (hasMainFunction) {
         return PrimaryActionCore.Execute;
       } else {
         return PrimaryActionCore.Compile;
@@ -51,10 +50,10 @@ const autoPrimaryActionSelector = createSelector(
   },
 );
 
-export const runAsTest = createSelector(
+/* export const runAsTest = createSelector(
   autoPrimaryActionSelector,
   primaryAction => primaryAction === PrimaryActionCore.Test,
-);
+); */
 
 export const getCrateType = createSelector(
   crateTypeSelector,
@@ -89,70 +88,44 @@ const primaryActionSelector = createSelector(
 );
 
 const LABELS: { [index in PrimaryActionCore]: string } = {
-  [PrimaryActionCore.Asm]: 'Show Assembly',
   [PrimaryActionCore.Compile]: 'Build',
   [PrimaryActionCore.Execute]: 'Run',
-  [PrimaryActionCore.LlvmIr]: 'Show LLVM IR',
-  [PrimaryActionCore.Hir]: 'Show HIR',
-  [PrimaryActionCore.Mir]: 'Show MIR',
-  [PrimaryActionCore.Test]: 'Test',
-  [PrimaryActionCore.Wasm]: 'Show WASM',
 };
 
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
 
-const getStable = (state: State) => state.versions?.stable;
-const getBeta = (state: State) => state.versions?.beta;
-const getNightly = (state: State) => state.versions?.nightly;
-
-const getJava19 = (state: State) => state.versions?.java19;
-const getJava20 = (state: State) => state.versions?.java20;
+const getLatest = (state: State) => state.versions?.latest;
+const getValhalla = (state: State) => state.versions?.valhalla;
 const getRustfmt = (state: State) => state.versions?.rustfmt;
 const getClippy = (state: State) => state.versions?.clippy;
 const getMiri = (state: State) => state.versions?.miri;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
-export const stableVersionText = createSelector(getStable, versionNumber);
-export const betaVersionText = createSelector(getBeta, versionNumber);
-export const nightlyVersionText = createSelector(getNightly, versionNumber);
-export const java19VersionText = createSelector(getJava19, versionNumber);
-export const java20VersionText = createSelector(getJava20, versionNumber);
+export const latestVersionText = createSelector(getLatest, versionNumber);
+export const valhallaVersionText = createSelector(getValhalla, versionNumber);
 export const clippyVersionText = createSelector(getClippy, versionNumber);
 export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
 export const miriVersionText = createSelector(getMiri, versionNumber);
 
 const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
-export const betaVersionDetailsText = createSelector(getBeta, versionDetails);
-export const nightlyVersionDetailsText = createSelector(getNightly, versionDetails);
+
 export const clippyVersionDetailsText = createSelector(getClippy, versionDetails);
 export const rustfmtVersionDetailsText = createSelector(getRustfmt, versionDetails);
 export const miriVersionDetailsText = createSelector(getMiri, versionDetails);
 
-const editionSelector = (state: State) => state.configuration.edition;
+const releaseSelector = (state: State) => state.configuration.release;
 
-export const isNightlyChannel = (state: State) => (
-  state.configuration.channel === Channel.Nightly
-);
-export const isWasmAvailable = isNightlyChannel;
-export const isHirAvailable = isNightlyChannel;
+export const isWasmAvailable = false;
+export const isHirAvailable = false;
 
-export const getModeLabel = (state: State) => {
-  const { configuration: { mode } } = state;
-  return `${mode}`;
+export const getRuntimeLabel = (state: State) => {
+  const { configuration: { runtime } } = state;
+  return `${runtime}`;
 };
 
-export const getChannelLabel = (state: State) => {
-  const { configuration: { channel } } = state;
-  return `${channel}`;
-};
-
-export const isEditionDefault = createSelector(
-  editionSelector,
-  edition => edition == Edition.Rust2021,
-);
-
-export const getBacktraceSet = (state: State) => (
-  state.configuration.backtrace !== Backtrace.Disabled
+export const isReleaseDefault = createSelector(
+  releaseSelector,
+  release => release == Release.Java21,
 );
 
 export const getPreviewSet = (state: State) => (
@@ -160,9 +133,9 @@ export const getPreviewSet = (state: State) => (
 );
 
 export const getAdvancedOptionsSet = createSelector(
-  isEditionDefault, getBacktraceSet,
-  (editionDefault, backtraceSet) => (
-    !editionDefault || backtraceSet
+    isReleaseDefault,
+  (releaseDefault) => (
+    !releaseDefault
   ),
 );
 
@@ -178,7 +151,6 @@ const getOutputs = (state: State) => [
   state.output.mir,
   state.output.hir,
   state.output.miri,
-  state.output.macroExpansion,
   state.output.wasm,
 ];
 
@@ -198,9 +170,9 @@ const urlQuerySelector = createSelector(
   gistSelector,
   gist => {
     const res = new URLSearchParams();
-    if (gist.channel) { res.set('version', gist.channel) }
-    if (gist.mode) { res.set('mode', gist.mode) }
-    if (gist.edition) { res.set('edition', gist.edition) }
+    if (gist.runtime) { res.set('runtime', gist.runtime) }
+    if (gist.release) { res.set('release', gist.release) }
+    if (gist.preview) { res.set('preview', gist.preview) }
     return res;
   },
 );
@@ -308,15 +280,15 @@ export const anyNotificationsToShowSelector = createSelector(
 
 export const clippyRequestSelector = createSelector(
   codeSelector,
-  editionSelector,
+  releaseSelector,
   getCrateType,
-  (code, edition, crateType) => ({ code, edition, crateType }),
+  (code, release, crateType) => ({ code, release, crateType }),
 );
 
 export const formatRequestSelector = createSelector(
   codeSelector,
-  editionSelector,
-  (code, edition) => ({ code, edition }),
+  releaseSelector,
+  (code, release) => ({ code, release }),
 );
 
 const focus = (state: State) => state.output.meta.focus;
@@ -354,8 +326,8 @@ export const acePairCharacters = createSelector(aceConfig, c => c.pairCharacters
 export const aceTheme = createSelector(aceConfig, c => c.theme);
 
 export const offerCrateAutocompleteOnUse = createSelector(
-  editionSelector,
-  (edition) => edition !== Edition.Rust2015,
+  releaseSelector,
+  (release) => release !== Release.Java21,
 );
 
 const websocket = (state: State) => state.websocket;
@@ -386,13 +358,11 @@ export const executeRequestPayloadSelector = createSelector(
   (state: State) => state.configuration,
   (_state: State, { crateType, tests }: { crateType: string, tests: boolean }) => ({ crateType, tests }),
   (code, configuration, { crateType, tests }) => ({
-    channel: configuration.channel,
-    mode: configuration.mode,
-    edition: configuration.edition,
+    runtime: configuration.runtime,
+    release: configuration.release,
     crateType,
     tests,
     code,
-    backtrace: configuration.backtrace === Backtrace.Enabled,
     preview: configuration.preview == Preview.Enabled
   }),
 );

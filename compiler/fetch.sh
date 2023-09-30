@@ -10,9 +10,10 @@ for image in rust-stable rust-beta rust-nightly rustfmt clippy miri; do
     docker tag "${repository}/${image}" "${image}"
 done
 
-for image in eclipse-temurin:19 eclipse-temurin:20; do
+for image in amazoncorretto:21; do
     docker pull "${image}"
     # The backend expects images without a repository prefix
     docker tag "${image}" "${image}"
 done
 
+docker pull shipilev/openjdk:valhalla

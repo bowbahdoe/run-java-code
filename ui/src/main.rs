@@ -91,11 +91,15 @@ impl Config {
             warn!("Environment variable {} is not set, so reading and writing GitHub gists will not work", PLAYGROUND_GITHUB_TOKEN);
         }
 
-        let metrics_token = env::var("PLAYGROUND_METRICS_TOKEN").ok();
-
-        let cors_enabled = env::var_os("PLAYGROUND_CORS_ENABLED").is_some();
-
-        let orchestrator_enabled = env::var_os("PLAYGROUND_ORCHESTRATOR_ENABLED").is_some();
+        // Attempt to retrieve the environment variable values
+        let metrics_token = std::env::var("PLAYGROUND_METRICS_TOKEN").ok();
+        let cors_enabled = std::env::var_os("PLAYGROUND_CORS_ENABLED").is_some();
+        let orchestrator_enabled = std::env::var_os("PLAYGROUND_ORCHESTRATOR_ENABLED").is_some();
+    
+        // Print the values to the console
+        println!("Metrics Token: {:?}", metrics_token);
+        println!("CORS Enabled: {}", cors_enabled);
+        println!("Orchestrator Enabled: {}", orchestrator_enabled);
 
         Self {
             address,
@@ -201,12 +205,12 @@ pub enum Error {
     InvalidDemangleAssembly { value: String },
     #[snafu(display("The value {:?} is not a valid assembly processing option", value))]
     InvalidProcessAssembly { value: String },
-    #[snafu(display("The value {:?} is not a valid channel", value,))]
-    InvalidChannel { value: String },
+    #[snafu(display("The value {:?} is not a valid runtime", value,))]
+    InvalidRuntime { value: String },
     #[snafu(display("The value {:?} is not a valid mode", value))]
     InvalidMode { value: String },
-    #[snafu(display("The value {:?} is not a valid edition", value))]
-    InvalidEdition { value: String },
+    #[snafu(display("The value {:?} is not a valid release", value))]
+    InvalidRelease { value: String },
     #[snafu(display("The value {:?} is not a valid crate type", value))]
     InvalidCrateType { value: String },
     #[snafu(display("No request was provided"))]
@@ -215,21 +219,6 @@ pub enum Error {
     CachePoisoned,
     #[snafu(display("The WebSocket worker panicked: {}", text))]
     WebSocketTaskPanic { text: String },
-
-    #[snafu(display("Unable to create the coordinator"))]
-    CreateCoordinator {
-        source: orchestrator::coordinator::Error,
-    },
-
-    #[snafu(display("Unable to shutdown the coordinator"))]
-    ShutdownCoordinator {
-        source: orchestrator::coordinator::Error,
-    },
-
-    #[snafu(display("Unable to convert the compile request"))]
-    Compile {
-        source: orchestrator::coordinator::CompileError,
-    },
 
     #[snafu(display("The operation timed out"))]
     Timeout { source: tokio::time::error::Elapsed },
@@ -251,15 +240,13 @@ struct CompileRequest {
     demangle_assembly: Option<String>,
     #[serde(rename = "processAssembly")]
     process_assembly: Option<String>,
-    channel: String,
+    runtime: String,
     mode: String,
     #[serde(default)]
-    edition: String,
+    release: String,
     #[serde(rename = "crateType")]
     crate_type: String,
     tests: bool,
-    #[serde(default)]
-    backtrace: bool,
     #[serde(default)]
     preview: bool,
     code: String,
@@ -275,15 +262,12 @@ struct CompileResponse {
 
 #[derive(Debug, Clone, Deserialize)]
 struct ExecuteRequest {
-    channel: String,
-    mode: String,
+    runtime: String,
     #[serde(default)]
-    edition: String,
+    release: String,
     #[serde(rename = "crateType")]
     crate_type: String,
     tests: bool,
-    #[serde(default)]
-    backtrace: bool,
     #[serde(default)]
     preview: bool,
     code: String,
@@ -300,7 +284,7 @@ struct ExecuteResponse {
 struct FormatRequest {
     code: String,
     #[serde(default)]
-    edition: String,
+    release: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -315,7 +299,7 @@ struct FormatResponse {
 struct ClippyRequest {
     code: String,
     #[serde(default)]
-    edition: String,
+    release: String,
     #[serde(default = "default_crate_type", rename = "crateType")]
     crate_type: String,
 }
@@ -331,25 +315,11 @@ struct ClippyResponse {
 struct MiriRequest {
     code: String,
     #[serde(default)]
-    edition: String,
+    release: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 struct MiriResponse {
-    success: bool,
-    stdout: String,
-    stderr: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct MacroExpansionRequest {
-    code: String,
-    #[serde(default)]
-    edition: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct MacroExpansionResponse {
     success: bool,
     stdout: String,
     stderr: String,
@@ -392,7 +362,7 @@ struct EvaluateRequest {
     optimize: String,
     code: String,
     #[serde(default)]
-    edition: String,
+    release: String,
     #[serde(default)]
     tests: bool,
 }
@@ -435,12 +405,10 @@ impl TryFrom<CompileRequest> for sandbox::CompileRequest {
 
         Ok(sandbox::CompileRequest {
             target,
-            channel: parse_channel(&me.channel)?,
-            mode: parse_mode(&me.mode)?,
-            edition: parse_edition(&me.edition)?,
+            runtime: parse_runtime(&me.runtime)?,
+            release: parse_release(&me.release)?,
             crate_type: parse_crate_type(&me.crate_type)?,
             tests: me.tests,
-            backtrace: me.backtrace,
             preview: me.preview,
             code: me.code,
         })
@@ -463,12 +431,10 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
 
     fn try_from(me: ExecuteRequest) -> Result<Self> {
         Ok(sandbox::ExecuteRequest {
-            channel: parse_channel(&me.channel)?,
-            mode: parse_mode(&me.mode)?,
-            edition: parse_edition(&me.edition)?,
+            runtime: parse_runtime(&me.runtime)?,
+            release: parse_release(&me.release)?,
             crate_type: parse_crate_type(&me.crate_type)?,
             tests: me.tests,
-            backtrace: me.backtrace,
             preview: me.preview,
             code: me.code,
         })
@@ -491,7 +457,7 @@ impl TryFrom<FormatRequest> for sandbox::FormatRequest {
     fn try_from(me: FormatRequest) -> Result<Self> {
         Ok(sandbox::FormatRequest {
             code: me.code,
-            edition: parse_edition(&me.edition)?,
+            release: parse_release(&me.release)?,
         })
     }
 }
@@ -514,7 +480,7 @@ impl TryFrom<ClippyRequest> for sandbox::ClippyRequest {
         Ok(sandbox::ClippyRequest {
             code: me.code,
             crate_type: parse_crate_type(&me.crate_type)?,
-            edition: parse_edition(&me.edition)?,
+            release: parse_release(&me.release)?,
         })
     }
 }
@@ -535,7 +501,7 @@ impl TryFrom<MiriRequest> for sandbox::MiriRequest {
     fn try_from(me: MiriRequest) -> Result<Self> {
         Ok(sandbox::MiriRequest {
             code: me.code,
-            edition: parse_edition(&me.edition)?,
+            release: parse_release(&me.release)?,
         })
     }
 }
@@ -543,27 +509,6 @@ impl TryFrom<MiriRequest> for sandbox::MiriRequest {
 impl From<sandbox::MiriResponse> for MiriResponse {
     fn from(me: sandbox::MiriResponse) -> Self {
         MiriResponse {
-            success: me.success,
-            stdout: me.stdout,
-            stderr: me.stderr,
-        }
-    }
-}
-
-impl TryFrom<MacroExpansionRequest> for sandbox::MacroExpansionRequest {
-    type Error = Error;
-
-    fn try_from(me: MacroExpansionRequest) -> Result<Self> {
-        Ok(sandbox::MacroExpansionRequest {
-            code: me.code,
-            edition: parse_edition(&me.edition)?,
-        })
-    }
-}
-
-impl From<sandbox::MacroExpansionResponse> for MacroExpansionResponse {
-    fn from(me: sandbox::MacroExpansionResponse) -> Self {
-        MacroExpansionResponse {
             success: me.success,
             stdout: me.stdout,
             stderr: me.stderr,
@@ -611,16 +556,10 @@ impl TryFrom<EvaluateRequest> for sandbox::ExecuteRequest {
 
     fn try_from(me: EvaluateRequest) -> Result<Self> {
         Ok(sandbox::ExecuteRequest {
-            channel: parse_channel(&me.version)?,
-            mode: if me.optimize != "0" {
-                sandbox::Mode::Release
-            } else {
-                sandbox::Mode::Debug
-            },
-            edition: parse_edition(&me.edition)?,
+            runtime: parse_runtime(&me.version)?,
+            release: parse_release(&me.release)?,
             crate_type: sandbox::CrateType::Binary,
             tests: me.tests,
-            backtrace: false,
             preview: false,
             code: me.code,
         })
@@ -692,33 +631,33 @@ fn parse_process_assembly(s: &str) -> Result<sandbox::ProcessAssembly> {
     })
 }
 
-fn parse_channel(s: &str) -> Result<sandbox::Channel> {
+fn parse_runtime(s: &str) -> Result<sandbox::Runtime> {
     Ok(match s {
-        "stable" => sandbox::Channel::Stable,
-        "beta" => sandbox::Channel::Beta,
-        "nightly" => sandbox::Channel::Nightly,
-        "java19" => sandbox::Channel::Java19,
-        "java20" => sandbox::Channel::Java20,
+        "latest" => sandbox::Runtime::Latest,
+        "valhalla" => sandbox::Runtime::Valhalla,
         
-        value => InvalidChannelSnafu { value }.fail()?,
+        value => InvalidRuntimeSnafu { value }.fail()?,
     })
 }
 
-fn parse_mode(s: &str) -> Result<sandbox::Mode> {
-    Ok(match s {
-        "debug" => sandbox::Mode::Debug,
-        "release" => sandbox::Mode::Release,
-        value => InvalidModeSnafu { value }.fail()?,
-    })
-}
-
-fn parse_edition(s: &str) -> Result<Option<sandbox::Edition>> {
+fn parse_release(s: &str) -> Result<Option<sandbox::Release>> {
     Ok(match s {
         "" => None,
-        "2015" => Some(sandbox::Edition::Rust2015),
-        "2018" => Some(sandbox::Edition::Rust2018),
-        "2021" => Some(sandbox::Edition::Rust2021),
-        value => InvalidEditionSnafu { value }.fail()?,
+        "8" => Some(sandbox::Release::_8),
+        "9" => Some(sandbox::Release::_9),
+        "10" => Some(sandbox::Release::_10),
+        "11" => Some(sandbox::Release::_11),
+        "12" => Some(sandbox::Release::_12),
+        "13" => Some(sandbox::Release::_13),
+        "14" => Some(sandbox::Release::_14),
+        "15" => Some(sandbox::Release::_15),
+        "16" => Some(sandbox::Release::_16),
+        "17" => Some(sandbox::Release::_17),
+        "18" => Some(sandbox::Release::_18),
+        "19" => Some(sandbox::Release::_19),
+        "20" => Some(sandbox::Release::_20),
+        "21" => Some(sandbox::Release::_21),
+        value => InvalidReleaseSnafu { value }.fail()?,
     })
 }
 

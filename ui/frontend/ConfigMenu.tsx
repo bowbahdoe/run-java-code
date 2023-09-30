@@ -110,7 +110,7 @@ const ConfigMenu: React.FC = () => {
         </SelectConfig>
       </MenuGroup>
 
-      <MenuGroup title="Assembly">
+      {/* <MenuGroup title="Assembly">
         <EitherConfig
           id="assembly-flavor"
           name="Flavor"
@@ -142,7 +142,7 @@ const ConfigMenu: React.FC = () => {
           value={processAssembly}
           onChange={changeProcessAssembly}
         />
-      </MenuGroup>
+      </MenuGroup> */}
     </Fragment>
   );
 };
