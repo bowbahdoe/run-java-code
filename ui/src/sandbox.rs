@@ -427,8 +427,8 @@ impl Runtime {
         use self::Runtime::*;
 
         match *self {
-            Latest => "amazoncorretto:21",
-            Valhalla => "shipilev/openjdk:valhalla",
+            Latest => "playground-latest",
+            Valhalla => "playground-latest",
         }
     }
 }

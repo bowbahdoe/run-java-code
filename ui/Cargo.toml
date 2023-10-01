@@ -5,7 +5,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-asm-cleanup = { path = "../compiler/base/asm-cleanup" }
 async-trait = "0.1.52"
 axum = { version = "0.6", features = ["headers", "ws"] }
 dotenv = "0.15.0"
