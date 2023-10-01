@@ -1,7 +1,7 @@
 import fetch from 'isomorphic-fetch';
 import {AnyAction, ThunkAction as ReduxThunkAction} from '@reduxjs/toolkit';
 
-import {clippyRequestSelector, codeSelector, getCrateType} from './selectors';
+import {clippyRequestSelector, codeSelector, getAction} from './selectors';
 import State from './state';
 import {
   AssemblyFlavor,
@@ -38,9 +38,6 @@ export const routes = {
   meta: {
     crates: '/meta/crates',
     version: {
-      rustfmt: '/meta/version/rustfmt',
-      clippy: '/meta/version/clippy',
-      miri: '/meta/version/miri',
       latest: '/meta/version/latest',
       valhalla: '/meta/version/valhalla',
     },
@@ -247,16 +244,14 @@ export const adaptFetchError = async <R>(cb: () => Promise<R>): Promise<R> => {
 function performAutoOnly(): ThunkAction {
   return function(dispatch, getState) {
     const state = getState();
-    const crateType = getCrateType(state);
-    // const tests = runAsTest(state);
+    const action = getAction(state);
 
-    return dispatch(performCommonExecute(crateType, false /* tests */));
+    return dispatch(performCommonExecute(action));
   };
 }
 
-const performExecuteOnly = (): ThunkAction => performCommonExecute('bin', false);
-const performCompileOnly = (): ThunkAction => performCommonExecute('lib', false);
-// const performTestOnly = (): ThunkAction => performCommonExecute('lib', true);
+const performExecuteOnly = (): ThunkAction => performCommonExecute('run');
+const performCompileOnly = (): ThunkAction => performCommonExecute('build');
 
 
 interface CompileSuccess {
@@ -365,7 +360,7 @@ const requestClippy = () =>
 interface ClippyRequestBody {
   code: string;
   release: string;
-  crateType: string;
+  action: string;
 }
 
 interface ClippyResponseBody {
@@ -456,15 +451,12 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  latest, valhalla, rustfmt, clippy, miri,
+  latest, valhalla
 }: {
   latest: Version,
-  valhalla: Version,
-  rustfmt: Version,
-  clippy: Version,
-  miri: Version,
+  valhalla: Version
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { latest, valhalla, rustfmt, clippy, miri });
+  createAction(ActionType.VersionsLoadSucceeded, { latest, valhalla });
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
@@ -472,19 +464,13 @@ export function performVersionsLoad(): ThunkAction {
 
     const latest = jsonGet(routes.meta.version.latest);
     const valhalla = jsonGet(routes.meta.version.valhalla);
-    const rustfmt = jsonGet(routes.meta.version.rustfmt);
-    const clippy = jsonGet(routes.meta.version.clippy);
-    const miri = jsonGet(routes.meta.version.miri);
 
-    const all = Promise.all([ latest, valhalla, rustfmt, clippy, miri]);
+    const all = Promise.all([ latest, valhalla]);
 
     return all
-      .then(([ latest, valhalla, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
+      .then(([ latest, valhalla]) => dispatch(receiveVersionsLoadSuccess({
         latest,
-        valhalla,
-        rustfmt,
-        clippy,
-        miri,
+        valhalla
       })));
     // TODO: Failure case
   };

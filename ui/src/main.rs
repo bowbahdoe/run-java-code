@@ -230,7 +230,6 @@ struct CompileRequest {
     #[serde(default)]
     release: String,
     action: String,
-    tests: bool,
     #[serde(default)]
     preview: bool,
     code: String,
@@ -250,7 +249,6 @@ struct ExecuteRequest {
     #[serde(default)]
     release: String,
     action: String,
-    tests: bool,
     #[serde(default)]
     preview: bool,
     code: String,
@@ -303,7 +301,6 @@ impl TryFrom<CompileRequest> for sandbox::CompileRequest {
             release: parse_release(&me.release)?,
             action: parse_action(&me.action)?
                 .unwrap_or(Action::Build),
-            tests: me.tests,
             preview: me.preview,
             code: me.code,
         })
@@ -330,7 +327,6 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
             release: parse_release(&me.release)?,
             action: parse_action(&me.action)?
                 .unwrap_or(Action::Run),
-            tests: me.tests,
             preview: me.preview,
             code: me.code,
         })

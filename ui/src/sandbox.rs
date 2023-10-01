@@ -144,28 +144,31 @@ fn basic_secure_docker_command() -> Command {
 }
 
 fn build_execution_command(
-    release: Release,
-    req: impl ActionRequest,
-    preview: bool
+    req: &(impl ActionRequest + PreviewRequest + ReleaseRequest + RuntimeRequest),
 ) -> Vec<&'static str> {
     use self::Action::*;
 
     let mut cmd = vec![];
+
+    let release = req.release()
+        .unwrap_or(req.runtime().default_release())
+        .java_release();
+
     if req.action() == Run {
         cmd.push("java");
-        cmd.extend(&["--source", release.java_release()]);
+        cmd.extend(&["--source", release]);
 
         // Enable using java.lang.foreign w/o warnings
         cmd.push("--enable-native-access=ALL-UNNAMED");
     }
     else {
         cmd.push("javac");
-        cmd.extend(&["--release", release.java_release()]);
+        cmd.extend(&["--release", release]);
         cmd.extend(&["-d", "out"])
     }
 
 
-    if preview {
+    if req.preview() {
         cmd.push("--enable-preview");
     }
 
@@ -211,13 +214,7 @@ impl Sandbox {
     pub async fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
         self.write_source_code(&req.code).await?;
 
-        let command = self.compile_command(
-            req.release.unwrap_or(
-                req.runtime.default_release()
-            ),
-            req.runtime,
-            req
-        );
+        let command = self.compile_command(req);
 
         let output = run_command_with_timeout(command).await?;
 
@@ -234,7 +231,7 @@ impl Sandbox {
 
     pub async fn execute(&self, req: &ExecuteRequest) -> Result<ExecuteResponse> {
         self.write_source_code(&req.code).await?;
-        let command = self.execute_command(req.release.unwrap_or(req.runtime.default_release()), req.runtime, req);
+        let command = self.execute_command(req);
 
         let output = run_command_with_timeout(command).await?;
 
@@ -302,19 +299,12 @@ impl Sandbox {
 
     fn compile_command(
         &self,
-        release: Release,
-        runtime: Runtime,
-        req: impl ActionRequest + ReleaseRequest + PreviewRequest,
+        req: impl ActionRequest + ReleaseRequest + PreviewRequest + RuntimeRequest,
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.action()));
-        let execution_cmd = build_execution_command(
-            release,
-            &req,
+        let execution_cmd = build_execution_command(&req);
 
-            req.preview()
-        );
-
-        cmd.arg(&runtime.container_name()).args(&execution_cmd);
+        cmd.arg(&req.runtime().container_name()).args(&execution_cmd);
 
         debug!("Compilation command is {:?}", cmd);
 
@@ -323,19 +313,13 @@ impl Sandbox {
 
     fn execute_command(
         &self,
-        release: Release,
-        runtime: Runtime,
-        req: impl ActionRequest + ReleaseRequest + PreviewRequest,
+        req: impl ActionRequest + ReleaseRequest + PreviewRequest + RuntimeRequest,
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.action()));
 
-        let execution_cmd = build_execution_command(
-            release,
-            &req,
-        req.preview()
-        );
+        let execution_cmd = build_execution_command(&req);
 
-        cmd.arg(&runtime.container_name()).args(&execution_cmd);
+        cmd.arg(&req.runtime().container_name()).args(&execution_cmd);
 
         debug!("Execution command is {:?}", cmd);
 
@@ -559,12 +543,21 @@ impl<R: PreviewRequest> PreviewRequest for &'_ R {
     }
 }
 
+trait RuntimeRequest {
+    fn runtime(&self) -> Runtime;
+}
+
+impl<R: RuntimeRequest> RuntimeRequest for &'_ R {
+    fn runtime(&self) -> Runtime {
+        (*self).runtime()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CompileRequest {
     pub runtime: Runtime,
     pub action: Action,
     pub release: Option<Release>,
-    pub tests: bool,
     pub preview: bool,
     pub code: String,
 }
@@ -587,6 +580,12 @@ impl PreviewRequest for CompileRequest {
     }
 }
 
+impl RuntimeRequest for CompileRequest {
+    fn runtime(&self) -> Runtime {
+        self.runtime
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CompileResponse {
     pub success: bool,
@@ -600,7 +599,6 @@ pub struct ExecuteRequest {
     pub runtime: Runtime,
     pub release: Option<Release>,
     pub action: Action,
-    pub tests: bool,
     pub preview: bool,
     pub code: String,
 }
@@ -620,6 +618,12 @@ impl ReleaseRequest for ExecuteRequest {
 impl PreviewRequest for ExecuteRequest {
     fn preview(&self) -> bool {
         self.preview
+    }
+}
+
+impl RuntimeRequest for ExecuteRequest {
+    fn runtime(&self) -> Runtime {
+        self.runtime
     }
 }
 
@@ -664,7 +668,6 @@ mod test {
             ExecuteRequest {
                 runtime: Runtime::Latest,
                 action: Action::Run,
-                tests: false,
                 code: HELLO_WORLD_CODE.to_string(),
                 release: None,
                 preview: false,
@@ -677,7 +680,6 @@ mod test {
             CompileRequest {
                 runtime: Runtime::Latest,
                 action: Action::Run,
-                tests: false,
                 code: HELLO_WORLD_CODE.to_string(),
                 release: None,
                 preview: false,

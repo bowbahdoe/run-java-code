@@ -33,8 +33,7 @@ type wsExecuteResponsePayload = z.infer<typeof wsExecuteResponsePayloadSchema>;
 type wsExecuteRequestPayload = {
   runtime: Runtime;
   release: Release;
-  crateType: string;
-  tests: boolean;
+  action: string;
   code: string;
 };
 
@@ -46,8 +45,7 @@ const sliceName = 'output/execute';
 
 export interface ExecuteRequestBody {
   runtime: string;
-  crateType: string;
-  tests: boolean;
+  action: string;
   code: string;
   release: string;
   preview: boolean;
@@ -116,10 +114,10 @@ const slice = createSlice({
 export const { wsExecuteRequest } = slice.actions;
 
 export const performCommonExecute =
-  (crateType: string, tests: boolean): SimpleThunkAction =>
+  (action: string): SimpleThunkAction =>
   (dispatch, getState) => {
     const state = getState();
-    const body = executeRequestPayloadSelector(state, { crateType, tests });
+    const body = executeRequestPayloadSelector(state, { action });
     const useWebSocket = useWebsocketSelector(state);
 
     if (useWebSocket) {

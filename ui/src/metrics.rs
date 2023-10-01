@@ -63,12 +63,11 @@ pub(crate) struct Labels {
     runtime: Option<Runtime>,
     release: Option<Option<Release>>,
     action: Option<Action>,
-    tests: Option<bool>,
     preview: Option<bool>
 }
 
 impl Labels {
-    const COUNT: usize = 7;
+    const COUNT: usize = 6;
 
     const LABELS: &'static [&'static str; Self::COUNT] = &[
         "endpoint",
@@ -76,7 +75,6 @@ impl Labels {
         "runtime",
         "release",
         "action",
-        "tests",
         "preview"
     ];
 
@@ -87,7 +85,6 @@ impl Labels {
             runtime,
             release,
             action,
-            tests,
             preview
         } = *self;
 
@@ -102,7 +99,6 @@ impl Labels {
             Some(Some(v)) => v.into(),
         };
         let action = action.map_or("", Into::into);
-        let tests = b(tests);
         let preview = b(preview);
 
         [
@@ -111,7 +107,6 @@ impl Labels {
             runtime,
             release,
             action,
-            tests,
             preview
         ]
     }
@@ -136,7 +131,6 @@ impl GenerateLabels for sandbox::CompileRequest {
             runtime,
             action,
             release,
-            tests,
             preview,
             code: _,
         } = *self;
@@ -147,7 +141,6 @@ impl GenerateLabels for sandbox::CompileRequest {
             runtime: Some(runtime),
             release: Some(release),
             action: Some(action),
-            tests: Some(tests),
             preview: Some(preview)
         }
     }
@@ -159,7 +152,6 @@ impl GenerateLabels for sandbox::ExecuteRequest {
             runtime,
             release,
             action,
-            tests,
             preview,
             code: _,
         } = *self;
@@ -170,7 +162,6 @@ impl GenerateLabels for sandbox::ExecuteRequest {
             runtime: Some(runtime),
             release: Some(release),
             action: Some(action),
-            tests: Some(tests),
             preview: Some(preview)
         }
     }
@@ -293,7 +284,6 @@ where
         runtime: None,
         release: None,
         action: None,
-        tests: None,
         preview: None
     };
 

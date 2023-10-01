@@ -23,29 +23,14 @@ const HAS_MAIN_FUNCTION_RE =
   /^\s*(public\s+)?\s*(static\s+)?\s*\s*void\s+main\s*(\(\s*\)|\(String\s*\[\]\s*[a-z|A-Z|0-9]+\))/m;
 export const hasMainFunctionSelector = createSelector(codeSelector, code => !!code.match(HAS_MAIN_FUNCTION_RE));
 
-const CRATE_TYPE_RE = /^\s*#!\s*\[\s*crate_type\s*=\s*"([^"]*)"\s*]/m;
-export const crateTypeSelector = createSelector(codeSelector, code => (code.match(CRATE_TYPE_RE) || [])[1]);
-
 const autoPrimaryActionSelector = createSelector(
-  crateTypeSelector,
-  hasTestsSelector,
   hasMainFunctionSelector,
-  (crateType, hasTests, hasMainFunction) => {
-    if (crateType && crateType !== 'proc-macro') {
-      if (crateType === 'bin') {
-        return PrimaryActionCore.Execute;
+  ( hasMainFunction) => {
+      if (hasMainFunction) {
+          return PrimaryActionCore.Execute;
       } else {
-        return PrimaryActionCore.Compile;
+          return PrimaryActionCore.Compile;
       }
-    } else {
-      /* if (hasTests) {
-        return PrimaryActionCore.Test;
-      } else */ if (hasMainFunction) {
-        return PrimaryActionCore.Execute;
-      } else {
-        return PrimaryActionCore.Compile;
-      }
-    }
   },
 );
 
@@ -54,16 +39,13 @@ const autoPrimaryActionSelector = createSelector(
   primaryAction => primaryAction === PrimaryActionCore.Test,
 ); */
 
-export const getCrateType = createSelector(
-  crateTypeSelector,
+export const getAction = createSelector(
   autoPrimaryActionSelector,
-  (crateType, primaryAction) => {
-    if (crateType) {
-      return crateType;
-    } else if (primaryAction === PrimaryActionCore.Execute) {
-      return 'bin';
+  ( primaryAction) => {
+    if (primaryAction === PrimaryActionCore.Execute) {
+      return 'run';
     } else {
-      return 'lib';
+      return 'build';
     }
   },
 );
@@ -280,8 +262,8 @@ export const anyNotificationsToShowSelector = createSelector(
 export const clippyRequestSelector = createSelector(
   codeSelector,
   releaseSelector,
-  getCrateType,
-  (code, release, crateType) => ({ code, release, crateType }),
+  getAction,
+  (code, release, action) => ({ code, release, action }),
 );
 
 export const formatRequestSelector = createSelector(
@@ -355,12 +337,11 @@ export const websocketStatusSelector = createSelector(
 export const executeRequestPayloadSelector = createSelector(
   codeSelector,
   (state: State) => state.configuration,
-  (_state: State, { crateType, tests }: { crateType: string, tests: boolean }) => ({ crateType, tests }),
-  (code, configuration, { crateType, tests }) => ({
+  (_state: State, { action }: { action: string }) => ({ action }),
+  (code, configuration, { action }) => ({
     runtime: configuration.runtime,
     release: configuration.release,
-    crateType,
-    tests,
+    action,
     code,
     preview: configuration.preview == Preview.Enabled,
   }),

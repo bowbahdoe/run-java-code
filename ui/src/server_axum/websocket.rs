@@ -43,7 +43,6 @@ struct ExecuteRequest {
     runtime: String,
     release: String,
     action: String,
-    tests: bool,
     code: String,
     preview: bool
 }
@@ -56,7 +55,6 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
             runtime,
             release,
             action,
-            tests,
             code,
             preview
         } = value;
@@ -65,7 +63,6 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
             runtime: parse_runtime(&runtime)?,
             release: parse_release(&release)?,
             action: parse_action(&action)?.unwrap_or(Action::Run),
-            tests,
             preview,
             code,
         })
