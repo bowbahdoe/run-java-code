@@ -3,7 +3,7 @@ import { Draft, PayloadAction, createAsyncThunk, createSlice } from '@reduxjs/to
 import { jsonGet, jsonPost, routes } from '../../actions';
 import { baseUrlSelector, codeSelector } from '../../selectors';
 import RootState from '../../state';
-import {Runtime, Release, Preview} from '../../types';
+import { Preview, Release, Runtime } from '../../types';
 import { RequestsInProgress } from './sharedStateManagement';
 
 const sliceName = 'output/gist';

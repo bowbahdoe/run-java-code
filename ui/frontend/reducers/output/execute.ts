@@ -3,7 +3,7 @@ import * as z from 'zod';
 
 import { SimpleThunkAction, adaptFetchError, jsonPost, routes } from '../../actions';
 import { executeRequestPayloadSelector, useWebsocketSelector } from '../../selectors';
-import { Runtime, Release } from '../../types';
+import { Release, Runtime } from '../../types';
 import {
   WsPayloadAction,
   createWebsocketResponseAction,
