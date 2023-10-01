@@ -15,7 +15,6 @@ const AdvancedOptionsMenu: React.FC = () => {
   const backtrace = useSelector((state: State) => state.configuration.backtrace);
   const isPreviewSet = useSelector(selectors.getPreviewSet);
   const preview = useSelector((state: State) => state.configuration.preview);
-
   const dispatch = useDispatch();
 
   const changeEdition = useCallback((e: Edition) => dispatch(actions.changeEdition(e)), [dispatch]);

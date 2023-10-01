@@ -200,38 +200,6 @@ async fn format(Json(req): Json<FormatRequest>) -> Result<Json<FormatResponse>> 
     .map(Json)
 }
 
-async fn clippy(Json(req): Json<ClippyRequest>) -> Result<Json<ClippyResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.clippy(req).await }.boxed(),
-        LintingSnafu,
-    )
-    .await
-    .map(Json)
-}
-
-async fn miri(Json(req): Json<MiriRequest>) -> Result<Json<MiriResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.miri(req).await }.boxed(),
-        InterpretingSnafu,
-    )
-    .await
-    .map(Json)
-}
-
-async fn macro_expansion(
-    Json(req): Json<MacroExpansionRequest>,
-) -> Result<Json<MacroExpansionResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.macro_expansion(req).await }.boxed(),
-        ExpansionSnafu,
-    )
-    .await
-    .map(Json)
-}
-
 async fn with_sandbox<F, Req, Resp, SbReq, SbResp, Ctx>(req: Req, f: F, ctx: Ctx) -> Result<Resp>
 where
     for<'req> F: FnOnce(Sandbox, &'req SbReq) -> BoxFuture<'req, sandbox::Result<SbResp>>,

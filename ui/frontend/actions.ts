@@ -76,6 +76,7 @@ export enum ActionType {
   NotificationSeen = 'NOTIFICATION_SEEN',
   BrowserWidthChanged = 'BROWSER_WIDTH_CHANGED',
   SplitRatioChanged = 'SPLIT_RATIO_CHANGED',
+  ChangeVersion = 'CHANGE_VERSION'
 }
 
 export const initializeApplication = () => createAction(ActionType.InitializeApplication);
@@ -106,6 +107,8 @@ export const changePairCharacters = (pairCharacters: PairCharacters) =>
 export const changeOrientation = (orientation: Orientation) =>
   createAction(ActionType.ChangeOrientation, { orientation });
 
+export const changeVersion = (version:Version) =>
+  createAction(ActionType.ChangeVersion, { version })
 
 export const changeMode = (mode: Mode) =>
   createAction(ActionType.ChangeMode, { mode });
