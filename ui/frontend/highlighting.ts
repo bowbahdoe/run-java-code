@@ -14,7 +14,7 @@ export function configureRustErrors({
   getRuntime,
   gotoPosition,
   selectText,
-  addImport
+  addImport,
 }: ConfigureRustErrorsArgs) {
   Prism.languages.rust_errors = {
     'warning': {

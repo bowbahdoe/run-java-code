@@ -50,7 +50,7 @@ const DEFAULT: State = {
   primaryAction: PrimaryActionAuto.Auto,
   runtime: Runtime.Latest,
   release: Release.Java21,
-  preview: Preview.Disabled
+  preview: Preview.Disabled,
 };
 
 export default function configuration(state = DEFAULT, action: Action): State {

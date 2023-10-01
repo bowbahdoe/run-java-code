@@ -1,7 +1,7 @@
 import fetch from 'isomorphic-fetch';
 import {AnyAction, ThunkAction as ReduxThunkAction} from '@reduxjs/toolkit';
 
-import {clippyRequestSelector, codeSelector, getCrateType,} from './selectors';
+import {clippyRequestSelector, codeSelector, getCrateType} from './selectors';
 import State from './state';
 import {
   AssemblyFlavor,
@@ -25,7 +25,7 @@ import {
   Version,
 } from './types';
 
-import {ExecuteRequestBody, performCommonExecute, wsExecuteRequest} from './reducers/output/execute';
+import { performCommonExecute, wsExecuteRequest} from './reducers/output/execute';
 import {performGistLoad} from './reducers/output/gist';
 
 export const routes = {
@@ -256,16 +256,8 @@ function performAutoOnly(): ThunkAction {
 
 const performExecuteOnly = (): ThunkAction => performCommonExecute('bin', false);
 const performCompileOnly = (): ThunkAction => performCommonExecute('lib', false);
-const performTestOnly = (): ThunkAction => performCommonExecute('lib', true);
+// const performTestOnly = (): ThunkAction => performCommonExecute('lib', true);
 
-interface CompileRequestBody extends ExecuteRequestBody {
-  target: string;
-  assemblyFlavor: string;
-  demangleAssembly: string;
-  processAssembly: string;
-}
-
-type CompileResponseBody = CompileSuccess;
 
 interface CompileSuccess {
   code: string;
@@ -277,48 +269,6 @@ interface CompileFailure {
   error: string;
 }
 
-function performCompileShow(
-  target: string,
-  { request, success, failure }: {
-    request: () => Action,
-    success: (body: CompileResponseBody) => Action,
-    failure: (f: CompileFailure) => Action,
-  }): ThunkAction {
-  // TODO: Check a cache
-  return function(dispatch, getState) {
-    dispatch(request());
-
-    const state = getState();
-    const code = codeSelector(state);
-    const { configuration: {
-      runtime,
-      release,
-      assemblyFlavor,
-      demangleAssembly,
-      processAssembly,
-    } } = state;
-    const crateType = getCrateType(state);
-    const tests = false; // runAsTest(state);
-    const preview = state.configuration.preview === Preview.Enabled;
-    const body: CompileRequestBody = {
-      runtime,
-      release,
-      crateType,
-      tests,
-      code,
-      target,
-      assemblyFlavor,
-      demangleAssembly,
-      processAssembly,
-      preview
-    };
-
-    return jsonPost<CompileResponseBody>(routes.compile, body)
-      .then(json => dispatch(success(json)))
-      .catch(json => dispatch(failure(json)));
-  };
-}
-
 const requestCompileAssembly = () =>
   createAction(ActionType.CompileAssemblyRequest);
 
@@ -327,13 +277,6 @@ const receiveCompileAssemblySuccess = ({ code, stdout, stderr }: CompileSuccess)
 
 const receiveCompileAssemblyFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileAssemblyFailed, { error });
-
-const performCompileToAssemblyOnly = () =>
-  performCompileShow('asm', {
-    request: requestCompileAssembly,
-    success: receiveCompileAssemblySuccess,
-    failure: receiveCompileAssemblyFailure,
-  });
 
 const requestCompileLlvmIr = () =>
   createAction(ActionType.CompileLlvmIrRequest);
@@ -344,13 +287,6 @@ const receiveCompileLlvmIrSuccess = ({ code, stdout, stderr }: CompileSuccess) =
 const receiveCompileLlvmIrFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileLlvmIrFailed, { error });
 
-const performCompileToLLVMOnly = () =>
-  performCompileShow('llvm-ir', {
-    request: requestCompileLlvmIr,
-    success: receiveCompileLlvmIrSuccess,
-    failure: receiveCompileLlvmIrFailure,
-  });
-
 const requestCompileHir = () =>
   createAction(ActionType.CompileHirRequest);
 
@@ -359,13 +295,6 @@ const receiveCompileHirSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
 
 const receiveCompileHirFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileHirFailed, { error });
-
-const performCompileToHirOnly = () =>
-  performCompileShow('hir', {
-    request: requestCompileHir,
-    success: receiveCompileHirSuccess,
-    failure: receiveCompileHirFailure,
-  });
 
 const requestCompileMir = () =>
   createAction(ActionType.CompileMirRequest);
@@ -376,13 +305,6 @@ const receiveCompileMirSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
 const receiveCompileMirFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileMirFailed, { error });
 
-const performCompileToMirOnly = () =>
-  performCompileShow('mir', {
-    request: requestCompileMir,
-    success: receiveCompileMirSuccess,
-    failure: receiveCompileMirFailure,
-  });
-
 const requestCompileWasm = () =>
   createAction(ActionType.CompileWasmRequest);
 
@@ -391,13 +313,6 @@ const receiveCompileWasmSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
 
 const receiveCompileWasmFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileWasmFailed, { error });
-
-const performCompileToWasm = () =>
-  performCompileShow('wasm', {
-    request: requestCompileWasm,
-    success: receiveCompileWasmSuccess,
-    failure: receiveCompileWasmFailure,
-  });
 
 const PRIMARY_ACTIONS: { [index in PrimaryAction]: () => ThunkAction } = {
   [PrimaryActionCore.Compile]: performCompileOnly,
@@ -648,13 +563,12 @@ export function indexPageLoad({
   gist,
   runtime: runtimeString,
   release: releaseString,
-  preview: previewString
+  preview: previewString,
 }: { code?: string, gist?: string, runtime?: string, release?: string, preview?: string }): ThunkAction {
   return function(dispatch) {
     const runtime = parseRuntime(runtimeString) || Runtime.Latest;
-    console.log(`PArsed Runtime ${runtime}`)
-    let release = parseRelease(releaseString) || Release.Java21;
-    let preview = parsePreview(previewString) || Preview.Disabled;
+    const release = parseRelease(releaseString) || Release.Java21;
+    const preview = parsePreview(previewString) || Preview.Disabled;
 
     dispatch(navigateToIndex());
 

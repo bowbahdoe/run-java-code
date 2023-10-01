@@ -27,20 +27,20 @@ const AdvancedOptionsMenu: React.FC = () => {
         isNotDefault={!isReleaseDefault}
         onChange={changeRelease}
       >
-          <option value={Release.Java21}>21</option>
-          <option value={Release.Java20}>20</option>
-          <option value={Release.Java19}>19</option>
-          <option value={Release.Java18}>18</option>
-          <option value={Release.Java17}>17</option>
-          <option value={Release.Java16}>16</option>
-          <option value={Release.Java15}>15</option>
-          <option value={Release.Java14}>14</option>
-          <option value={Release.Java13}>13</option>
-          <option value={Release.Java12}>12</option>
-          <option value={Release.Java11}>11</option>
-          <option value={Release.Java10}>10</option>
-          <option value={Release.Java9}>9</option>
-          <option value={Release.Java8}>8</option>
+        <option value={Release.Java21}>21</option>
+        <option value={Release.Java20}>20</option>
+        <option value={Release.Java19}>19</option>
+        <option value={Release.Java18}>18</option>
+        <option value={Release.Java17}>17</option>
+        <option value={Release.Java16}>16</option>
+        <option value={Release.Java15}>15</option>
+        <option value={Release.Java14}>14</option>
+        <option value={Release.Java13}>13</option>
+        <option value={Release.Java12}>12</option>
+        <option value={Release.Java11}>11</option>
+        <option value={Release.Java10}>10</option>
+        <option value={Release.Java9}>9</option>
+        <option value={Release.Java8}>8</option>
       </SelectConfig>
 
       <EitherConfig

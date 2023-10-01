@@ -14,27 +14,34 @@ describe('checking for a main function', () => {
   });
 
   test('a classic main counts', () => {
-    expect(hasMainFunctionSelector(buildState('public class Main {\n public static void main(String[] args) {} }'))).toBe(true);
+    expect(hasMainFunctionSelector(
+      buildState('public class Main {\n public static void main(String[] args) {} }'))).toBe(true);
   });
 
   test('a classic main with different args name counts', () => {
-    expect(hasMainFunctionSelector(buildState('public class Main {\n public static void main(String[] stuff) {} }'))).toBe(true);
+    expect(hasMainFunctionSelector(
+      buildState('public class Main {\n public static void main(String[] stuff) {} }'))).toBe(true);
   });
 
   test('a classic main with a body counts', () => {
-    expect(hasMainFunctionSelector(buildState('public class Main {\n public static void main(String[] args) { System.out.println("hello"); } } }'))).toBe(true);
+    expect(hasMainFunctionSelector(
+      buildState(`public class Main {
+         public static void main(String[] args) { System.out.println("hello"); } } }`))).toBe(true);
   });
 
   test('an instance main counts', () => {
-    expect(hasMainFunctionSelector(buildState('public class Main {\n public void main(String[] args) {} }'))).toBe(true);
+    expect(hasMainFunctionSelector(
+      buildState('public class Main {\n public void main(String[] args) {} }'))).toBe(true);
   });
 
   test('an classic main without args counts', () => {
-    expect(hasMainFunctionSelector(buildState('public class Main {\n public void main() {} }'))).toBe(true);
+    expect(hasMainFunctionSelector(
+      buildState('public class Main {\n public void main() {} }'))).toBe(true);
   });
 
   test('a non-public main counts', () => {
-    expect(hasMainFunctionSelector(buildState('public class Main {\n void main(String[] args) {} }'))).toBe(true);
+    expect(hasMainFunctionSelector(
+      buildState('public class Main {\n void main(String[] args) {} }'))).toBe(true);
   });
 
   test('a non-public main without args counts', () => {

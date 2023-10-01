@@ -4,7 +4,6 @@ import { createSelector } from '@reduxjs/toolkit';
 import { State } from '../reducers';
 import {
   AceResizeKey,
-  Runtime,
   Release,
   Orientation,
   Preview,
@@ -133,7 +132,7 @@ export const getPreviewSet = (state: State) => (
 );
 
 export const getAdvancedOptionsSet = createSelector(
-    isReleaseDefault,
+  isReleaseDefault,
   (releaseDefault) => (
     !releaseDefault
   ),
@@ -363,6 +362,6 @@ export const executeRequestPayloadSelector = createSelector(
     crateType,
     tests,
     code,
-    preview: configuration.preview == Preview.Enabled
+    preview: configuration.preview == Preview.Enabled,
   }),
 );

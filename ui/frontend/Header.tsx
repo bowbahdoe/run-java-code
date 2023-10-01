@@ -9,7 +9,6 @@ import HeaderButton from './HeaderButton';
 import { BuildIcon, ConfigIcon, HelpIcon, MoreOptionsActiveIcon, MoreOptionsIcon } from './Icon';
 import PopButton from './PopButton';
 import { SegmentedButton, SegmentedButtonSet, SegmentedLink } from './SegmentedButton';
-import ToolsMenu from './ToolsMenu';
 
 import * as actions from './actions';
 import * as selectors from './selectors';
@@ -128,7 +127,7 @@ const ShareButton: React.FC = () => {
 };
 
 
-const ToolsMenuButton: React.FC = () => {
+/* const ToolsMenuButton: React.FC = () => {
   const Button = React.forwardRef<HTMLButtonElement, { toggle: () => void }>(({ toggle }, ref) => (
     <SegmentedButton title="Run extra tools on the source code" ref={ref} onClick={toggle}>
       <HeaderButton isExpandable>Tools</HeaderButton>
@@ -137,7 +136,7 @@ const ToolsMenuButton: React.FC = () => {
   Button.displayName = 'ToolsMenuButton.Button';
 
   return <PopButton Button={Button} Menu={ToolsMenu} />;
-};
+}; */
 
 const ConfigMenuButton: React.FC = () => {
   const Button = React.forwardRef<HTMLButtonElement, { toggle: () => void }>(({ toggle }, ref) => (
