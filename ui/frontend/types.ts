@@ -27,6 +27,12 @@ export enum Version {
   Java21 = 'java 21',
 }
 
+export interface VersionInfo
+{
+  version: string;
+  hash: string;
+  date: string;
+}
 export interface CommonEditorProps {
   code: string;
   execute: () => any;

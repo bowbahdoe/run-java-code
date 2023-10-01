@@ -21,6 +21,7 @@ import {
   Position,
   makePosition,
   Version,
+  PrimaryActionAuto,
 } from './types';
 
 import { ExecuteRequestBody, performCommonExecute, wsExecuteRequest } from './reducers/output/execute';
@@ -119,7 +120,7 @@ export const changeEdition = (edition: Edition) =>
   createAction(ActionType.ChangeEdition, { edition });
 
 const changePrimaryAction = (primaryAction: PrimaryAction) =>
-createAction(ActionType.ChangePrimaryAction, { primaryAction });
+  createAction(ActionType.ChangePrimaryAction, { primaryAction });
 
 export const changeBacktrace = (backtrace: Backtrace) =>
   createAction(ActionType.ChangeBacktrace, { backtrace });
@@ -219,14 +220,11 @@ export const adaptFetchError = async <R>(cb: () => Promise<R>): Promise<R> => {
 
 
 
-const performExecuteOnly = (): ThunkAction => performCommonExecute('bin', false);
-const performCompileOnly = (): ThunkAction => performCommonExecute('lib', false);
+const performExecuteOnly = (): ThunkAction => performCommonExecute();
+const performCompileOnly = (): ThunkAction => performCommonExecute();
 
 interface CompileRequestBody extends ExecuteRequestBody {
   target: string;
-  assemblyFlavor: string;
-  demangleAssembly: string;
-  processAssembly: string;
 }
 
 type CompileResponseBody = CompileSuccess;
@@ -241,6 +239,7 @@ interface CompileFailure {
   error: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function performCompileShow(
   target: string,
   { request, success, failure }: {
@@ -257,12 +256,13 @@ function performCompileShow(
     const { configuration: {
       mode,
       edition,
+      version,
     } } = state;
     const backtrace = state.configuration.backtrace === Backtrace.Enabled;
     const body: CompileRequestBody = {
       mode,
       edition,
-      version:
+      version,
       code,
       target,
       backtrace,
@@ -278,6 +278,7 @@ function performCompileShow(
 const PRIMARY_ACTIONS: { [index in PrimaryAction]: () => ThunkAction } = {
   [PrimaryActionCore.Compile]: performCompileOnly,
   [PrimaryActionCore.Execute]: performExecuteOnly,
+  [PrimaryActionAuto.Auto]: performExecuteOnly,
 };
 
 export const performPrimaryAction = (): ThunkAction => (dispatch, getState) => {

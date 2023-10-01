@@ -10,7 +10,7 @@ import {
   Preview,
   PrimaryActionAuto,
   PrimaryActionCore,
-  Version,
+  VersionInfo,
 } from '../types';
 
 export const codeSelector = (state: State) => state.code;
@@ -94,14 +94,14 @@ const getJava19 = (state: State) => state.versions?.java19;
 const getJava20 = (state: State) => state.versions?.java20;
 const getJava21 = (state: State) => state.versions?.java21;
 
-const versionNumber = (v: Version | undefined) => v ? v.version : '';
+const versionNumber = (v: VersionInfo | undefined) => v ? v.version : '';
 export const java17VersionNumber = createSelector(getJava17, versionNumber);
 export const java18VersionNumber = createSelector(getJava18, versionNumber);
 export const java19VersionNumber = createSelector(getJava19, versionNumber);
 export const java20VersionNumber = createSelector(getJava20, versionNumber);
 export const java21VersionNumber = createSelector(getJava21, versionNumber);
 
-const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
+const versionDetails = (v: VersionInfo | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
 export const java17VersionText = createSelector(getJava17, versionDetails);
 export const java18VersionText = createSelector(getJava18, versionDetails);
 export const java19VersionText = createSelector(getJava19, versionDetails);
@@ -347,9 +347,8 @@ export const executeRequestPayloadSelector = createSelector(
   codeSelector,
   (state: State) => state.configuration,
   getBacktraceSet,
-  (_state: State) => ({ crateType, tests }),
   (code, configuration, backtrace) => ({
-    channel: configuration.version,
+    version: configuration.version,
     mode: configuration.mode,
     edition: configuration.edition,
     code,
@@ -360,10 +359,9 @@ export const executeRequestPayloadSelector = createSelector(
 export const compileRequestPayloadSelector = createSelector(
   codeSelector,
   (state: State) => state.configuration,
-  getCrateType,
   getBacktraceSet,
   (_state: State, { target }: { target: string }) => ({ target }),
-  (code, configuration, backtrace, { target }) => ({
+  (code, configuration, backtrace, target ) => ({
     version: configuration.version,
     mode: configuration.mode,
     edition: configuration.edition,

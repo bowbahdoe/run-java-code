@@ -31,10 +31,9 @@ const wsExecuteResponsePayloadSchema = z.object({
 type wsExecuteResponsePayload = z.infer<typeof wsExecuteResponsePayloadSchema>;
 
 type wsExecuteRequestPayload = {
-  version:Version;
+  version: Version;
   mode: Mode;
   edition: Edition;
-  tests: boolean;
   code: string;
   backtrace: boolean;
 };
@@ -48,7 +47,6 @@ const sliceName = 'output/execute';
 export interface ExecuteRequestBody {
   mode: string;
   version: string;
-  tests: boolean;
   code: string;
   edition: string;
   backtrace: boolean;
