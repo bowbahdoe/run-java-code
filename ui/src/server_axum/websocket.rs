@@ -1,5 +1,6 @@
+use crate::sandbox::Action;
 use crate::{
-    metrics, parse_runtime, parse_action, parse_release,
+    metrics, parse_action, parse_release, parse_runtime,
     sandbox::{self, Sandbox},
     Error, ExecutionSnafu, Result, SandboxCreationSnafu, WebSocketTaskPanicSnafu,
 };
@@ -10,7 +11,6 @@ use std::{
     time::Instant,
 };
 use tokio::{sync::mpsc, task::JoinSet};
-use crate::sandbox::Action;
 
 type Meta = serde_json::Value;
 
@@ -44,7 +44,7 @@ struct ExecuteRequest {
     release: String,
     action: String,
     code: String,
-    preview: bool
+    preview: bool,
 }
 
 impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
@@ -56,7 +56,7 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
             release,
             action,
             code,
-            preview
+            preview,
         } = value;
 
         Ok(sandbox::ExecuteRequest {
@@ -190,8 +190,14 @@ async fn handle_core(mut socket: WebSocket) {
 }
 
 async fn connect_handshake(socket: &mut WebSocket) -> bool {
-    let Some(Ok(Message::Text(txt))) = socket.recv().await else { return false };
-    let Ok(HandshakeMessage::Connected { payload, .. }) = serde_json::from_str::<HandshakeMessage>(&txt) else { return false };
+    let Some(Ok(Message::Text(txt))) = socket.recv().await else {
+        return false;
+    };
+    let Ok(HandshakeMessage::Connected { payload, .. }) =
+        serde_json::from_str::<HandshakeMessage>(&txt)
+    else {
+        return false;
+    };
     if !payload.i_accept_this_is_an_unsupported_api {
         return false;
     }

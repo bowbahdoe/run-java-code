@@ -1,14 +1,14 @@
 use crate::{
     gist,
-    metrics::{track_metric_async,
-              track_metric_no_request_async, Endpoint, GenerateLabels,
-              SuccessDetails, UNAVAILABLE_WS,
+    metrics::{
+        track_metric_async, track_metric_no_request_async, Endpoint, GenerateLabels,
+        SuccessDetails, UNAVAILABLE_WS,
     },
     sandbox::{self, Runtime, Sandbox},
-    CachingSnafu, CompilationSnafu, CompileRequest, CompileResponse, Config, Error, ErrorJson, ExecuteRequest, ExecuteResponse, ExecutionSnafu, GhToken, GistCreationSnafu,
-    GistLoadingSnafu,
-    MetaCratesResponse, MetaGistCreateRequest, MetaGistResponse,
-    MetaVersionResponse, MetricsToken, Result, SandboxCreationSnafu,
+    CachingSnafu, CompilationSnafu, CompileRequest, CompileResponse, Config, Error, ErrorJson,
+    ExecuteRequest, ExecuteResponse, ExecutionSnafu, GhToken, GistCreationSnafu, GistLoadingSnafu,
+    MetaCratesResponse, MetaGistCreateRequest, MetaGistResponse, MetaVersionResponse, MetricsToken,
+    Result, SandboxCreationSnafu,
 };
 use async_trait::async_trait;
 use axum::{
@@ -130,16 +130,14 @@ async fn rewrite_help_as_index<B>(
     next.run(req).await
 }
 
-async fn compile(
-    Json(req): Json<CompileRequest>,
-) -> Result<Json<CompileResponse>> {
+async fn compile(Json(req): Json<CompileRequest>) -> Result<Json<CompileResponse>> {
     with_sandbox(
         req,
         |sb, req| async move { sb.compile(req).await }.boxed(),
         CompilationSnafu,
     )
-        .await
-        .map(Json)
+    .await
+    .map(Json)
 }
 
 async fn execute(Json(req): Json<ExecuteRequest>) -> Result<Json<ExecuteResponse>> {

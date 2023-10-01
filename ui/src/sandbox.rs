@@ -1,12 +1,6 @@
 use serde_derive::Deserialize;
 use snafu::prelude::*;
-use std::{
-    io,
-    os::unix::fs::PermissionsExt,
-    path::PathBuf,
-    string,
-    time::Duration,
-};
+use std::{io, os::unix::fs::PermissionsExt, path::PathBuf, string, time::Duration};
 use tempfile::TempDir;
 use tokio::{fs, process::Command, time};
 use tracing::debug;
@@ -150,7 +144,8 @@ fn build_execution_command(
 
     let mut cmd = vec![];
 
-    let release = req.release()
+    let release = req
+        .release()
         .unwrap_or(req.runtime().default_release())
         .java_release();
 
@@ -160,13 +155,11 @@ fn build_execution_command(
 
         // Enable using java.lang.foreign w/o warnings
         cmd.push("--enable-native-access=ALL-UNNAMED");
-    }
-    else {
+    } else {
         cmd.push("javac");
         cmd.extend(&["--release", release]);
         cmd.extend(&["-d", "out"])
     }
-
 
     if req.preview() {
         cmd.push("--enable-preview");
@@ -174,7 +167,6 @@ fn build_execution_command(
 
     cmd.push("src/Main.java");
     cmd
-
 }
 
 pub struct Sandbox {
@@ -242,7 +234,6 @@ impl Sandbox {
         })
     }
 
-
     pub async fn crates(&self) -> Result<Vec<CrateInformation>> {
         /* let mut command = basic_secure_docker_command();
         command.args(&[Runtime::Stable.container_name()]);
@@ -265,12 +256,12 @@ impl Sandbox {
         command.args(&[runtime.container_name()]);
         command.args(&["java", "--version"]);
 
-
         let output = run_command_with_timeout(command).await?;
 
         let version_output = vec_to_str(output.stdout)?;
 
-        let version = version_output.lines()
+        let version = version_output
+            .lines()
             .take(1)
             .fold(String::new(), |a, b| a + " " + b);
 
@@ -304,7 +295,8 @@ impl Sandbox {
         let mut cmd = self.docker_command(Some(req.action()));
         let execution_cmd = build_execution_command(&req);
 
-        cmd.arg(&req.runtime().container_name()).args(&execution_cmd);
+        cmd.arg(&req.runtime().container_name())
+            .args(&execution_cmd);
 
         debug!("Compilation command is {:?}", cmd);
 
@@ -319,7 +311,8 @@ impl Sandbox {
 
         let execution_cmd = build_execution_command(&req);
 
-        cmd.arg(&req.runtime().container_name()).args(&execution_cmd);
+        cmd.arg(&req.runtime().container_name())
+            .args(&execution_cmd);
 
         debug!("Execution command is {:?}", cmd);
 
@@ -419,7 +412,7 @@ async fn run_command_with_timeout(mut command: Command) -> Result<std::process::
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
 pub enum Runtime {
     Latest,
-    Valhalla
+    Valhalla,
 }
 
 impl Runtime {
@@ -435,7 +428,7 @@ impl Runtime {
 
         match *self {
             Latest => "amazoncorretto:21",
-            Valhalla => "shipilev/openjdk:valhalla"
+            Valhalla => "shipilev/openjdk:valhalla",
         }
     }
 }
@@ -476,7 +469,7 @@ impl Release {
             _18 => "18",
             _19 => "19",
             _20 => "20",
-            _21 => "21"
+            _21 => "21",
         }
     }
 }
@@ -484,7 +477,7 @@ impl Release {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
 pub enum Action {
     Run,
-    Build
+    Build,
 }
 
 impl Action {
@@ -505,10 +498,7 @@ trait DockerCommandExt {
 impl DockerCommandExt for Command {
     fn apply_release(&mut self, req: impl ReleaseRequest) {
         if let Some(release) = req.release() {
-            self.args(&[
-                "--release",
-                release.java_release()
-            ]);
+            self.args(&["--release", release.java_release()]);
         }
     }
 }
@@ -636,8 +626,8 @@ pub struct ExecuteResponse {
 
 #[cfg(test)]
 mod test {
-    use crate::sandbox::Error::CompilerExecutionTimedOut;
     use super::*;
+    use crate::sandbox::Error::CompilerExecutionTimedOut;
 
     // Running the tests completely in parallel causes spurious
     // failures due to my resource-limited Docker
@@ -747,7 +737,11 @@ mod test {
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
         let resp = sb.execute(&req).await.expect("Unable to execute code");
 
-        assert!(resp.stderr.contains("java.lang.OutOfMemoryError"), "was: {}", resp.stderr);
+        assert!(
+            resp.stderr.contains("java.lang.OutOfMemoryError"),
+            "was: {}",
+            resp.stderr
+        );
     }
 
     #[tokio::test]
@@ -771,7 +765,11 @@ mod test {
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
         let resp = sb.execute(&req).await.expect("Unable to execute code");
 
-        assert!(resp.stderr.contains("java.lang.OutOfMemoryError"), "was: {}", resp.stderr);
+        assert!(
+            resp.stderr.contains("java.lang.OutOfMemoryError"),
+            "was: {}",
+            resp.stderr
+        );
     }
 
     #[tokio::test]
@@ -795,7 +793,10 @@ mod test {
         let resp = sb.execute(&req).await;
 
         assert!(match resp {
-            Err (CompilerExecutionTimedOut{ timeout: DOCKER_PROCESS_TIMEOUT_HARD, .. }) => {
+            Err(CompilerExecutionTimedOut {
+                timeout: DOCKER_PROCESS_TIMEOUT_HARD,
+                ..
+            }) => {
                 true
             }
             Ok(_) | Err(_) => {

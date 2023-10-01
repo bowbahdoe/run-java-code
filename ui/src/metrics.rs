@@ -10,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::sandbox::{self, Runtime, Action, Release};
+use crate::sandbox::{self, Action, Release, Runtime};
 
 lazy_static! {
     pub(crate) static ref REQUESTS: HistogramVec = register_histogram_vec!(
@@ -63,19 +63,14 @@ pub(crate) struct Labels {
     runtime: Option<Runtime>,
     release: Option<Option<Release>>,
     action: Option<Action>,
-    preview: Option<bool>
+    preview: Option<bool>,
 }
 
 impl Labels {
     const COUNT: usize = 6;
 
     const LABELS: &'static [&'static str; Self::COUNT] = &[
-        "endpoint",
-        "outcome",
-        "runtime",
-        "release",
-        "action",
-        "preview"
+        "endpoint", "outcome", "runtime", "release", "action", "preview",
     ];
 
     fn as_values(&self) -> [&'static str; Self::COUNT] {
@@ -85,7 +80,7 @@ impl Labels {
             runtime,
             release,
             action,
-            preview
+            preview,
         } = *self;
 
         fn b(v: Option<bool>) -> &'static str {
@@ -107,7 +102,7 @@ impl Labels {
             runtime,
             release,
             action,
-            preview
+            preview,
         ]
     }
 }
@@ -141,7 +136,7 @@ impl GenerateLabels for sandbox::CompileRequest {
             runtime: Some(runtime),
             release: Some(release),
             action: Some(action),
-            preview: Some(preview)
+            preview: Some(preview),
         }
     }
 }
@@ -162,7 +157,7 @@ impl GenerateLabels for sandbox::ExecuteRequest {
             runtime: Some(runtime),
             release: Some(release),
             action: Some(action),
-            preview: Some(preview)
+            preview: Some(preview),
         }
     }
 }
@@ -214,7 +209,6 @@ impl SuccessDetails for sandbox::ExecuteResponse {
         common_success_details(self.success, &self.stderr)
     }
 }
-
 
 impl SuccessDetails for Vec<sandbox::CrateInformation> {
     fn success_details(&self) -> Outcome {
@@ -284,7 +278,7 @@ where
         runtime: None,
         release: None,
         action: None,
-        preview: None
+        preview: None,
     };
 
     record_metric_complete(labels, elapsed);

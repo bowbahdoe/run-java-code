@@ -1,6 +1,7 @@
 #![deny(rust_2018_idioms)]
 
 use crate::env::{PLAYGROUND_GITHUB_TOKEN, PLAYGROUND_UI_ROOT};
+use crate::sandbox::Action;
 use serde::{Deserialize, Serialize};
 use snafu::prelude::*;
 use std::{
@@ -11,7 +12,6 @@ use std::{
 };
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
-use crate::sandbox::Action;
 
 const DEFAULT_ADDRESS: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 5000;
@@ -26,7 +26,6 @@ fn main() {
     // Dotenv may be unable to load environment variables, but that's ok in production
     let _ = dotenv::dotenv();
     openssl_probe::init_ssl_cert_env_vars();
-
 
     // Info-level logging is enabled by default.
     tracing_subscriber::fmt()
@@ -94,7 +93,7 @@ impl Config {
         // Attempt to retrieve the environment variable values
         let metrics_token = std::env::var("PLAYGROUND_METRICS_TOKEN").ok();
         let cors_enabled = std::env::var_os("PLAYGROUND_CORS_ENABLED").is_some();
-    
+
         // Print the values to the console
         println!("Metrics Token: {:?}", metrics_token);
         println!("CORS Enabled: {}", cors_enabled);
@@ -299,8 +298,7 @@ impl TryFrom<CompileRequest> for sandbox::CompileRequest {
         Ok(sandbox::CompileRequest {
             runtime: parse_runtime(&me.runtime)?,
             release: parse_release(&me.release)?,
-            action: parse_action(&me.action)?
-                .unwrap_or(Action::Build),
+            action: parse_action(&me.action)?.unwrap_or(Action::Build),
             preview: me.preview,
             code: me.code,
         })
@@ -325,8 +323,7 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
         Ok(sandbox::ExecuteRequest {
             runtime: parse_runtime(&me.runtime)?,
             release: parse_release(&me.release)?,
-            action: parse_action(&me.action)?
-                .unwrap_or(Action::Run),
+            action: parse_action(&me.action)?.unwrap_or(Action::Run),
             preview: me.preview,
             code: me.code,
         })
@@ -382,7 +379,7 @@ fn parse_runtime(s: &str) -> Result<sandbox::Runtime> {
     Ok(match s {
         "latest" => sandbox::Runtime::Latest,
         "valhalla" => sandbox::Runtime::Valhalla,
-        
+
         value => InvalidRuntimeSnafu { value }.fail()?,
     })
 }
