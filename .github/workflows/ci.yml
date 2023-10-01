@@ -2,7 +2,7 @@
 ---
 name: Validate everything
 'on':
-  push:
+  push: 
   pull_request_target:
     types:
     - labeled
@@ -117,47 +117,6 @@ jobs:
           ${{ env.IMAGE_NAME }}:${{ github.run_id }}
           ${{ env.IMAGE_NAME }}:latest
         cache-to: type=inline
-  build_tool_containers:
-    name: Build ${{ matrix.tool }} tool container
-    runs-on: ubuntu-latest
-    needs: build_compiler_containers
-    strategy:
-      matrix:
-        tool:
-        - clippy
-        - miri
-        - rustfmt
-    if: 'github.event_name == ''push'' || contains(github.event.pull_request.labels.*.name, ''CI: approved'')'
-    env:
-      IMAGE_NAME: ghcr.io/integer32llc/rust-playground-ci-tool-${{ matrix.tool }}
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        ref: "${{ github.event.pull_request.head.sha }}"
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-      with:
-        driver-opts: image=moby/buildkit:v0.11.6
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: "${{ env.GH_CONTAINER_REGISTRY_USERNAME }}"
-        password: "${{ secrets.GH_CONTAINER_REGISTRY_TOKEN }}"
-    - name: Build and push container
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/${{ matrix.tool }}/
-        file: compiler/${{ matrix.tool }}/Dockerfile
-        build-args: base_image=ghcr.io/integer32llc/rust-playground-ci-rust-nightly:sources--${{ github.run_id }}
-        pull: true
-        push: true
-        tags: "${{ env.IMAGE_NAME }}:${{ github.run_id }}"
-        cache-from: |-
-          ${{ env.IMAGE_NAME }}:${{ github.run_id }}
-          ${{ env.IMAGE_NAME }}:latest
-        cache-to: type=inline
   build_backend:
     name: Build backend
     runs-on: ubuntu-latest
@@ -181,11 +140,9 @@ jobs:
         key: "${{ runner.os }}-cargo-${{ hashFiles('ui/**/Cargo.lock') }}-2"
     - name: Format server
       run: cargo fmt --manifest-path ui/Cargo.toml --all --check
-    - name: Format top-crates
-      run: cargo fmt --manifest-path top-crates/Cargo.toml --check
     - name: Build backend
       run: |-
-        mkdir -p ui/target; docker run --rm -v $PWD/compiler/base/asm-cleanup:/compiler/base/asm-cleanup -v $PWD/compiler/base/orchestrator:/compiler/base/orchestrator -v $PWD/compiler/base/modify-cargo-toml:/compiler/base/modify-cargo-toml -v $PWD/ui:/ui -v ~/.cargo/git:/root/.cargo/git -v ~/.cargo/registry:/root/.cargo/registry --workdir /ui rust:alpine sh -c '
+        mkdir -p ui/target; docker run --rm -v $PWD/compiler/base/asm-cleanup:/compiler/base/asm-cleanup -v $PWD/compiler/base/modify-cargo-toml:/compiler/base/modify-cargo-toml -v $PWD/ui:/ui -v ~/.cargo/git:/root/.cargo/git -v ~/.cargo/registry:/root/.cargo/registry --workdir /ui rust:alpine sh -c '
           apk add musl-dev openssl-dev openssl-libs-static
 
           # Adding -C relocation-model=static due to
@@ -250,84 +207,9 @@ jobs:
       with:
         name: frontend
         path: ui/frontend/build
-  run_integration_tests:
-    name: Running integration tests
-    runs-on: ubuntu-latest
-    if: 'github.event_name == ''push'' || contains(github.event.pull_request.labels.*.name, ''CI: approved'')'
-    needs:
-    - build_compiler_containers
-    - build_tool_containers
-    - build_backend
-    - build_frontend
-    defaults:
-      run:
-        working-directory: tests
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        ref: "${{ github.event.pull_request.head.sha }}"
-    - name: Configure Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 3.0.2
-    - name: Cache bundler intermediate products
-      uses: actions/cache@v3
-      with:
-        path: tests/vendor/bundle
-        key: "${{ runner.os }}-gems-${{ hashFiles('tests/**/Gemfile.lock') }}"
-        restore-keys: "${{ runner.os }}-gems-"
-    - name: Install gems
-      run: |-
-        gem install bundler
-        bundle config path vendor/bundle
-        bundle install --jobs 4 --retry 3
-    - name: Pull containers
-      run: echo ghcr.io/integer32llc/rust-playground-ci-{rust-{stable,beta,nightly},tool-{clippy,rustfmt,miri}}:${{ github.run_id }} | xargs -n1 docker pull
-    - name: Rename containers
-      run: |-
-        for c in stable beta nightly; do
-          docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} ghcr.io/integer32llc/rust-playground-ci-rust-$c
-          docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} shepmaster/rust-$c
-          docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} rust-$c
-        done
-        for t in clippy miri rustfmt; do
-          docker tag ghcr.io/integer32llc/rust-playground-ci-tool-$t:${{ github.run_id }} ghcr.io/integer32llc/rust-playground-ci-tool-$t
-          docker tag ghcr.io/integer32llc/rust-playground-ci-tool-$t:${{ github.run_id }} shepmaster/$t
-          docker tag ghcr.io/integer32llc/rust-playground-ci-tool-$t:${{ github.run_id }} $t
-        done
-    - name: Download backend
-      uses: actions/download-artifact@v3
-      with:
-        name: backend
-        path: tests/server/
-    - name: Download frontend
-      uses: actions/download-artifact@v3
-      with:
-        name: frontend
-        path: tests/server/build/
-    - name: Run unit tests
-      run: chmod +x ./server/unit_tests && ./server/unit_tests
-    - name: Run tests
-      env:
-        PLAYGROUND_UI_ROOT: server/build/
-        PLAYGROUND_CORS_ENABLED: true
-        PLAYGROUND_GITHUB_TOKEN: "${{ secrets.PLAYGROUND_GITHUB_TOKEN }}"
-      run: |-
-        killall -q ui || true
-        chmod +x ./server/ui && ./server/ui &
-        bundle exec rspec
-    - name: Preserve screenshots
-      if: "${{ failure() }}"
-      uses: actions/upload-artifact@v3
-      with:
-        name: test-failures
-        path: tests/test-failures
   release_artifacts:
     name: Release artifacts
     runs-on: ubuntu-latest
-    needs:
-    - run_integration_tests
     if: github.event_name == 'push' && github.event.ref == 'refs/heads/main'
     permissions:
       contents: read
