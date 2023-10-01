@@ -36,6 +36,7 @@ export const routes = {
       java18: '/meta/version/java28_',
       java19: '/meta/version/java19_',
       java20: '/meta/version/java20_',
+      java21: '/meta/version/java21_',
     },
     gistSave: '/meta/gist',
     gistLoad: '/meta/gist/id',
@@ -54,6 +55,7 @@ export enum ActionType {
   DisableSyncChangesToStorage = 'DISABLE_SYNC_CHANGES_TO_STORAGE',
   SetPage = 'SET_PAGE',
   ChangeEditor = 'CHANGE_EDITOR',
+  ChangePrimaryAction = 'CHANGE_PRIMARY_ACTION',
   ChangeKeybinding = 'CHANGE_KEYBINDING',
   ChangeAceTheme = 'CHANGE_ACE_THEME',
   ChangeMonacoTheme = 'CHANGE_MONACO_THEME',
@@ -115,6 +117,9 @@ export const changeMode = (mode: Mode) =>
 
 export const changeEdition = (edition: Edition) =>
   createAction(ActionType.ChangeEdition, { edition });
+
+const changePrimaryAction = (primaryAction: PrimaryAction) =>
+createAction(ActionType.ChangePrimaryAction, { primaryAction });
 
 export const changeBacktrace = (backtrace: Backtrace) =>
   createAction(ActionType.ChangeBacktrace, { backtrace });
@@ -309,23 +314,19 @@ export const gotoPosition = (line: string | number, column: string | number) =>
 export const selectText = (start: Position, end: Position) =>
   createAction(ActionType.SelectText, { start, end });
 
-interface GeneralSuccess {
-  stdout: string;
-  stderr: string;
-}
-
 const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  java17, java18,  java19, java20,
+  java17, java18,  java19, java20, java21,
 }: {
   java17: Version,
   java18: Version,
   java19: Version,
   java20: Version,
+  java21: Version,
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { java17, java18, java19, java20});
+  createAction(ActionType.VersionsLoadSucceeded, { java17, java18, java19, java20, java21});
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
@@ -335,15 +336,18 @@ export function performVersionsLoad(): ThunkAction {
     const java18 = jsonGet(routes.meta.version.java18);
     const java19 = jsonGet(routes.meta.version.java19);
     const java20 = jsonGet(routes.meta.version.java20);
+    const java21 = jsonGet(routes.meta.version.java21);
 
-    const all = Promise.all([java17, java18, java19, java20]);
+
+    const all = Promise.all([java17, java18, java19, java20, java21]);
 
     return all
-      .then(([java17, java18, java19, java20]) => dispatch(receiveVersionsLoadSuccess({
+      .then(([java17, java18, java19, java20, java21]) => dispatch(receiveVersionsLoadSuccess({
         java17,
         java18,
         java19,
         java20,
+        java21,
       })));
     // TODO: Failure case
   };

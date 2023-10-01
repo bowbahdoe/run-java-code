@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, version } from 'react';
+import React, { Fragment, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
 import MenuGroup from './MenuGroup';
@@ -16,7 +16,7 @@ interface VersionMenuProps {
 }
 
 const ChannelMenu: React.FC<VersionMenuProps> = props => {
-  const version = useSelector((state: State) => state.versions);
+  const version = useSelector((state: State) => state.configuration.version);
   const java17Version = useSelector(selectors.java17VersionText);
   const java18Version = useSelector(selectors.java18VersionText);
   const java19Version = useSelector(selectors.java19VersionText);

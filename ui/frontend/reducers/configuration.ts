@@ -2,7 +2,7 @@ import { Action, ActionType } from '../actions';
 import {
   AssemblyFlavor,
   Backtrace,
-  Channel,
+  Version,
   DemangleAssembly,
   Edition,
   Editor,
@@ -30,7 +30,7 @@ export interface State {
   demangleAssembly: DemangleAssembly;
   processAssembly: ProcessAssembly;
   primaryAction: PrimaryAction;
-  channel: Channel;
+  version: Version;
   mode: Mode;
   edition: Edition;
   backtrace: Backtrace;
@@ -52,11 +52,11 @@ const DEFAULT: State = {
   demangleAssembly: DemangleAssembly.Demangle,
   processAssembly: ProcessAssembly.Filter,
   primaryAction: PrimaryActionAuto.Auto,
-  channel: Channel.Stable,
+  version: Version.Java21,
   mode: Mode.Debug,
-  edition: Edition.Rust2021,
+  edition: Edition.JavaStandardEdition,
   backtrace: Backtrace.Disabled,
-  preview: Preview.Disabled
+  preview: Preview.Disabled,
 };
 
 export default function configuration(state = DEFAULT, action: Action): State {
@@ -82,17 +82,6 @@ export default function configuration(state = DEFAULT, action: Action): State {
     }
     case ActionType.ChangeOrientation:
       return { ...state, orientation: action.orientation };
-    case ActionType.ChangeAssemblyFlavor:
-      return { ...state, assemblyFlavor: action.assemblyFlavor };
-    case ActionType.ChangeDemangleAssembly:
-      return { ...state, demangleAssembly: action.demangleAssembly };
-    case ActionType.ChangeProcessAssembly:
-      return { ...state, processAssembly: action.processAssembly };
-    case ActionType.ChangePrimaryAction:
-      return { ...state, primaryAction: action.primaryAction };
-    case ActionType.ChangeChannel: {
-      return { ...state, channel: action.channel };
-    }
     case ActionType.ChangeMode:
       return { ...state, mode: action.mode };
     case ActionType.ChangeEdition: {

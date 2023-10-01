@@ -29,9 +29,10 @@ const AdvancedOptionsMenu: React.FC = () => {
         isNotDefault={!isEditionDefault}
         onChange={changeEdition}
       >
-        <option value={Edition.Rust2015}>2015</option>
-        <option value={Edition.Rust2018}>2018</option>
-        <option value={Edition.Rust2021}>2021</option>
+        <option value={Edition.JavaEnterpriseEdition}>JavaEE</option>
+        <option value={Edition.JavaFX}>JavaFX</option>
+        <option value={Edition.JavaMicroEdition}>JavaME</option>
+        <option value={Edition.JavaStandardEdition}>JavaSE</option>
       </SelectConfig>
 
       <EitherConfig

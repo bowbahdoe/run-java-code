@@ -347,13 +347,11 @@ export const executeRequestPayloadSelector = createSelector(
   codeSelector,
   (state: State) => state.configuration,
   getBacktraceSet,
-  (_state: State, { crateType, tests }: { crateType: string, tests: boolean }) => ({ crateType, tests }),
-  (code, configuration, backtrace, { crateType, tests }) => ({
-    channel: configuration.channel,
+  (_state: State) => ({ crateType, tests }),
+  (code, configuration, backtrace) => ({
+    channel: configuration.version,
     mode: configuration.mode,
     edition: configuration.edition,
-    crateType,
-    tests,
     code,
     backtrace,
   }),
