@@ -1,7 +1,6 @@
 use serde_derive::Deserialize;
 use snafu::prelude::*;
 use std::{
-    collections::BTreeMap,
     ffi::OsStr,
     fmt, io,
     io::ErrorKind,
@@ -139,9 +138,7 @@ fn basic_secure_docker_command() -> Command {
         ),
     );
 
-    if cfg!(feature = "fork-bomb-prevention") {
-        cmd.args(&["--pids-limit", "512"]);
-    }
+    cmd.args(&["--pids-limit", "512"]);
 
     cmd.kill_on_drop(true);
 
@@ -695,10 +692,6 @@ pub enum Runtime {
 }
 
 impl Runtime {
-    pub fn latest() -> Runtime {
-        Runtime::Latest
-    }
-
     fn default_release(&self) -> Release {
         match *self {
             Runtime::Latest => Release::_21,
@@ -1000,6 +993,7 @@ pub struct MacroExpansionResponse {
 
 #[cfg(test)]
 mod test {
+    use crate::sandbox::Error::CompilerExecutionTimedOut;
     use super::*;
 
     // Running the tests completely in parallel causes spurious
@@ -1019,15 +1013,17 @@ mod test {
     }
 
     const HELLO_WORLD_CODE: &'static str = r#"
-    fn main() {
-        println!("Hello, world!");
+    public class Main {
+      public static void main(String[] args) {
+        System.out.println("Hello, world!");
+      }
     }
     "#;
 
     impl Default for ExecuteRequest {
         fn default() -> Self {
             ExecuteRequest {
-                runtime: Runtime::latest(),
+                runtime: Runtime::Latest,
                 crate_type: CrateType::Binary,
                 tests: false,
                 code: HELLO_WORLD_CODE.to_string(),
@@ -1041,7 +1037,7 @@ mod test {
         fn default() -> Self {
             CompileRequest {
                 target: CompileTarget::LlvmIr,
-                runtime: Runtime::latest(),
+                runtime: Runtime::Latest,
                 crate_type: CrateType::Binary,
                 tests: false,
                 code: HELLO_WORLD_CODE.to_string(),
@@ -1072,456 +1068,20 @@ mod test {
         assert!(resp.stdout.contains("Hello, world!"));
     }
 
-    const COMPILATION_MODE_CODE: &'static str = r#"
-    #[cfg(debug_assertions)]
-    fn main() {
-        println!("Compiling in debug mode");
-    }
-
-    #[cfg(not(debug_assertions))]
-    fn main() {
-        println!("Compiling in release mode");
-    }
-    "#;
-
-    #[tokio::test]
-    async fn debug_mode() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            code: COMPILATION_MODE_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("debug mode"));
-    }
-
-    #[tokio::test]
-    async fn release_mode() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            code: COMPILATION_MODE_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("release mode"));
-    }
-
-    static VERSION_CODE: &'static str = r#"
-    use std::process::Command;
-
-    fn main() {
-        let output = Command::new("rustc").arg("--version").output().unwrap();
-        let output = String::from_utf8(output.stdout).unwrap();
-        println!("{}", output);
-    }
-    "#;
-
-    #[tokio::test]
-    async fn stable_runtime() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: VERSION_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("rustc"));
-        assert!(!resp.stdout.contains("beta"));
-        assert!(!resp.stdout.contains("nightly"));
-    }
-
-    #[tokio::test]
-    async fn beta_runtime() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: VERSION_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("rustc"));
-        assert!(resp.stdout.contains("beta"));
-        assert!(!resp.stdout.contains("nightly"));
-    }
-
-    #[tokio::test]
-    async fn nightly_runtime() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: VERSION_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("rustc"));
-        assert!(!resp.stdout.contains("beta"));
-        assert!(resp.stdout.contains("nightly"));
-    }
-
-    // Code that will only work in Rust 2015
-    const EDITION_CODE: &str = r#"
-    fn main() {
-        let async = true;
-    }
-    "#;
-
-    const EDITION_ERROR: &str = "found keyword `async`";
-
-    #[tokio::test]
-    async fn rust_release_default() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: EDITION_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let resp = Sandbox::new().await?.execute(&req).await?;
-
-        assert!(!resp.stderr.contains(EDITION_ERROR), "was: {}", resp.stderr);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn rust_release_2015() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: EDITION_CODE.to_string(),
-            release: Some(Release::Rust2015),
-            ..ExecuteRequest::default()
-        };
-
-        let resp = Sandbox::new().await?.execute(&req).await?;
-
-        assert!(!resp.stderr.contains(EDITION_ERROR), "was: {}", resp.stderr);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn rust_release_2018() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: EDITION_CODE.to_string(),
-            release: Some(Release::Rust2018),
-            ..ExecuteRequest::default()
-        };
-
-        let resp = Sandbox::new().await?.execute(&req).await?;
-
-        assert!(resp.stderr.contains(EDITION_ERROR), "was: {}", resp.stderr);
-        Ok(())
-    }
-
-    const BACKTRACE_CODE: &str = r#"
-    fn trigger_the_problem() {
-        None::<u8>.unwrap();
-    }
-
-    fn main() {
-        trigger_the_problem()
-    }
-    "#;
-
-    const BACKTRACE_NOTE: &str =
-        "run with `RUST_BACKTRACE=1` environment variable to display a backtrace";
-
-    #[tokio::test]
-    async fn backtrace_disabled() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            code: BACKTRACE_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await?;
-        let resp = sb.execute(&req).await?;
-
-        assert!(resp.stderr.contains(BACKTRACE_NOTE), "Was: {}", resp.stderr);
-        assert!(
-            !resp.stderr.contains("stack backtrace:"),
-            "Was: {}",
-            resp.stderr
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn backtrace_enabled() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            code: BACKTRACE_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await?;
-        let resp = sb.execute(&req).await?;
-
-        assert!(
-            !resp.stderr.contains(BACKTRACE_NOTE),
-            "Was: {}",
-            resp.stderr
-        );
-        assert!(
-            resp.stderr.contains("stack backtrace:"),
-            "Was: {}",
-            resp.stderr
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn output_llvm_ir() {
-        let _singleton = one_test_at_a_time();
-        let req = CompileRequest {
-            target: CompileTarget::LlvmIr,
-            ..CompileRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.compile(&req).await.expect("Unable to compile code");
-
-        assert!(resp.code.contains("ModuleID"));
-        assert!(resp.code.contains("target datalayout"));
-        assert!(resp.code.contains("target triple"));
-    }
-
-    #[tokio::test]
-    async fn output_assembly() {
-        let _singleton = one_test_at_a_time();
-        let req = CompileRequest {
-            target: CompileTarget::Assembly(
-                AssemblyFlavor::Att,
-                DemangleAssembly::Mangle,
-                ProcessAssembly::Raw,
-            ),
-            ..CompileRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.compile(&req).await.expect("Unable to compile code");
-
-        assert!(resp.code.contains(".text"));
-        assert!(resp.code.contains(".file"));
-        assert!(resp.code.contains(".section"));
-        assert!(resp.code.contains(".p2align"));
-    }
-
-    #[tokio::test]
-    async fn output_demangled_assembly() {
-        let _singleton = one_test_at_a_time();
-        let req = CompileRequest {
-            target: CompileTarget::Assembly(
-                AssemblyFlavor::Att,
-                DemangleAssembly::Demangle,
-                ProcessAssembly::Raw,
-            ),
-            ..CompileRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.compile(&req).await.expect("Unable to compile code");
-
-        assert!(resp.code.contains("core::fmt::Arguments::new_const"));
-        assert!(resp.code.contains("std::io::stdio::_print@GOTPCREL"));
-    }
-
-    #[tokio::test]
-    #[should_panic]
-    async fn output_filtered_assembly() {
-        let _singleton = one_test_at_a_time();
-        let req = CompileRequest {
-            target: CompileTarget::Assembly(
-                AssemblyFlavor::Att,
-                DemangleAssembly::Mangle,
-                ProcessAssembly::Filter,
-            ),
-            ..CompileRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.compile(&req).await.expect("Unable to compile code");
-
-        assert!(resp.code.contains(".text"));
-        assert!(resp.code.contains(".file"));
-    }
-
-    #[tokio::test]
-    async fn formatting_code() {
-        let _singleton = one_test_at_a_time();
-        let req = FormatRequest {
-            code: "fn foo () { method_call(); }".to_string(),
-            release: None,
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.format(&req).await.expect("Unable to format code");
-
-        let lines: Vec<_> = resp.code.lines().collect();
-
-        assert_eq!(lines[0], "fn foo() {");
-        assert_eq!(lines[1], "    method_call();");
-        assert_eq!(lines[2], "}");
-    }
-
-    // Code that is only syntactically valid in Rust 2018
-    const FORMAT_IN_EDITION_2018: &str = r#"fn main() { use std::num::ParseIntError; let result: Result<i32, ParseIntError> = try { "1".parse::<i32>()? + "2".parse::<i32>()? + "3".parse::<i32>()? }; assert_eq!(result, Ok(6)); }"#;
-
-    const FORMAT_ERROR: &str = r#"error: expected identifier, found `"1"`"#;
-
-    #[tokio::test]
-    async fn formatting_code_release_2015() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = FormatRequest {
-            code: FORMAT_IN_EDITION_2018.to_string(),
-            release: Some(Release::Rust2015),
-        };
-
-        let resp = Sandbox::new().await?.format(&req).await?;
-
-        assert!(resp.stderr.contains(FORMAT_ERROR));
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn formatting_code_release_2018() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = FormatRequest {
-            code: FORMAT_IN_EDITION_2018.to_string(),
-            release: Some(Release::Rust2018),
-        };
-
-        let resp = Sandbox::new().await?.format(&req).await?;
-        assert!(!resp.stderr.contains(FORMAT_ERROR));
-
-        let lines: Vec<_> = resp.code.lines().collect();
-        assert_eq!(lines[0], r#"fn main() {"#);
-        assert_eq!(lines[1], r#"    use std::num::ParseIntError;"#);
-        assert_eq!(lines[2], r#"    let result: Result<i32, ParseIntError> ="#);
-        assert_eq!(
-            lines[3],
-            r#"        try { "1".parse::<i32>()? + "2".parse::<i32>()? + "3".parse::<i32>()? };"#
-        );
-        assert_eq!(lines[4], r#"    assert_eq!(result, Ok(6));"#);
-        assert_eq!(lines[5], r#"}"#);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn linting_code() {
-        let _singleton = one_test_at_a_time();
-        let code = r#"
-        fn main() {
-            let a = 0.0 / 0.0;
-            println!("NaN is {}", a);
-        }
-        "#;
-
-        let req = ClippyRequest {
-            code: code.to_string(),
-            ..ClippyRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.clippy(&req).await.expect("Unable to lint code");
-
-        assert!(resp.stderr.contains("deny(clippy::eq_op)"));
-        assert!(resp.stderr.contains("warn(clippy::zero_divided_by_zero)"));
-    }
-
-    #[tokio::test]
-    async fn linting_code_options() {
-        let _singleton = one_test_at_a_time();
-        let code = r#"
-        use itertools::Itertools; // Release 2018 feature
-
-        fn example() {
-            let a = 0.0 / 0.0;
-            println!("NaN is {}", a);
-        }
-        "#;
-
-        let req = ClippyRequest {
-            code: code.to_string(),
-            crate_type: CrateType::Library(LibraryType::Rlib),
-            release: Some(Release::Rust2018),
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.clippy(&req).await.expect("Unable to lint code");
-
-        assert!(resp.stderr.contains("deny(clippy::eq_op)"));
-        assert!(resp.stderr.contains("warn(clippy::zero_divided_by_zero)"));
-    }
-
-    #[tokio::test]
-    async fn interpreting_code() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let code = r#"
-        fn main() {
-            let mut a: [u8; 0] = [];
-            unsafe { *a.get_unchecked_mut(1) = 1; }
-        }
-        "#;
-
-        let req = MiriRequest {
-            code: code.to_string(),
-            release: None,
-        };
-
-        let sb = Sandbox::new().await?;
-        let resp = sb.miri(&req).await?;
-
-        assert!(
-            resp.stderr.contains("Undefined Behavior"),
-            "was: {}",
-            resp.stderr
-        );
-        assert!(
-            resp.stderr.contains("pointer to 1 byte"),
-            "was: {}",
-            resp.stderr
-        );
-        assert!(
-            resp.stderr.contains("starting at offset 0"),
-            "was: {}",
-            resp.stderr
-        );
-        assert!(
-            resp.stderr.contains("is out-of-bounds"),
-            "was: {}",
-            resp.stderr
-        );
-        assert!(resp.stderr.contains("has size 0"), "was: {}", resp.stderr);
-        Ok(())
-    }
-
     #[tokio::test]
     async fn network_connections_are_disabled() {
         let _singleton = one_test_at_a_time();
         let code = r#"
-            fn main() {
-                match ::std::net::TcpStream::connect("google.com:80") {
-                    Ok(_) => println!("Able to connect to the outside world"),
-                    Err(e) => println!("Failed to connect {}, {:?}", e, e),
+            import java.net.URL;
+
+            public class Main {
+                public static void main(String[] args) {
+                   try {
+                       new URL("https://google.com:443").openStream().readAllBytes();
+                       System.out.println("Able to connect to the outside world");
+                   } catch (Exception e) {
+                      System.out.println("Failed to connect " + e);
+                   }
                 }
             }
         "#;
@@ -1533,7 +1093,6 @@ mod test {
 
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
         let resp = sb.execute(&req).await.expect("Unable to execute code");
-
         assert!(resp.stdout.contains("Failed to connect"));
     }
 
@@ -1541,10 +1100,12 @@ mod test {
     async fn memory_usage_is_limited() {
         let _singleton = one_test_at_a_time();
         let code = r#"
-            fn main() {
-                let gigabyte = 1024 * 1024 * 1024;
-                let mut big = vec![0u8; 1 * gigabyte];
-                for i in &mut big { *i += 1; }
+            public class Main {
+                public static void main(String[] args) {
+                   int gigabyte = 1024 * 1024 * 1024;
+                   var big = new int[gigabyte];
+                   for (int i = 0; i < big.length; i++) { big[i] = big[i] + 1; }
+                }
             }
         "#;
 
@@ -1556,101 +1117,81 @@ mod test {
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
         let resp = sb.execute(&req).await.expect("Unable to execute code");
 
-        assert!(resp.stderr.contains("Killed"), "was: {}", resp.stderr);
+        assert!(resp.stderr.contains("java.lang.OutOfMemoryError"), "was: {}", resp.stderr);
+    }
+
+    #[tokio::test]
+    async fn memory_usage_is_limited_even_with_bytebuffer() {
+        let _singleton = one_test_at_a_time();
+        let code = r#"
+            import java.nio.ByteBuffer;
+            public class Main {
+                public static void main(String[] args) {
+                   int gigabyte = 1024 * 1024 * 1024;
+                   var byteBuffer = ByteBuffer.allocate(gigabyte);
+                }
+            }
+        "#;
+
+        let req = ExecuteRequest {
+            code: code.to_string(),
+            ..ExecuteRequest::default()
+        };
+
+        let sb = Sandbox::new().await.expect("Unable to create sandbox");
+        let resp = sb.execute(&req).await.expect("Unable to execute code");
+
+        assert!(resp.stderr.contains("java.lang.OutOfMemoryError"), "was: {}", resp.stderr);
     }
 
     #[tokio::test]
     async fn wallclock_time_is_limited() {
         let _singleton = one_test_at_a_time();
         let code = r#"
-            fn main() {
-                let a_long_time = std::time::Duration::from_secs(20);
-                std::thread::sleep(a_long_time);
+            public class Main {
+                public static void main(String[] args) throws Exception {
+                    Thread.sleep(20000000);
+                }
             }
         "#;
 
+        println!("A");
         let req = ExecuteRequest {
             code: code.to_string(),
             ..ExecuteRequest::default()
         };
 
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
+        let resp = sb.execute(&req).await;
 
-        assert!(resp.stderr.contains("Killed"), "was: {}", resp.stderr);
-    }
-
-    #[tokio::test]
-    async fn wallclock_time_is_limited_from_outside() {
-        let _singleton = one_test_at_a_time();
-        let code = r##"
-            use std::{process::Command, thread, time::Duration};
-
-            fn main() {
-                let output = Command::new("pgrep").args(&["timeout"]).output().unwrap();
-                assert!(output.status.success());
-
-                let out = String::from_utf8(output.stdout).expect("Unable to parse output");
-                let timeout_pid: u32 = out.trim().parse().expect("Unable to find timeout PID");
-
-                let output = Command::new("sh")
-                    .args(&["-c", &format!("kill -s STOP {}", timeout_pid)])
-                    .output()
-                    .unwrap();
-                assert!(output.status.success());
-
-                for _ in 0.. {
-                    thread::sleep(Duration::from_secs(1));
-                }
+        assert!(match resp {
+            Err (CompilerExecutionTimedOut{ timeout: DOCKER_PROCESS_TIMEOUT_HARD, .. }) => {
+                true
             }
-        "##;
-
-        async fn docker_process_count() -> usize {
-            let mut cmd = docker_command!("ps", "-a");
-            let output = cmd.output().await.expect("Unable to get process count");
-            let output = String::from_utf8_lossy(&output.stdout);
-            // Skip one line of header
-            output.lines().skip(1).count()
-        }
-
-        assert_eq!(
-            0,
-            docker_process_count().await,
-            "There must be no running docker processes"
-        );
-
-        let req = ExecuteRequest {
-            code: code.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        match sb.execute(&req).await {
-            Ok(_) => panic!("Expected an error"),
-            Err(Error::CompilerExecutionTimedOut { .. }) => { /* Ok */ }
-            Err(e) => panic!("Got the wrong error: {}", e),
-        }
-
-        assert_eq!(
-            0,
-            docker_process_count().await,
-            "A docker process continues to run"
-        );
+            Ok(_) | Err(_) => {
+                false
+            }
+        });
     }
 
     #[tokio::test]
     async fn number_of_pids_is_limited() {
         let _singleton = one_test_at_a_time();
         let forkbomb = r##"
-            fn main() {
-                ::std::process::Command::new("sh").arg("-c").arg(r#"
-                    z() {
-                        z&
-                        z
-                    }
-                    z
-                "#).status().unwrap();
-            }
+import java.util.List;
+public class Main {
+  public static void main(String[] args) throws Exception {
+    new ProcessBuilder(List.of(
+		"sh",
+        "-c",
+        "z() {\n" +
+                   "     z&\n" +
+                   "     z\n" +
+                   " }\n" +
+                   " z"
+    )).start().waitFor();
+  }
+}
         "##;
 
         let req = ExecuteRequest {
@@ -1661,6 +1202,6 @@ mod test {
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
         let resp = sb.execute(&req).await.expect("Unable to execute code");
 
-        assert!(resp.stderr.contains("Cannot fork"));
+        assert!(resp.stderr.contains("unable to create native thread: possibly out of memory or process/resource limits reached"));
     }
 }

@@ -41,7 +41,6 @@ struct Config {
     cors_enabled: bool,
     gh_token: Option<String>,
     metrics_token: Option<String>,
-    orchestrator_enabled: bool,
     port: u16,
     root: PathBuf,
 }
@@ -94,19 +93,16 @@ impl Config {
         // Attempt to retrieve the environment variable values
         let metrics_token = std::env::var("PLAYGROUND_METRICS_TOKEN").ok();
         let cors_enabled = std::env::var_os("PLAYGROUND_CORS_ENABLED").is_some();
-        let orchestrator_enabled = std::env::var_os("PLAYGROUND_ORCHESTRATOR_ENABLED").is_some();
     
         // Print the values to the console
         println!("Metrics Token: {:?}", metrics_token);
         println!("CORS Enabled: {}", cors_enabled);
-        println!("Orchestrator Enabled: {}", orchestrator_enabled);
 
         Self {
             address,
             cors_enabled,
             gh_token,
             metrics_token,
-            orchestrator_enabled,
             port,
             root,
         }
@@ -122,10 +118,6 @@ impl Config {
 
     fn use_cors(&self) -> bool {
         self.cors_enabled
-    }
-
-    fn use_orchestrator(&self) -> bool {
-        self.orchestrator_enabled
     }
 
     fn metrics_token(&self) -> Option<MetricsToken> {
@@ -241,7 +233,6 @@ struct CompileRequest {
     #[serde(rename = "processAssembly")]
     process_assembly: Option<String>,
     runtime: String,
-    mode: String,
     #[serde(default)]
     release: String,
     #[serde(rename = "crateType")]
@@ -359,7 +350,6 @@ struct MetaGistResponse {
 #[derive(Debug, Clone, Deserialize)]
 struct EvaluateRequest {
     version: String,
-    optimize: String,
     code: String,
     #[serde(default)]
     release: String,

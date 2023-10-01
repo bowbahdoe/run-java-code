@@ -88,8 +88,7 @@ pub(crate) async fn serve(config: Config) {
         .route("/nowebsocket", post(nowebsocket))
         .route("/whynowebsocket", get(whynowebsocket))
         .layer(Extension(Arc::new(SandboxCache::default())))
-        .layer(Extension(config.github_token()))
-        .layer(Extension(OrchestratorEnabled(config.use_orchestrator())));
+        .layer(Extension(config.github_token()));
 
     if let Some(token) = config.metrics_token() {
         app = app.layer(Extension(token))
@@ -155,7 +154,6 @@ async fn evaluate(Json(req): Json<EvaluateRequest>) -> Result<Json<EvaluateRespo
 }
 
 async fn compile(
-    Extension(use_orchestrator): Extension<OrchestratorEnabled>,
     Json(req): Json<CompileRequest>,
 ) -> Result<Json<CompileResponse>> {
     with_sandbox(
