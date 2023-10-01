@@ -31,12 +31,12 @@ interface WarningProps {
 
 const Warning: React.FC<WarningProps> = props => (
   <Section kind="warning" label="Warnings">
-    No main function was detected, so your code was compiled
+    No main method was detected, so your code was compiled
     {'\n'}
     but not run. If you’d like to execute your code, please
     {'\n'}
     <button className={styles.addMain} onClick={props.addMainFunction}>
-      add a main function
+      add a main method
     </button>
     .
   </Section>

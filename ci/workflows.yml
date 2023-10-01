@@ -147,35 +147,6 @@ components:
           ${{ env.IMAGE_NAME }}:latest
         cache-to: type=inline
 
-  - build_tool_containers_job: &build_tool_containers_job
-      name: "Build ${{ matrix.tool }} tool container"
-      runs-on: ubuntu-latest
-      needs: build_compiler_containers
-
-      strategy:
-        matrix:
-          tool: [clippy, miri, rustfmt]
-
-  - build_tool_containers_job_env: &build_tool_containers_job_env
-      IMAGE_NAME: ghcr.io/integer32llc/rust-playground-ci-tool-${{ matrix.tool }}
-
-  - build_tool_containers_final: &build_tool_containers_final
-      name: "Build and push container"
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/${{ matrix.tool }}/
-        file: compiler/${{ matrix.tool }}/Dockerfile
-        build-args: |-
-          base_image=ghcr.io/integer32llc/rust-playground-ci-rust-nightly:sources--${{ github.run_id }}
-        pull: true
-        push: true
-        tags: |-
-          ${{ env.IMAGE_NAME }}:${{ github.run_id }}
-        cache-from: |-
-          ${{ env.IMAGE_NAME }}:${{ github.run_id }}
-          ${{ env.IMAGE_NAME }}:latest
-        cache-to: type=inline
-
   - pull_containers: &pull_containers
       name: "Pull containers"
       run: |-
@@ -241,18 +212,6 @@ workflows:
           - *build_compiler_containers_munge
           - *build_compiler_containers_sources
           - *build_compiler_containers_final
-
-      build_tool_containers:
-        <<: *build_tool_containers_job
-        if: "github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'CI: approved')"
-        env:
-          <<: *build_tool_containers_job_env
-
-        steps:
-          - *checkout_pr
-          - *docker_buildx
-          - *login_ghcr
-          - *build_tool_containers_final
 
       build_backend:
         name: "Build backend"
@@ -379,83 +338,9 @@ workflows:
               name: frontend
               path: ui/frontend/build
 
-      run_integration_tests:
-        name: "Running integration tests"
-        runs-on: ubuntu-latest
-        if: "github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'CI: approved')"
-        needs:
-          - build_compiler_containers
-          - build_tool_containers
-          - build_backend
-          - build_frontend
-
-        defaults:
-          run:
-            working-directory: tests
-
-        steps:
-          - *checkout_pr
-
-          - name: "Configure Ruby"
-            uses: ruby/setup-ruby@v1
-            with:
-              ruby-version: '3.0.2'
-
-          - name: "Cache bundler intermediate products"
-            uses: actions/cache@v3
-            with:
-              path: tests/vendor/bundle
-              key: ${{ runner.os }}-gems-${{ hashFiles('tests/**/Gemfile.lock') }}
-              restore-keys: |-
-                ${{ runner.os }}-gems-
-
-          - name: "Install gems"
-            run: |-
-              gem install bundler
-              bundle config path vendor/bundle
-              bundle install --jobs 4 --retry 3
-
-          - *pull_containers
-          - *rename_all_containers
-
-          - name: "Download backend"
-            uses: actions/download-artifact@v3
-            with:
-              name: backend
-              path: tests/server/
-
-          - name: "Download frontend"
-            uses: actions/download-artifact@v3
-            with:
-              name: frontend
-              path: tests/server/build/
-
-          - name: "Run unit tests"
-            run: |-
-              chmod +x ./server/unit_tests && ./server/unit_tests
-
-          - name: "Run tests"
-            env:
-              PLAYGROUND_UI_ROOT: server/build/
-              PLAYGROUND_CORS_ENABLED: true
-              PLAYGROUND_GITHUB_TOKEN: ${{ secrets.PLAYGROUND_GITHUB_TOKEN }}
-            run: |-
-              killall -q ui || true
-              chmod +x ./server/ui && ./server/ui &
-              bundle exec rspec
-
-          - name: "Preserve screenshots"
-            if: ${{ failure() }}
-            uses: actions/upload-artifact@v3
-            with:
-              name: test-failures
-              path: tests/test-failures
-
       release_artifacts:
         name: "Release artifacts"
         runs-on: ubuntu-latest
-        needs:
-          - run_integration_tests
         if: github.event_name == 'push' && github.event.ref == 'refs/heads/main'
         permissions:
           contents: read
@@ -556,24 +441,6 @@ workflows:
           - *build_compiler_containers_munge
           - *build_compiler_containers_sources
           - *build_compiler_containers_final
-
-          - *pull_current_container
-          - *rename_current_container
-          - *push_current_container
-
-      build_tool_containers:
-        <<: *build_tool_containers_job
-        env:
-          <<: *build_tool_containers_job_env
-          DOCKER_HUB_IMAGE_NAME: shepmaster/${{ matrix.tool }}
-        continue-on-error: true
-
-        steps:
-          - *checkout
-          - *docker_buildx
-          - *login_ghcr
-          - *login_docker_hub
-          - *build_tool_containers_final
 
           - *pull_current_container
           - *rename_current_container

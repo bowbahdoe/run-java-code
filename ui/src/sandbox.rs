@@ -159,12 +159,20 @@ fn build_execution_command(
     use self::CompileTarget::*;
     use self::CrateType::*;
 
-    let mut cmd = vec![
-        "java",
-    ];
-    cmd.extend(&["--source", release.java_release()]);
-    // Enable using java.lang.foreign w/o warnings
-    cmd.push("--enable-native-access=ALL-UNNAMED");
+    let mut cmd = vec![];
+    if req.crate_type() == CrateType::Binary {
+        cmd.push("java");
+        cmd.extend(&["--source", release.java_release()]);
+
+        // Enable using java.lang.foreign w/o warnings
+        cmd.push("--enable-native-access=ALL-UNNAMED");
+    }
+    else {
+        cmd.push("javac");
+        cmd.extend(&["--release", release.java_release()]);
+        cmd.extend(&["-d", "out"])
+    }
+
 
     if preview {
         cmd.push("--enable-preview");

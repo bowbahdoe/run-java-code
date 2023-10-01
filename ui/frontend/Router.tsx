@@ -61,7 +61,7 @@ const stateToLocation = ({ page, configuration, output }: Substate): Partial<Pat
       }
 
       if (configuration.preview === Preview.Enabled) {
-        query.preview = true;
+        query.preview = configuration.preview;
       }
 
       return {

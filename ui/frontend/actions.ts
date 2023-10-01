@@ -634,9 +634,9 @@ function parseRelease(s?: string): Release | null {
 
 function parsePreview(s?: string): Preview | null {
   switch (s) {
-    case 'true':
+    case 'enabled':
       return Preview.Enabled;
-    case 'false':
+    case 'disabled':
       return Preview.Disabled;
     default:
       return null;
@@ -652,6 +652,7 @@ export function indexPageLoad({
 }: { code?: string, gist?: string, runtime?: string, release?: string, preview?: string }): ThunkAction {
   return function(dispatch) {
     const runtime = parseRuntime(runtimeString) || Runtime.Latest;
+    console.log(`PArsed Runtime ${runtime}`)
     let release = parseRelease(releaseString) || Release.Java21;
     let preview = parsePreview(previewString) || Preview.Disabled;
 
