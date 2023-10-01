@@ -1,11 +1,9 @@
 use serde_derive::Deserialize;
 use snafu::prelude::*;
 use std::{
-    ffi::OsStr,
-    fmt, io,
-    io::ErrorKind,
+    io,
     os::unix::fs::PermissionsExt,
-    path::{Path, PathBuf},
+    path::PathBuf,
     string,
     time::Duration,
 };
@@ -146,18 +144,16 @@ fn basic_secure_docker_command() -> Command {
 }
 
 fn build_execution_command(
-    target: Option<CompileTarget>,
     release: Release,
     runtime: Runtime,
-    req: impl CrateTypeRequest,
+    req: impl ActionRequest,
     tests: bool,
     preview: bool
 ) -> Vec<&'static str> {
-    use self::CompileTarget::*;
-    use self::CrateType::*;
+    use self::Action::*;
 
     let mut cmd = vec![];
-    if req.crate_type() == CrateType::Binary {
+    if req.action() == Action::Run {
         cmd.push("java");
         cmd.extend(&["--source", release.java_release()]);
 
@@ -178,21 +174,6 @@ fn build_execution_command(
     cmd.push("src/Main.java");
     cmd
 
-}
-
-fn set_execution_environment(
-    cmd: &mut Command,
-    target: Option<CompileTarget>,
-    req: impl CrateTypeRequest + ReleaseRequest,
-) {
-    use self::CompileTarget::*;
-
-    if let Some(Wasm) = target {
-        cmd.args(&["--env", "PLAYGROUND_NO_DEPENDENCIES=true"]);
-        cmd.args(&["--env", "PLAYGROUND_RELEASE_LTO=true"]);
-    }
-
-    cmd.apply_crate_type(&req);
 }
 
 pub struct Sandbox {
@@ -232,69 +213,23 @@ impl Sandbox {
     pub async fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
         self.write_source_code(&req.code).await?;
 
-        let command = self.compile_command(req.target, req.release.unwrap_or(req.runtime.default_release()), req.runtime, req.tests, req);
+        let command = self.compile_command(
+            req.release.unwrap_or(
+                req.runtime.default_release()
+            ),
+            req.runtime,
+            req.tests,
+            req
+        );
 
         let output = run_command_with_timeout(command).await?;
 
-        // The compiler writes the file to a name like
-        // `compilation-3b75174cac3d47fb.ll`, so we just find the
-        // first with the right extension.
-        async fn path_to_first_file_with_extension(
-            dir: &Path,
-            extension: &OsStr,
-        ) -> Result<Option<PathBuf>> {
-            let mut files = fs::read_dir(dir).await.context(UnableToReadOutputSnafu)?;
-
-            while let Some(entry) = files.next_entry().await.transpose() {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.extension() == Some(extension) {
-                        return Ok(Some(path));
-                    }
-                }
-            }
-
-            Ok(None)
-        }
-
-        let file =
-            path_to_first_file_with_extension(&self.output_dir, req.target.extension()).await?;
         let stdout = vec_to_str(output.stdout)?;
-        let mut stderr = vec_to_str(output.stderr)?;
-
-        let mut code = match file {
-            Some(file) => read(&file).await?.unwrap_or_default(),
-            None => {
-                // If we didn't find the file, it's *most* likely that
-                // the user's code was invalid. Tack on our own error
-                // to the compiler's error instead of failing the
-                // request.
-                use std::fmt::Write;
-                write!(
-                    &mut stderr,
-                    "\nUnable to locate file for {} output",
-                    req.target
-                )
-                .expect("Unable to write to a string");
-                String::new()
-            }
-        };
-
-        if let CompileTarget::Assembly(_, demangle, process) = req.target {
-            if demangle == DemangleAssembly::Demangle {
-                code = asm_cleanup::demangle_asm(&code);
-            }
-
-            if process == ProcessAssembly::Filter {
-                code = asm_cleanup::filter_asm(&code);
-            }
-        } else if CompileTarget::Hir == req.target {
-            // TODO: Run rustfmt on the generated HIR.
-        }
+        let stderr = vec_to_str(output.stderr)?;
 
         Ok(CompileResponse {
             success: output.status.success(),
-            code,
+            code: "".to_string(),
             stdout,
             stderr,
         })
@@ -313,47 +248,6 @@ impl Sandbox {
         })
     }
 
-    pub async fn format(&self, req: &FormatRequest) -> Result<FormatResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.format_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(FormatResponse {
-            success: output.status.success(),
-            code: read(self.input_file.as_ref())
-                .await?
-                .context(OutputMissingSnafu)?,
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
-    pub async fn clippy(&self, req: &ClippyRequest) -> Result<ClippyResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.clippy_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(ClippyResponse {
-            success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
-    pub async fn miri(&self, req: &MiriRequest) -> Result<MiriResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.miri_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(MiriResponse {
-            success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
 
     pub async fn crates(&self) -> Result<Vec<CrateInformation>> {
         /* let mut command = basic_secure_docker_command();
@@ -393,43 +287,6 @@ impl Sandbox {
         })
     }
 
-    pub async fn version_rustfmt(&self) -> Result<Version> {
-        let mut command = basic_secure_docker_command();
-        command.args(&["rustfmt", "cargo", "fmt", "--version"]);
-        self.cargo_tool_version(command).await
-    }
-
-    pub async fn version_clippy(&self) -> Result<Version> {
-        let mut command = basic_secure_docker_command();
-        command.args(&["clippy", "cargo", "clippy", "--version"]);
-        self.cargo_tool_version(command).await
-    }
-
-    pub async fn version_miri(&self) -> Result<Version> {
-        let mut command = basic_secure_docker_command();
-        command.args(&["miri", "cargo", "miri", "--version"]);
-        self.cargo_tool_version(command).await
-    }
-
-
-
-    // Parses versions of the shape `toolname 0.0.0 (0000000 0000-00-00)`
-    async fn cargo_tool_version(&self, command: Command) -> Result<Version> {
-        let output = run_command_with_timeout(command).await?;
-        let version_output = vec_to_str(output.stdout)?;
-        let mut parts = version_output.split_whitespace().fuse().skip(1);
-
-        let release = parts.next().unwrap_or("").into();
-        let commit_hash = parts.next().unwrap_or("").trim_start_matches('(').into();
-        let commit_date = parts.next().unwrap_or("").trim_end_matches(')').into();
-
-        Ok(Version {
-            release,
-            commit_hash,
-            commit_date,
-        })
-    }
-
     async fn write_source_code(&self, code: &str) -> Result<()> {
         fs::write(&self.input_file, code)
             .await
@@ -448,16 +305,13 @@ impl Sandbox {
 
     fn compile_command(
         &self,
-        target: CompileTarget,
         release: Release,
         runtime: Runtime,
         tests: bool,
-        req: impl CrateTypeRequest + ReleaseRequest + PreviewRequest,
+        req: impl ActionRequest + ReleaseRequest + PreviewRequest,
     ) -> Command {
-        let mut cmd = self.docker_command(Some(req.crate_type()));
-        set_execution_environment(&mut cmd, Some(target), &req);
+        let mut cmd = self.docker_command(Some(req.action()));
         let execution_cmd = build_execution_command(
-            Some(target),
             release,
             runtime,
             &req,
@@ -478,13 +332,11 @@ impl Sandbox {
         release: Release,
         runtime: Runtime,
         tests: bool,
-        req: impl CrateTypeRequest + ReleaseRequest + PreviewRequest,
+        req: impl ActionRequest + ReleaseRequest + PreviewRequest,
     ) -> Command {
-        let mut cmd = self.docker_command(Some(req.crate_type()));
-        set_execution_environment(&mut cmd, None, &req);
+        let mut cmd = self.docker_command(Some(req.action()));
 
         let execution_cmd = build_execution_command(
-            None,
             release,
             runtime,
             &req,
@@ -499,47 +351,13 @@ impl Sandbox {
         cmd
     }
 
-    fn format_command(&self, req: impl ReleaseRequest) -> Command {
-        let crate_type = CrateType::Binary;
-
-        let mut cmd = self.docker_command(Some(crate_type));
-
-        cmd.arg("rustfmt").args(&["cargo", "fmt"]);
-
-        debug!("Formatting command is {:?}", cmd);
-
-        cmd
-    }
-
-    fn clippy_command(&self, req: impl CrateTypeRequest + ReleaseRequest) -> Command {
-        let mut cmd = self.docker_command(Some(req.crate_type()));
-
-        cmd.apply_crate_type(&req);
-
-        cmd.arg("clippy").args(&["cargo", "clippy"]);
-
-        debug!("Clippy command is {:?}", cmd);
-
-        cmd
-    }
-
-    fn miri_command(&self, req: impl ReleaseRequest) -> Command {
-        let mut cmd = self.docker_command(None);
-
-        cmd.arg("miri").args(&["cargo", "miri-playground"]);
-
-        debug!("Miri command is {:?}", cmd);
-
-        cmd
-    }
-
-    fn docker_command(&self, crate_type: Option<CrateType>) -> Command {
-        let crate_type = crate_type.unwrap_or(CrateType::Binary);
+    fn docker_command(&self, action: Option<Action>) -> Command {
+        let action = action.unwrap_or(Action::Run);
 
         let mut mount_input_file = self.input_file.as_os_str().to_os_string();
         mount_input_file.push(":");
         mount_input_file.push("/playground/");
-        mount_input_file.push(crate_type.file_name());
+        mount_input_file.push(action.file_name());
 
         let mut mount_output_dir = self.output_dir.as_os_str().to_os_string();
         mount_output_dir.push(":");
@@ -623,68 +441,6 @@ async fn run_command_with_timeout(mut command: Command) -> Result<std::process::
     Ok(output)
 }
 
-async fn read(path: &Path) -> Result<Option<String>> {
-    match fs::read_to_string(path).await {
-        Ok(s) => Ok(Some(s)),
-        Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(e).context(UnableToReadOutputSnafu),
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AssemblyFlavor {
-    Att,
-    Intel,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum DemangleAssembly {
-    Demangle,
-    Mangle,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ProcessAssembly {
-    Filter,
-    Raw,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum CompileTarget {
-    Assembly(AssemblyFlavor, DemangleAssembly, ProcessAssembly),
-    LlvmIr,
-    Mir,
-    Hir,
-    Wasm,
-}
-
-impl CompileTarget {
-    fn extension(&self) -> &'static OsStr {
-        let ext = match *self {
-            CompileTarget::Assembly(_, _, _) => "s",
-            CompileTarget::LlvmIr => "ll",
-            CompileTarget::Mir => "mir",
-            CompileTarget::Hir => "hir",
-            CompileTarget::Wasm => "wat",
-        };
-        OsStr::new(ext)
-    }
-}
-
-impl fmt::Display for CompileTarget {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::CompileTarget::*;
-
-        match *self {
-            Assembly(_, _, _) => "assembly".fmt(f),
-            LlvmIr => "LLVM IR".fmt(f),
-            Mir => "Rust MIR".fmt(f),
-            Hir => "Rust HIR".fmt(f),
-            Wasm => "WebAssembly".fmt(f),
-        }
-    }
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
 pub enum Runtime {
     Latest,
@@ -695,7 +451,7 @@ impl Runtime {
     fn default_release(&self) -> Release {
         match *self {
             Runtime::Latest => Release::_21,
-            Runtime::Valhalla => Release::_20,
+            Runtime::Valhalla => Release::_21,
         }
     }
 
@@ -751,62 +507,27 @@ impl Release {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum CrateType {
-    Binary,
-    Library(LibraryType),
+pub enum Action {
+    Run,
+    Build
 }
 
-impl CrateType {
+impl Action {
     fn file_name(&self) -> &'static str {
-        use self::CrateType::*;
+        use self::Action::*;
 
         match *self {
-            Binary => "src/Main.java",
-            Library(_) => "src/Main.java",
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum LibraryType {
-    Lib,
-    Dylib,
-    Rlib,
-    Staticlib,
-    Cdylib,
-    ProcMacro,
-}
-
-impl LibraryType {
-    fn cargo_ident(&self) -> &'static str {
-        use self::LibraryType::*;
-
-        match *self {
-            Lib => "lib",
-            Dylib => "dylib",
-            Rlib => "rlib",
-            Staticlib => "staticlib",
-            Cdylib => "cdylib",
-            ProcMacro => "proc-macro",
+            Run => "src/Main.java",
+            Build => "src/Main.java",
         }
     }
 }
 
 trait DockerCommandExt {
-    fn apply_crate_type(&mut self, req: impl CrateTypeRequest);
     fn apply_release(&mut self, req: impl ReleaseRequest);
 }
 
 impl DockerCommandExt for Command {
-    fn apply_crate_type(&mut self, req: impl CrateTypeRequest) {
-        if let CrateType::Library(lib) = req.crate_type() {
-            self.args(&[
-                "--env",
-                &format!("PLAYGROUND_CRATE_TYPE={}", lib.cargo_ident()),
-            ]);
-        }
-    }
-
     fn apply_release(&mut self, req: impl ReleaseRequest) {
         if let Some(release) = req.release() {
             self.args(&[
@@ -817,13 +538,13 @@ impl DockerCommandExt for Command {
     }
 }
 
-trait CrateTypeRequest {
-    fn crate_type(&self) -> CrateType;
+trait ActionRequest {
+    fn action(&self) -> Action;
 }
 
-impl<R: CrateTypeRequest> CrateTypeRequest for &'_ R {
-    fn crate_type(&self) -> CrateType {
-        (*self).crate_type()
+impl<R: ActionRequest> ActionRequest for &'_ R {
+    fn action(&self) -> Action {
+        (*self).action()
     }
 }
 
@@ -849,18 +570,17 @@ impl<R: PreviewRequest> PreviewRequest for &'_ R {
 
 #[derive(Debug, Clone)]
 pub struct CompileRequest {
-    pub target: CompileTarget,
     pub runtime: Runtime,
-    pub crate_type: CrateType,
+    pub action: Action,
     pub release: Option<Release>,
     pub tests: bool,
     pub preview: bool,
     pub code: String,
 }
 
-impl CrateTypeRequest for CompileRequest {
-    fn crate_type(&self) -> CrateType {
-        self.crate_type
+impl ActionRequest for CompileRequest {
+    fn action(&self) -> Action {
+        self.action
     }
 }
 
@@ -888,15 +608,15 @@ pub struct CompileResponse {
 pub struct ExecuteRequest {
     pub runtime: Runtime,
     pub release: Option<Release>,
-    pub crate_type: CrateType,
+    pub action: Action,
     pub tests: bool,
     pub preview: bool,
     pub code: String,
 }
 
-impl CrateTypeRequest for ExecuteRequest {
-    fn crate_type(&self) -> CrateType {
-        self.crate_type
+impl ActionRequest for ExecuteRequest {
+    fn action(&self) -> Action {
+        self.action
     }
 }
 
@@ -914,78 +634,6 @@ impl PreviewRequest for ExecuteRequest {
 
 #[derive(Debug, Clone)]
 pub struct ExecuteResponse {
-    pub success: bool,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct FormatRequest {
-    pub code: String,
-    pub release: Option<Release>,
-}
-
-impl ReleaseRequest for FormatRequest {
-    fn release(&self) -> Option<Release> {
-        self.release
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct FormatResponse {
-    pub success: bool,
-    pub code: String,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct ClippyRequest {
-    pub code: String,
-    pub release: Option<Release>,
-    pub crate_type: CrateType,
-}
-
-impl CrateTypeRequest for ClippyRequest {
-    fn crate_type(&self) -> CrateType {
-        self.crate_type
-    }
-}
-
-impl ReleaseRequest for ClippyRequest {
-    fn release(&self) -> Option<Release> {
-        self.release
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ClippyResponse {
-    pub success: bool,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct MiriRequest {
-    pub code: String,
-    pub release: Option<Release>,
-}
-
-impl ReleaseRequest for MiriRequest {
-    fn release(&self) -> Option<Release> {
-        self.release
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct MiriResponse {
-    pub success: bool,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct MacroExpansionResponse {
     pub success: bool,
     pub stdout: String,
     pub stderr: String,
@@ -1024,7 +672,7 @@ mod test {
         fn default() -> Self {
             ExecuteRequest {
                 runtime: Runtime::Latest,
-                crate_type: CrateType::Binary,
+                action: Action::Run,
                 tests: false,
                 code: HELLO_WORLD_CODE.to_string(),
                 release: None,
@@ -1036,23 +684,12 @@ mod test {
     impl Default for CompileRequest {
         fn default() -> Self {
             CompileRequest {
-                target: CompileTarget::LlvmIr,
                 runtime: Runtime::Latest,
-                crate_type: CrateType::Binary,
+                action: Action::Run,
                 tests: false,
                 code: HELLO_WORLD_CODE.to_string(),
                 release: None,
                 preview: false,
-            }
-        }
-    }
-
-    impl Default for ClippyRequest {
-        fn default() -> Self {
-            ClippyRequest {
-                code: HELLO_WORLD_CODE.to_string(),
-                crate_type: CrateType::Binary,
-                release: None,
             }
         }
     }

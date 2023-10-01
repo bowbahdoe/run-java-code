@@ -1,5 +1,5 @@
 use crate::{
-    metrics, parse_runtime, parse_crate_type, parse_release,
+    metrics, parse_runtime, parse_action, parse_release,
     sandbox::{self, Sandbox},
     Error, ExecutionSnafu, Result, SandboxCreationSnafu, WebSocketTaskPanicSnafu,
 };
@@ -10,6 +10,7 @@ use std::{
     time::Instant,
 };
 use tokio::{sync::mpsc, task::JoinSet};
+use crate::sandbox::Action;
 
 type Meta = serde_json::Value;
 
@@ -38,11 +39,10 @@ enum WSMessageRequest {
 }
 
 #[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct ExecuteRequest {
     runtime: String,
     release: String,
-    crate_type: String,
+    action: String,
     tests: bool,
     code: String,
     preview: bool
@@ -55,7 +55,7 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
         let ExecuteRequest {
             runtime,
             release,
-            crate_type,
+            action,
             tests,
             code,
             preview
@@ -64,7 +64,7 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
         Ok(sandbox::ExecuteRequest {
             runtime: parse_runtime(&runtime)?,
             release: parse_release(&release)?,
-            crate_type: parse_crate_type(&crate_type)?,
+            action: parse_action(&action)?.unwrap_or(Action::Run),
             tests,
             preview,
             code,

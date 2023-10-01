@@ -10,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::sandbox::{self, Runtime, CompileTarget, CrateType, Release};
+use crate::sandbox::{self, Runtime, Action, Release};
 
 lazy_static! {
     pub(crate) static ref REQUESTS: HistogramVec = register_histogram_vec!(
@@ -42,16 +42,9 @@ lazy_static! {
 pub(crate) enum Endpoint {
     Compile,
     Execute,
-    Format,
-    Miri,
-    Clippy,
     MetaCrates,
     MetaVersionLatest,
     MetaVersionValhalla,
-    MetaVersionRustfmt,
-    MetaVersionClippy,
-    MetaVersionMiri,
-    Evaluate,
 }
 
 #[derive(Debug, Copy, Clone, strum::IntoStaticStr)]
@@ -64,10 +57,9 @@ pub(crate) enum Outcome {
 }
 
 pub(crate) struct LabelsCore {
-    target: Option<CompileTarget>,
     runtime: Option<Runtime>,
     release: Option<Option<Release>>,
-    crate_type: Option<CrateType>,
+    action: Option<Action>,
     tests: Option<bool>,
     preview: Option<bool>
 }
@@ -76,24 +68,22 @@ pub(crate) struct LabelsCore {
 pub(crate) struct Labels {
     endpoint: Endpoint,
     outcome: Outcome,
-    target: Option<CompileTarget>,
     runtime: Option<Runtime>,
     release: Option<Option<Release>>,
-    crate_type: Option<CrateType>,
+    action: Option<Action>,
     tests: Option<bool>,
     preview: Option<bool>
 }
 
 impl Labels {
-    const COUNT: usize = 8;
+    const COUNT: usize = 7;
 
     const LABELS: &'static [&'static str; Self::COUNT] = &[
         "endpoint",
         "outcome",
-        "target",
         "runtime",
         "release",
-        "crate_type",
+        "action",
         "tests",
         "preview"
     ];
@@ -102,10 +92,9 @@ impl Labels {
         let Self {
             endpoint,
             outcome,
-            target,
             runtime,
             release,
-            crate_type,
+            action,
             tests,
             preview
         } = *self;
@@ -114,24 +103,22 @@ impl Labels {
             v.map_or("", |v| if v { "true" } else { "false" })
         }
 
-        let target = target.map_or("", Into::into);
         let runtime = runtime.map_or("", Into::into);
         let release = match release {
             None => "",
             Some(None) => "Unspecified",
             Some(Some(v)) => v.into(),
         };
-        let crate_type = crate_type.map_or("", Into::into);
+        let action = action.map_or("", Into::into);
         let tests = b(tests);
         let preview = b(preview);
 
         [
             endpoint.into(),
             outcome.into(),
-            target,
             runtime,
             release,
-            crate_type,
+            action,
             tests,
             preview
         ]
@@ -139,20 +126,18 @@ impl Labels {
 
     pub(crate) fn complete(endpoint: Endpoint, labels_core: LabelsCore, outcome: Outcome) -> Self {
         let LabelsCore {
-            target,
             runtime,
             release,
-            crate_type,
+            action,
             tests,
             preview
         } = labels_core;
         Self {
             endpoint,
             outcome,
-            target,
             runtime,
             release,
-            crate_type,
+            action,
             tests,
             preview
         }
@@ -175,9 +160,8 @@ where
 impl GenerateLabels for sandbox::CompileRequest {
     fn generate_labels(&self, outcome: Outcome) -> Labels {
         let Self {
-            target,
             runtime,
-            crate_type,
+            action,
             release,
             tests,
             preview,
@@ -187,10 +171,9 @@ impl GenerateLabels for sandbox::CompileRequest {
         Labels {
             endpoint: Endpoint::Compile,
             outcome,
-            target: Some(target),
             runtime: Some(runtime),
             release: Some(release),
-            crate_type: Some(crate_type),
+            action: Some(action),
             tests: Some(tests),
             preview: Some(preview)
         }
@@ -202,7 +185,7 @@ impl GenerateLabels for sandbox::ExecuteRequest {
         let Self {
             runtime,
             release,
-            crate_type,
+            action,
             tests,
             preview,
             code: _,
@@ -211,71 +194,11 @@ impl GenerateLabels for sandbox::ExecuteRequest {
         Labels {
             endpoint: Endpoint::Execute,
             outcome,
-
-            target: None,
             runtime: Some(runtime),
             release: Some(release),
-            crate_type: Some(crate_type),
+            action: Some(action),
             tests: Some(tests),
             preview: Some(preview)
-        }
-    }
-}
-
-impl GenerateLabels for sandbox::FormatRequest {
-    fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self { release, code: _ } = *self;
-
-        Labels {
-            endpoint: Endpoint::Format,
-            outcome,
-
-            target: None,
-            runtime: None,
-            release: Some(release),
-            crate_type: None,
-            tests: None,
-            preview: None
-        }
-    }
-}
-
-impl GenerateLabels for sandbox::ClippyRequest {
-    fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self {
-            code: _,
-            release,
-            crate_type,
-        } = *self;
-
-        Labels {
-            endpoint: Endpoint::Clippy,
-            outcome,
-
-            target: None,
-            runtime: None,
-            release: Some(release),
-            crate_type: Some(crate_type),
-            tests: None,
-            preview: None
-        }
-    }
-}
-
-impl GenerateLabels for sandbox::MiriRequest {
-    fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self { code: _, release } = *self;
-
-        Labels {
-            endpoint: Endpoint::Miri,
-            outcome,
-
-            target: None,
-            runtime: None,
-            release: Some(release),
-            crate_type: None,
-            tests: None,
-            preview: None
         }
     }
 }
@@ -328,23 +251,6 @@ impl SuccessDetails for sandbox::ExecuteResponse {
     }
 }
 
-impl SuccessDetails for sandbox::FormatResponse {
-    fn success_details(&self) -> Outcome {
-        common_success_details(self.success, &self.stderr)
-    }
-}
-
-impl SuccessDetails for sandbox::ClippyResponse {
-    fn success_details(&self) -> Outcome {
-        common_success_details(self.success, &self.stderr)
-    }
-}
-
-impl SuccessDetails for sandbox::MiriResponse {
-    fn success_details(&self) -> Outcome {
-        common_success_details(self.success, &self.stderr)
-    }
-}
 
 impl SuccessDetails for Vec<sandbox::CrateInformation> {
     fn success_details(&self) -> Outcome {
@@ -424,10 +330,9 @@ where
     let labels = Labels {
         endpoint,
         outcome,
-        target: None,
         runtime: None,
         release: None,
-        crate_type: None,
+        action: None,
         tests: None,
         preview: None
     };

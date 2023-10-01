@@ -5,13 +5,11 @@ use crate::{
         track_metric_no_request_async, Endpoint, GenerateLabels, HasLabelsCore, Outcome,
         SuccessDetails, UNAVAILABLE_WS,
     },
-    sandbox::{self, Runtime, Sandbox, DOCKER_PROCESS_TIMEOUT_SOFT},
-    CachingSnafu, ClippyRequest, ClippyResponse, CompilationSnafu, CompileRequest, CompileResponse, Config, Error, ErrorJson, EvaluateRequest,
-    EvaluateResponse, EvaluationSnafu, ExecuteRequest, ExecuteResponse, ExecutionSnafu,
-    FormatRequest, FormatResponse, FormattingSnafu, GhToken, GistCreationSnafu,
-    GistLoadingSnafu, InterpretingSnafu, LintingSnafu,
+    sandbox::{self, Runtime, Sandbox},
+    CachingSnafu, CompilationSnafu, CompileRequest, CompileResponse, Config, Error, ErrorJson, ExecuteRequest, ExecuteResponse, ExecutionSnafu, GhToken, GistCreationSnafu,
+    GistLoadingSnafu,
     MetaCratesResponse, MetaGistCreateRequest, MetaGistResponse,
-    MetaVersionResponse, MetricsToken, MiriRequest, MiriResponse, Result, SandboxCreationSnafu,
+    MetaVersionResponse, MetricsToken, Result, SandboxCreationSnafu,
 };
 use async_trait::async_trait;
 use axum::{
@@ -68,18 +66,11 @@ pub(crate) async fn serve(config: Config) {
         .fallback_service(root_files)
         .nest_service("/assets", asset_files)
         .layer(rewrite_help_as_index)
-        .route("/evaluate.json", post(evaluate))
         .route("/compile", post(compile))
         .route("/execute", get_or_post(execute))
-        .route("/format", post(format))
-        .route("/clippy", post(clippy))
-        .route("/miri", post(miri))
         .route("/meta/crates", get_or_post(meta_crates))
         .route("/meta/version/latest", get_or_post(meta_version_latest))
         .route("/meta/version/valhalla", get_or_post(meta_version_valhalla))
-        .route("/meta/version/rustfmt", get_or_post(meta_version_rustfmt))
-        .route("/meta/version/clippy", get_or_post(meta_version_clippy))
-        .route("/meta/version/miri", get_or_post(meta_version_miri))
         .route("/meta/gist", post(meta_gist_create))
         .route("/meta/gist/", post(meta_gist_create)) // compatibility with lax frontend code
         .route("/meta/gist/:id", get(meta_gist_get))
@@ -140,19 +131,6 @@ async fn rewrite_help_as_index<B>(
     next.run(req).await
 }
 
-// This is a backwards compatibilty shim. The Rust documentation uses
-// this to run code in place.
-async fn evaluate(Json(req): Json<EvaluateRequest>) -> Result<Json<EvaluateResponse>> {
-    with_sandbox_force_endpoint(
-        req,
-        Endpoint::Evaluate,
-        |sb, req| async move { sb.execute(req).await }.boxed(),
-        EvaluationSnafu,
-    )
-    .await
-    .map(Json)
-}
-
 async fn compile(
     Json(req): Json<CompileRequest>,
 ) -> Result<Json<CompileResponse>> {
@@ -175,36 +153,6 @@ async fn execute(Json(req): Json<ExecuteRequest>) -> Result<Json<ExecuteResponse
     .map(Json)
 }
 
-async fn format(Json(req): Json<FormatRequest>) -> Result<Json<FormatResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.format(req).await }.boxed(),
-        FormattingSnafu,
-    )
-    .await
-    .map(Json)
-}
-
-async fn clippy(Json(req): Json<ClippyRequest>) -> Result<Json<ClippyResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.clippy(req).await }.boxed(),
-        LintingSnafu,
-    )
-    .await
-    .map(Json)
-}
-
-async fn miri(Json(req): Json<MiriRequest>) -> Result<Json<MiriResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.miri(req).await }.boxed(),
-        InterpretingSnafu,
-    )
-    .await
-    .map(Json)
-}
-
 async fn with_sandbox<F, Req, Resp, SbReq, SbResp, Ctx>(req: Req, f: F, ctx: Ctx) -> Result<Resp>
 where
     for<'req> F: FnOnce(Sandbox, &'req SbReq) -> BoxFuture<'req, sandbox::Result<SbResp>>,
@@ -220,28 +168,6 @@ where
         .map(Into::into)
         .context(ctx)
 }
-
-async fn with_sandbox_force_endpoint<F, Req, Resp, SbReq, SbResp, Ctx>(
-    req: Req,
-    endpoint: Endpoint,
-    f: F,
-    ctx: Ctx,
-) -> Result<Resp>
-where
-    for<'req> F: FnOnce(Sandbox, &'req SbReq) -> BoxFuture<'req, sandbox::Result<SbResp>>,
-    Resp: From<SbResp>,
-    SbReq: TryFrom<Req, Error = Error> + GenerateLabels,
-    SbResp: SuccessDetails,
-    Ctx: IntoError<Error, Source = sandbox::Error>,
-{
-    let sandbox = Sandbox::new().await.context(SandboxCreationSnafu)?;
-    let request = req.try_into()?;
-    track_metric_force_endpoint_async(request, endpoint, |request| f(sandbox, request))
-        .await
-        .map(Into::into)
-        .context(ctx)
-}
-
 pub(crate) trait HasEndpoint {
     const ENDPOINT: Endpoint;
 }
@@ -281,35 +207,6 @@ async fn meta_version_valhalla(
     let value =
         track_metric_no_request_async(Endpoint::MetaVersionValhalla, || cache.version_valhalla())
             .await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_rustfmt(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionRustfmt, || cache.version_rustfmt())
-            .await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_clippy(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionClippy, || cache.version_clippy())
-            .await?;
-    apply_timestamped_caching(value, if_none_match)
-}
-
-async fn meta_version_miri(
-    Extension(cache): Extension<Arc<SandboxCache>>,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Result<impl IntoResponse> {
-    let value =
-        track_metric_no_request_async(Endpoint::MetaVersionMiri, || cache.version_miri()).await?;
     apply_timestamped_caching(value, if_none_match)
 }
 
@@ -458,9 +355,6 @@ struct SandboxCache {
     crates: CacheOne<MetaCratesResponse>,
     version_latest: CacheOne<MetaVersionResponse>,
     version_valhalla: CacheOne<MetaVersionResponse>,
-    version_rustfmt: CacheOne<MetaVersionResponse>,
-    version_clippy: CacheOne<MetaVersionResponse>,
-    version_miri: CacheOne<MetaVersionResponse>,
 }
 
 impl SandboxCache {
@@ -492,34 +386,6 @@ impl SandboxCache {
                     .await
                     .context(CachingSnafu)?;
                 Ok(version.into())
-            })
-            .await
-    }
-
-    async fn version_rustfmt(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_rustfmt
-            .fetch(|sandbox| async move {
-                Ok(sandbox
-                    .version_rustfmt()
-                    .await
-                    .context(CachingSnafu)?
-                    .into())
-            })
-            .await
-    }
-
-    async fn version_clippy(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_clippy
-            .fetch(|sandbox| async move {
-                Ok(sandbox.version_clippy().await.context(CachingSnafu)?.into())
-            })
-            .await
-    }
-
-    async fn version_miri(&self) -> Result<Stamped<MetaVersionResponse>> {
-        self.version_miri
-            .fetch(|sandbox| async move {
-                Ok(sandbox.version_miri().await.context(CachingSnafu)?.into())
             })
             .await
     }

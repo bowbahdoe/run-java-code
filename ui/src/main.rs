@@ -11,6 +11,7 @@ use std::{
 };
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
+use crate::sandbox::Action;
 
 const DEFAULT_ADDRESS: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 5000;
@@ -225,18 +226,10 @@ struct ErrorJson {
 
 #[derive(Debug, Clone, Deserialize)]
 struct CompileRequest {
-    target: String,
-    #[serde(rename = "assemblyFlavor")]
-    assembly_flavor: Option<String>,
-    #[serde(rename = "demangleAssembly")]
-    demangle_assembly: Option<String>,
-    #[serde(rename = "processAssembly")]
-    process_assembly: Option<String>,
     runtime: String,
     #[serde(default)]
     release: String,
-    #[serde(rename = "crateType")]
-    crate_type: String,
+    action: String,
     tests: bool,
     #[serde(default)]
     preview: bool,
@@ -256,8 +249,7 @@ struct ExecuteRequest {
     runtime: String,
     #[serde(default)]
     release: String,
-    #[serde(rename = "crateType")]
-    crate_type: String,
+    action: String,
     tests: bool,
     #[serde(default)]
     preview: bool,
@@ -266,51 +258,6 @@ struct ExecuteRequest {
 
 #[derive(Debug, Clone, Serialize)]
 struct ExecuteResponse {
-    success: bool,
-    stdout: String,
-    stderr: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct FormatRequest {
-    code: String,
-    #[serde(default)]
-    release: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct FormatResponse {
-    success: bool,
-    code: String,
-    stdout: String,
-    stderr: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct ClippyRequest {
-    code: String,
-    #[serde(default)]
-    release: String,
-    #[serde(default = "default_crate_type", rename = "crateType")]
-    crate_type: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct ClippyResponse {
-    success: bool,
-    stdout: String,
-    stderr: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct MiriRequest {
-    code: String,
-    #[serde(default)]
-    release: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct MiriResponse {
     success: bool,
     stdout: String,
     stderr: String,
@@ -347,57 +294,15 @@ struct MetaGistResponse {
     code: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-struct EvaluateRequest {
-    version: String,
-    code: String,
-    #[serde(default)]
-    release: String,
-    #[serde(default)]
-    tests: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct EvaluateResponse {
-    result: String,
-    error: Option<String>,
-}
-
 impl TryFrom<CompileRequest> for sandbox::CompileRequest {
     type Error = Error;
 
     fn try_from(me: CompileRequest) -> Result<Self> {
-        let target = parse_target(&me.target)?;
-        let assembly_flavor = match me.assembly_flavor {
-            Some(f) => Some(parse_assembly_flavor(&f)?),
-            None => None,
-        };
-
-        let demangle = match me.demangle_assembly {
-            Some(f) => Some(parse_demangle_assembly(&f)?),
-            None => None,
-        };
-
-        let process_assembly = match me.process_assembly {
-            Some(f) => Some(parse_process_assembly(&f)?),
-            None => None,
-        };
-
-        let target = match (target, assembly_flavor, demangle, process_assembly) {
-            (
-                sandbox::CompileTarget::Assembly(_, _, _),
-                Some(flavor),
-                Some(demangle),
-                Some(process),
-            ) => sandbox::CompileTarget::Assembly(flavor, demangle, process),
-            _ => target,
-        };
-
         Ok(sandbox::CompileRequest {
-            target,
             runtime: parse_runtime(&me.runtime)?,
             release: parse_release(&me.release)?,
-            crate_type: parse_crate_type(&me.crate_type)?,
+            action: parse_action(&me.action)?
+                .unwrap_or(Action::Build),
             tests: me.tests,
             preview: me.preview,
             code: me.code,
@@ -423,7 +328,8 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
         Ok(sandbox::ExecuteRequest {
             runtime: parse_runtime(&me.runtime)?,
             release: parse_release(&me.release)?,
-            crate_type: parse_crate_type(&me.crate_type)?,
+            action: parse_action(&me.action)?
+                .unwrap_or(Action::Run),
             tests: me.tests,
             preview: me.preview,
             code: me.code,
@@ -434,71 +340,6 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
 impl From<sandbox::ExecuteResponse> for ExecuteResponse {
     fn from(me: sandbox::ExecuteResponse) -> Self {
         ExecuteResponse {
-            success: me.success,
-            stdout: me.stdout,
-            stderr: me.stderr,
-        }
-    }
-}
-
-impl TryFrom<FormatRequest> for sandbox::FormatRequest {
-    type Error = Error;
-
-    fn try_from(me: FormatRequest) -> Result<Self> {
-        Ok(sandbox::FormatRequest {
-            code: me.code,
-            release: parse_release(&me.release)?,
-        })
-    }
-}
-
-impl From<sandbox::FormatResponse> for FormatResponse {
-    fn from(me: sandbox::FormatResponse) -> Self {
-        FormatResponse {
-            success: me.success,
-            code: me.code,
-            stdout: me.stdout,
-            stderr: me.stderr,
-        }
-    }
-}
-
-impl TryFrom<ClippyRequest> for sandbox::ClippyRequest {
-    type Error = Error;
-
-    fn try_from(me: ClippyRequest) -> Result<Self> {
-        Ok(sandbox::ClippyRequest {
-            code: me.code,
-            crate_type: parse_crate_type(&me.crate_type)?,
-            release: parse_release(&me.release)?,
-        })
-    }
-}
-
-impl From<sandbox::ClippyResponse> for ClippyResponse {
-    fn from(me: sandbox::ClippyResponse) -> Self {
-        ClippyResponse {
-            success: me.success,
-            stdout: me.stdout,
-            stderr: me.stderr,
-        }
-    }
-}
-
-impl TryFrom<MiriRequest> for sandbox::MiriRequest {
-    type Error = Error;
-
-    fn try_from(me: MiriRequest) -> Result<Self> {
-        Ok(sandbox::MiriRequest {
-            code: me.code,
-            release: parse_release(&me.release)?,
-        })
-    }
-}
-
-impl From<sandbox::MiriResponse> for MiriResponse {
-    fn from(me: sandbox::MiriResponse) -> Self {
-        MiriResponse {
             success: me.success,
             stdout: me.stdout,
             stderr: me.stderr,
@@ -541,86 +382,6 @@ impl From<gist::Gist> for MetaGistResponse {
     }
 }
 
-impl TryFrom<EvaluateRequest> for sandbox::ExecuteRequest {
-    type Error = Error;
-
-    fn try_from(me: EvaluateRequest) -> Result<Self> {
-        Ok(sandbox::ExecuteRequest {
-            runtime: parse_runtime(&me.version)?,
-            release: parse_release(&me.release)?,
-            crate_type: sandbox::CrateType::Binary,
-            tests: me.tests,
-            preview: false,
-            code: me.code,
-        })
-    }
-}
-
-impl From<sandbox::ExecuteResponse> for EvaluateResponse {
-    fn from(me: sandbox::ExecuteResponse) -> Self {
-        // The old playground didn't use Cargo, so it never had the
-        // Cargo output ("Compiling playground...") which is printed
-        // to stderr. Since this endpoint is used to inline results on
-        // the page, don't include the stderr unless an error
-        // occurred.
-        if me.success {
-            EvaluateResponse {
-                result: me.stdout,
-                error: None,
-            }
-        } else {
-            // When an error occurs, *some* consumers check for an
-            // `error` key, others assume that the error is crammed in
-            // the `result` field and then they string search for
-            // `error:` or `warning:`. Ew. We can put it in both.
-            let result = me.stderr + &me.stdout;
-            EvaluateResponse {
-                result: result.clone(),
-                error: Some(result),
-            }
-        }
-    }
-}
-
-fn parse_target(s: &str) -> Result<sandbox::CompileTarget> {
-    Ok(match s {
-        "asm" => sandbox::CompileTarget::Assembly(
-            sandbox::AssemblyFlavor::Att,
-            sandbox::DemangleAssembly::Demangle,
-            sandbox::ProcessAssembly::Filter,
-        ),
-        "llvm-ir" => sandbox::CompileTarget::LlvmIr,
-        "mir" => sandbox::CompileTarget::Mir,
-        "hir" => sandbox::CompileTarget::Hir,
-        "wasm" => sandbox::CompileTarget::Wasm,
-        value => InvalidTargetSnafu { value }.fail()?,
-    })
-}
-
-fn parse_assembly_flavor(s: &str) -> Result<sandbox::AssemblyFlavor> {
-    Ok(match s {
-        "att" => sandbox::AssemblyFlavor::Att,
-        "intel" => sandbox::AssemblyFlavor::Intel,
-        value => InvalidAssemblyFlavorSnafu { value }.fail()?,
-    })
-}
-
-fn parse_demangle_assembly(s: &str) -> Result<sandbox::DemangleAssembly> {
-    Ok(match s {
-        "demangle" => sandbox::DemangleAssembly::Demangle,
-        "mangle" => sandbox::DemangleAssembly::Mangle,
-        value => InvalidDemangleAssemblySnafu { value }.fail()?,
-    })
-}
-
-fn parse_process_assembly(s: &str) -> Result<sandbox::ProcessAssembly> {
-    Ok(match s {
-        "filter" => sandbox::ProcessAssembly::Filter,
-        "raw" => sandbox::ProcessAssembly::Raw,
-        value => InvalidProcessAssemblySnafu { value }.fail()?,
-    })
-}
-
 fn parse_runtime(s: &str) -> Result<sandbox::Runtime> {
     Ok(match s {
         "latest" => sandbox::Runtime::Latest,
@@ -651,20 +412,11 @@ fn parse_release(s: &str) -> Result<Option<sandbox::Release>> {
     })
 }
 
-fn parse_crate_type(s: &str) -> Result<sandbox::CrateType> {
-    use crate::sandbox::{CrateType::*, LibraryType::*};
+fn parse_action(s: &str) -> Result<Option<sandbox::Action>> {
     Ok(match s {
-        "bin" => Binary,
-        "lib" => Library(Lib),
-        "dylib" => Library(Dylib),
-        "rlib" => Library(Rlib),
-        "staticlib" => Library(Staticlib),
-        "cdylib" => Library(Cdylib),
-        "proc-macro" => Library(ProcMacro),
-        value => InvalidCrateTypeSnafu { value }.fail()?,
+        "" => None,
+        "run" => Some(Action::Run),
+        "build" => Some(Action::Build),
+        value => InvalidReleaseSnafu { value }.fail()?,
     })
-}
-
-fn default_crate_type() -> String {
-    "bin".into()
 }
