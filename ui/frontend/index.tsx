@@ -15,7 +15,6 @@ import {
   gotoPosition,
   selectText,
   addImport,
-  performCratesLoad,
   performVersionsLoad,
   reExecuteWithBacktrace,
   browserWidthChanged,
@@ -50,7 +49,6 @@ configureRustErrors({
   getChannel: () => store.getState().configuration.channel,
 });
 
-store.dispatch(performCratesLoad());
 store.dispatch(performVersionsLoad());
 
 window.rustPlayground = {

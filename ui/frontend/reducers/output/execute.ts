@@ -117,7 +117,7 @@ const slice = createSlice({
 export const { wsExecuteRequest } = slice.actions;
 
 export const performCommonExecute =
-  (crateType: string, tests: boolean): SimpleThunkAction =>
+  (): SimpleThunkAction =>
   (dispatch, getState) => {
     const state = getState();
     const body = executeRequestPayloadSelector(state);

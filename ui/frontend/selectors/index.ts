@@ -340,15 +340,24 @@ export const websocketStatusSelector = createSelector(
   }
 );
 
-export const executeRequestPayloadSelector = createSelector(
+export const compileRequestPayloadSelector = createSelector(
   codeSelector,
   (state: State) => state.configuration,
-  (_state: State) => (code, configuration) => ({
+  getCrateType,
+  runAsTest,
+  getBacktraceSet,
+  (_state: State, { target }: { target: string }) => ({ target }),
+  (code, configuration, crateType, tests, backtrace, { target }) => ({
     channel: configuration.channel,
     mode: configuration.mode,
     edition: configuration.edition,
+    crateType,
+    tests,
     code,
-    backtrace: configuration.backtrace === Backtrace.Enabled,
-    preview: configuration.preview == Preview.Enabled,
+    target,
+    assemblyFlavor: configuration.assemblyFlavor,
+    demangleAssembly: configuration.demangleAssembly,
+    processAssembly: configuration.processAssembly,
+    backtrace,
   }),
 );

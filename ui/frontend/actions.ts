@@ -3,7 +3,6 @@ import { ThunkAction as ReduxThunkAction, AnyAction } from '@reduxjs/toolkit';
 
 import {
   codeSelector,
-  runAsTest,
 } from './selectors';
 import State from './state';
 import {
@@ -18,9 +17,7 @@ import {
   PairCharacters,
   Preview,
   PrimaryAction,
-  PrimaryActionAuto,
   PrimaryActionCore,
-  ProcessAssembly,
   Position,
   makePosition,
   Version,
@@ -109,12 +106,6 @@ export const changePairCharacters = (pairCharacters: PairCharacters) =>
 export const changeOrientation = (orientation: Orientation) =>
   createAction(ActionType.ChangeOrientation, { orientation });
 
-
-export const changeProcessAssembly = (processAssembly: ProcessAssembly) =>
-  createAction(ActionType.ChangeProcessAssembly, { processAssembly });
-
-const changePrimaryAction = (primaryAction: PrimaryAction) =>
-  createAction(ActionType.ChangePrimaryAction, { primaryAction });
 
 export const changeMode = (mode: Mode) =>
   createAction(ActionType.ChangeMode, { mode });
@@ -258,17 +249,12 @@ function performCompileShow(
     const { configuration: {
       mode,
       edition,
-      assemblyFlavor,
-      demangleAssembly,
-      processAssembly,
     } } = state;
-    const tests = runAsTest(state);
     const backtrace = state.configuration.backtrace === Backtrace.Enabled;
     const body: CompileRequestBody = {
       mode,
       edition,
       version:
-      tests,
       code,
       target,
       backtrace,
@@ -284,7 +270,6 @@ function performCompileShow(
 const PRIMARY_ACTIONS: { [index in PrimaryAction]: () => ThunkAction } = {
   [PrimaryActionCore.Compile]: performCompileOnly,
   [PrimaryActionCore.Execute]: performExecuteOnly,
-  [PrimaryActionAuto.Auto]: performAutoOnly,
 };
 
 export const performPrimaryAction = (): ThunkAction => (dispatch, getState) => {
@@ -325,8 +310,6 @@ interface GeneralSuccess {
   stdout: string;
   stderr: string;
 }
-
-
 
 const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
@@ -424,7 +407,7 @@ export function indexPageLoad({
       }
     }
 
-    const edition = maybeEdition || Edition.Rust2021;
+    const edition = maybeEdition || Edition.JavaStandardEdition;
 
     if (code) {
       dispatch(editCode(code));
@@ -461,8 +444,6 @@ export type Action =
   | ReturnType<typeof changeKeybinding>
   | ReturnType<typeof changeMode>
   | ReturnType<typeof changeOrientation>
-  | ReturnType<typeof changePrimaryAction>
-  | ReturnType<typeof changeProcessAssembly>
   | ReturnType<typeof changeAceTheme>
   | ReturnType<typeof changeMonacoTheme>
   | ReturnType<typeof editCode>

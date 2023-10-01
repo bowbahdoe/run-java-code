@@ -373,48 +373,6 @@ impl Sandbox {
         })
     }
 
-    pub async fn clippy(&self, req: &ClippyRequest) -> Result<ClippyResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.clippy_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(ClippyResponse {
-            success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
-    pub async fn miri(&self, req: &MiriRequest) -> Result<MiriResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.miri_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(MiriResponse {
-            success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
-    pub async fn macro_expansion(
-        &self,
-        req: &MacroExpansionRequest,
-    ) -> Result<MacroExpansionResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.macro_expansion_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(MacroExpansionResponse {
-            success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
     pub async fn crates(&self) -> Result<Vec<CrateInformation>> {
         let mut command = basic_secure_docker_command();
         command.args(&[Channel::Stable.container_name()]);
