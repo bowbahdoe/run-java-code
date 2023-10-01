@@ -145,15 +145,13 @@ fn basic_secure_docker_command() -> Command {
 
 fn build_execution_command(
     release: Release,
-    runtime: Runtime,
     req: impl ActionRequest,
-    tests: bool,
     preview: bool
 ) -> Vec<&'static str> {
     use self::Action::*;
 
     let mut cmd = vec![];
-    if req.action() == Action::Run {
+    if req.action() == Run {
         cmd.push("java");
         cmd.extend(&["--source", release.java_release()]);
 
@@ -218,7 +216,6 @@ impl Sandbox {
                 req.runtime.default_release()
             ),
             req.runtime,
-            req.tests,
             req
         );
 
@@ -237,7 +234,7 @@ impl Sandbox {
 
     pub async fn execute(&self, req: &ExecuteRequest) -> Result<ExecuteResponse> {
         self.write_source_code(&req.code).await?;
-        let command = self.execute_command(req.release.unwrap_or(req.runtime.default_release()), req.runtime, req.tests, req);
+        let command = self.execute_command(req.release.unwrap_or(req.runtime.default_release()), req.runtime, req);
 
         let output = run_command_with_timeout(command).await?;
 
@@ -307,15 +304,12 @@ impl Sandbox {
         &self,
         release: Release,
         runtime: Runtime,
-        tests: bool,
         req: impl ActionRequest + ReleaseRequest + PreviewRequest,
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.action()));
         let execution_cmd = build_execution_command(
             release,
-            runtime,
             &req,
-            tests,
 
             req.preview()
         );
@@ -331,16 +325,13 @@ impl Sandbox {
         &self,
         release: Release,
         runtime: Runtime,
-        tests: bool,
         req: impl ActionRequest + ReleaseRequest + PreviewRequest,
     ) -> Command {
         let mut cmd = self.docker_command(Some(req.action()));
 
         let execution_cmd = build_execution_command(
             release,
-            runtime,
             &req,
-            tests,
         req.preview()
         );
 

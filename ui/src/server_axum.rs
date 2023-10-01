@@ -1,9 +1,8 @@
 use crate::{
     gist,
-    metrics::{
-        record_metric, track_metric_async, track_metric_force_endpoint_async,
-        track_metric_no_request_async, Endpoint, GenerateLabels, HasLabelsCore, Outcome,
-        SuccessDetails, UNAVAILABLE_WS,
+    metrics::{track_metric_async,
+              track_metric_no_request_async, Endpoint, GenerateLabels,
+              SuccessDetails, UNAVAILABLE_WS,
     },
     sandbox::{self, Runtime, Sandbox},
     CachingSnafu, CompilationSnafu, CompileRequest, CompileResponse, Config, Error, ErrorJson, ExecuteRequest, ExecuteResponse, ExecutionSnafu, GhToken, GistCreationSnafu,

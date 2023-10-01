@@ -56,14 +56,6 @@ pub(crate) enum Outcome {
     ErrorUserCode,
 }
 
-pub(crate) struct LabelsCore {
-    runtime: Option<Runtime>,
-    release: Option<Option<Release>>,
-    action: Option<Action>,
-    tests: Option<bool>,
-    preview: Option<bool>
-}
-
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Labels {
     endpoint: Endpoint,
@@ -122,25 +114,6 @@ impl Labels {
             tests,
             preview
         ]
-    }
-
-    pub(crate) fn complete(endpoint: Endpoint, labels_core: LabelsCore, outcome: Outcome) -> Self {
-        let LabelsCore {
-            runtime,
-            release,
-            action,
-            tests,
-            preview
-        } = labels_core;
-        Self {
-            endpoint,
-            outcome,
-            runtime,
-            release,
-            action,
-            tests,
-            preview
-        }
     }
 }
 
@@ -273,19 +246,6 @@ where
     track_metric_common_async(request, body, |_| {}).await
 }
 
-pub(crate) async fn track_metric_force_endpoint_async<Req, B, Resp>(
-    request: Req,
-    endpoint: Endpoint,
-    body: B,
-) -> sandbox::Result<Resp>
-where
-    Req: GenerateLabels,
-    for<'req> B: FnOnce(&'req Req) -> BoxFuture<'req, sandbox::Result<Resp>>,
-    Resp: SuccessDetails,
-{
-    track_metric_common_async(request, body, |labels| labels.endpoint = endpoint).await
-}
-
 async fn track_metric_common_async<Req, B, Resp, F>(
     request: Req,
     body: B,
@@ -340,20 +300,6 @@ where
     record_metric_complete(labels, elapsed);
 
     response
-}
-
-pub(crate) trait HasLabelsCore {
-    fn labels_core(&self) -> LabelsCore;
-}
-
-pub(crate) fn record_metric(
-    endpoint: Endpoint,
-    labels_core: LabelsCore,
-    outcome: Outcome,
-    elapsed: Duration,
-) {
-    let labels = Labels::complete(endpoint, labels_core, outcome);
-    record_metric_complete(labels, elapsed)
 }
 
 fn record_metric_complete(labels: Labels, elapsed: Duration) {
