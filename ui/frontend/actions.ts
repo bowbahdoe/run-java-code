@@ -564,9 +564,9 @@ export function indexPageLoad({
       dispatch(performGistLoad({ id: gist, runtime, release, preview }));
     }
 
-    dispatch(changeRuntime(runtime));
     dispatch(changeRelease(release));
     dispatch(changePreview(preview));
+    dispatch(changeRuntime(runtime));
   };
 }
 

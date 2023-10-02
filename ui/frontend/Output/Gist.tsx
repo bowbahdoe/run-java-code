@@ -66,7 +66,7 @@ const Links: React.FC = () => {
       <Copied href={permalink}>Permalink to the playground</Copied>
       { gistUrl ? <Copied href={gistUrl}>Direct link to the gist</Copied> : null }
       <Copied href={codeUrl}>Embedded code in link</Copied>
-      <NewWindow href={urloUrl}>Open a new thread in the Rust user forum</NewWindow>
+      {/* <NewWindow href={urloUrl}>Open a new thread in the Rust user forum</NewWindow> */}
       {textChanged ? <Section kind="warning" label="Code changed">
         Source code has been changed since gist was saved
       </Section>: null }

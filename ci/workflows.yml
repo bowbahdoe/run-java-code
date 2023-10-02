@@ -1,8 +1,7 @@
 components:
   - global_env: &global_env
       env:
-        DOCKER_HUB_USERNAME: shepmaster
-        GH_CONTAINER_REGISTRY_USERNAME: shepmaster
+        GH_CONTAINER_REGISTRY_USERNAME: mccue-software-solutions
         AWS_ACCESS_KEY_ID: AKIAWESVHZ3JQAY5NM5K
 
   - checkout: &checkout
@@ -32,28 +31,17 @@ components:
         username: ${{ env.GH_CONTAINER_REGISTRY_USERNAME }}
         password: ${{ secrets.GH_CONTAINER_REGISTRY_TOKEN }}
 
-  - login_docker_hub: &login_docker_hub
-      name: "Login to Docker Hub"
-      uses: docker/login-action@v2
-      with:
-        username: ${{ env.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
   - build_compiler_containers_job: &build_compiler_containers_job
       name: "Build ${{ matrix.channel }} compiler container"
       runs-on: ubuntu-latest
 
-      strategy:
-        matrix:
-          channel: [stable, beta, nightly]
-
   - build_compiler_containers_job_env: &build_compiler_containers_job_env
       IMAGE_NAME: ghcr.io/integer32llc/rust-playground-ci-rust-${{ matrix.channel }}
 
-  - build_compiler_containers_toolchain: &build_compiler_containers_toolchain
-      name: "Build and push 'toolchain' container"
+  - build_compiler_containers: &build_compiler_containers
+      name: "Build and push containers"
       env:
-        TAG_PREFIX: ${{ env.IMAGE_NAME }}:toolchain
+        TAG_PREFIX: ${{ env.IMAGE_NAME }}:latest
       uses: docker/build-push-action@v4
       with:
         context: compiler/base/
@@ -68,83 +56,6 @@ components:
         cache-from: |-
           ${{ env.TAG_PREFIX }}--${{ github.run_id }}
           ${{ env.TAG_PREFIX }}--latest
-        cache-to: type=inline
-
-  - build_compiler_containers_bare_sources: &build_compiler_containers_bare_sources
-      name: "Build and push 'bare-sources' container"
-      env:
-        TAG_PREFIX: ${{ env.IMAGE_NAME }}:bare-sources
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/base/
-        file: compiler/base/Dockerfile
-        build-args: |-
-          channel=${{ matrix.channel }}
-        target: bare-sources
-        pull: true
-        push: true
-        tags: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-        cache-from: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-          ${{ env.TAG_PREFIX }}--latest
-        cache-to: type=inline
-
-  - build_compiler_containers_munge: &build_compiler_containers_munge
-      name: "Build and push 'munge' container"
-      env:
-        TAG_PREFIX: ${{ env.IMAGE_NAME }}:munge
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/base/
-        file: compiler/base/Dockerfile
-        build-args: |-
-          channel=${{ matrix.channel }}
-        target: munge
-        pull: true
-        push: true
-        tags: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-        cache-from: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-          ${{ env.TAG_PREFIX }}--latest
-        cache-to: type=inline
-
-  - build_compiler_containers_sources: &build_compiler_containers_sources
-      name: "Build and push 'sources' container"
-      env:
-        TAG_PREFIX: ${{ env.IMAGE_NAME }}:sources
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/base/
-        file: compiler/base/Dockerfile
-        build-args: |-
-          channel=${{ matrix.channel }}
-        target: sources
-        pull: true
-        push: true
-        tags: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-        cache-from: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-          ${{ env.TAG_PREFIX }}--latest
-        cache-to: type=inline
-
-  - build_compiler_containers_final: &build_compiler_containers_final
-      name: "Build and push container"
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/base/
-        file: compiler/base/Dockerfile
-        build-args: |-
-          channel=${{ matrix.channel }}
-        pull: true
-        push: true
-        tags: |-
-          ${{ env.IMAGE_NAME }}:${{ github.run_id }}
-        cache-from: |-
-          ${{ env.IMAGE_NAME }}:${{ github.run_id }}
-          ${{ env.IMAGE_NAME }}:latest
         cache-to: type=inline
 
   - pull_containers: &pull_containers
@@ -175,13 +86,11 @@ components:
       name: "Rename container"
       run: |-
         docker tag ${{ env.IMAGE_NAME }}:${{ github.run_id }} ${{ env.IMAGE_NAME }}
-        docker tag ${{ env.IMAGE_NAME }}:${{ github.run_id }} ${{ env.DOCKER_HUB_IMAGE_NAME }}
 
   - push_current_container: &push_current_container
       name: "Push container"
       run: |-
         docker push ${{ env.IMAGE_NAME }}
-        docker push ${{ env.DOCKER_HUB_IMAGE_NAME }}
 
 workflows:
   ci:
@@ -207,11 +116,8 @@ workflows:
           - *checkout_pr
           - *docker_buildx
           - *login_ghcr
-          - *build_compiler_containers_toolchain
-          - *build_compiler_containers_bare_sources
-          - *build_compiler_containers_munge
-          - *build_compiler_containers_sources
-          - *build_compiler_containers_final
+          - *build_compiler_containers_latest
+          - *build_compiler_containers_valhalla
 
       build_backend:
         name: "Build backend"
@@ -342,13 +248,6 @@ workflows:
 
         steps:
           - *login_ghcr
-
-          - name: "Login to Docker Hub"
-            uses: docker/login-action@v2
-            with:
-              username: ${{ env.DOCKER_HUB_USERNAME }}
-              password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
           - *pull_containers
           - *rename_all_containers
 
@@ -422,20 +321,13 @@ workflows:
         <<: *build_compiler_containers_job
         env:
           <<: *build_compiler_containers_job_env
-          DOCKER_HUB_IMAGE_NAME: shepmaster/rust-${{ matrix.channel }}
         continue-on-error: true
 
         steps:
           - *checkout
           - *docker_buildx
           - *login_ghcr
-          - *login_docker_hub
-          - *build_compiler_containers_toolchain
-          - *build_compiler_containers_bare_sources
-          - *build_compiler_containers_munge
-          - *build_compiler_containers_sources
-          - *build_compiler_containers_final
-
+          - *build_compiler_containers
           - *pull_current_container
           - *rename_current_container
           - *push_current_container
