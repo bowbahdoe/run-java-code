@@ -37,7 +37,7 @@ const DEFAULT: State = {
   editor: Editor.Ace,
   ace: {
     keybinding: 'ace',
-    theme: 'github',
+    theme: 'eclipse',
     pairCharacters: PairCharacters.Enabled,
   },
   monaco: {
