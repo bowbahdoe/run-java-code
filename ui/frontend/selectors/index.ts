@@ -3,13 +3,13 @@ import { createSelector } from '@reduxjs/toolkit';
 
 import { State } from '../reducers';
 import {
-    AceResizeKey,
-    Release,
-    Orientation,
-    Preview,
-    PrimaryActionAuto,
-    PrimaryActionCore,
-    Version, Runtime,
+  AceResizeKey,
+  Release,
+  Orientation,
+  Preview,
+  PrimaryActionAuto,
+  PrimaryActionCore,
+  Version, Runtime,
 } from '../types';
 
 export const codeSelector = (state: State) => state.code;
@@ -26,11 +26,11 @@ export const hasMainFunctionSelector = createSelector(codeSelector, code => !!co
 const autoPrimaryActionSelector = createSelector(
   hasMainFunctionSelector,
   ( hasMainFunction) => {
-      if (hasMainFunction) {
-          return PrimaryActionCore.Execute;
-      } else {
-          return PrimaryActionCore.Compile;
-      }
+    if (hasMainFunction) {
+      return PrimaryActionCore.Execute;
+    } else {
+      return PrimaryActionCore.Compile;
+    }
   },
 );
 
@@ -100,16 +100,16 @@ export const getRuntimeLabel = (state: State) => {
 };
 
 export const isReleaseDefault = createSelector(
-    runtimeSelector,
-    releaseSelector,
-    (runtime, release) => {
-        if (runtime == Runtime.Valhalla) {
-            return release == Release.Java20;
-        }
-        else {
-            return release == Release.Java21;
-        }
+  runtimeSelector,
+  releaseSelector,
+  (runtime, release) => {
+    if (runtime == Runtime.Valhalla) {
+      return release == Release.Java20;
     }
+    else {
+      return release == Release.Java21;
+    }
+  }
 );
 
 export const getPreviewSet = (state: State) => (

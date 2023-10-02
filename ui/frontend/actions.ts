@@ -451,7 +451,7 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  latest, valhalla
+  latest, valhalla,
 }: {
   latest: Version,
   valhalla: Version
@@ -470,7 +470,7 @@ export function performVersionsLoad(): ThunkAction {
     return all
       .then(([ latest, valhalla]) => dispatch(receiveVersionsLoadSuccess({
         latest,
-        valhalla
+        valhalla,
       })));
     // TODO: Failure case
   };

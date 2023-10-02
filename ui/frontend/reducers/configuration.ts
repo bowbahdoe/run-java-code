@@ -12,7 +12,6 @@ import {
   Release,
   Runtime,
 } from '../types';
-import {act} from "react-dom/test-utils";
 
 export interface State {
   editor: Editor;
