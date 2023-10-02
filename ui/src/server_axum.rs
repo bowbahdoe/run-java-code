@@ -5,7 +5,7 @@ use crate::{
         SuccessDetails, UNAVAILABLE_WS,
     },
     sandbox::{self, Runtime, Sandbox},
-    CachingSnafu, CompilationSnafu, CompileRequest, CompileResponse, Config, Error, ErrorJson,
+    CachingSnafu, CompileRequest, Config, Error, ErrorJson,
     ExecuteRequest, ExecuteResponse, ExecutionSnafu, GhToken, GistCreationSnafu, GistLoadingSnafu,
     MetaCratesResponse, MetaGistCreateRequest, MetaGistResponse, MetaVersionResponse, MetricsToken,
     Result, SandboxCreationSnafu,
@@ -65,7 +65,6 @@ pub(crate) async fn serve(config: Config) {
         .fallback_service(root_files)
         .nest_service("/assets", asset_files)
         .layer(rewrite_help_as_index)
-        .route("/compile", post(compile))
         .route("/execute", get_or_post(execute))
         .route("/meta/crates", get_or_post(meta_crates))
         .route("/meta/version/latest", get_or_post(meta_version_latest))
@@ -128,16 +127,6 @@ async fn rewrite_help_as_index<B>(
         *uri = Uri::from_parts(parts).unwrap();
     }
     next.run(req).await
-}
-
-async fn compile(Json(req): Json<CompileRequest>) -> Result<Json<CompileResponse>> {
-    with_sandbox(
-        req,
-        |sb, req| async move { sb.compile(req).await }.boxed(),
-        CompilationSnafu,
-    )
-    .await
-    .map(Json)
 }
 
 async fn execute(Json(req): Json<ExecuteRequest>) -> Result<Json<ExecuteResponse>> {

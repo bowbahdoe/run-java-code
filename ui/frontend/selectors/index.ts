@@ -3,13 +3,13 @@ import { createSelector } from '@reduxjs/toolkit';
 
 import { State } from '../reducers';
 import {
-  AceResizeKey,
-  Release,
-  Orientation,
-  Preview,
-  PrimaryActionAuto,
-  PrimaryActionCore,
-  Version,
+    AceResizeKey,
+    Release,
+    Orientation,
+    Preview,
+    PrimaryActionAuto,
+    PrimaryActionCore,
+    Version, Runtime,
 } from '../types';
 
 export const codeSelector = (state: State) => state.code;
@@ -77,23 +77,18 @@ export const getExecutionLabel = createSelector(primaryActionSelector, primaryAc
 
 const getLatest = (state: State) => state.versions?.latest;
 const getValhalla = (state: State) => state.versions?.valhalla;
-const getRustfmt = (state: State) => state.versions?.rustfmt;
-const getClippy = (state: State) => state.versions?.clippy;
-const getMiri = (state: State) => state.versions?.miri;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
 export const latestVersionText = createSelector(getLatest, versionNumber);
 export const valhallaVersionText = createSelector(getValhalla, versionNumber);
-export const clippyVersionText = createSelector(getClippy, versionNumber);
-export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
-export const miriVersionText = createSelector(getMiri, versionNumber);
 
 const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
 
-export const clippyVersionDetailsText = createSelector(getClippy, versionDetails);
-export const rustfmtVersionDetailsText = createSelector(getRustfmt, versionDetails);
-export const miriVersionDetailsText = createSelector(getMiri, versionDetails);
+export const clippyVersionDetailsText = createSelector(getLatest, versionDetails);
+export const rustfmtVersionDetailsText = createSelector(getLatest, versionDetails);
+export const miriVersionDetailsText = createSelector(getLatest, versionDetails);
 
+const runtimeSelector = (state: State) => state.configuration.runtime;
 const releaseSelector = (state: State) => state.configuration.release;
 
 export const isWasmAvailable = false;
@@ -105,8 +100,16 @@ export const getRuntimeLabel = (state: State) => {
 };
 
 export const isReleaseDefault = createSelector(
-  releaseSelector,
-  release => release == Release.Java21,
+    runtimeSelector,
+    releaseSelector,
+    (runtime, release) => {
+        if (runtime == Runtime.Valhalla) {
+            return release == Release.Java20;
+        }
+        else {
+            return release == Release.Java21;
+        }
+    }
 );
 
 export const getPreviewSet = (state: State) => (

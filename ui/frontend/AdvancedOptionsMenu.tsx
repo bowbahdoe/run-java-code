@@ -6,11 +6,12 @@ import { Either as EitherConfig, Select as SelectConfig } from './ConfigElement'
 import MenuGroup from './MenuGroup';
 import { State } from './reducers';
 import * as selectors from './selectors';
-import { Release, Preview } from './types';
+import {Release, Preview, Runtime} from './types';
 
 const AdvancedOptionsMenu: React.FC = () => {
   const isReleaseDefault = useSelector(selectors.isReleaseDefault);
   const release = useSelector((state: State) => state.configuration.release);
+  const runtime = useSelector((state: State) => state.configuration.runtime);
   const isPreviewSet = useSelector(selectors.getPreviewSet);
   const preview = useSelector((state: State) => state.configuration.preview);
 
@@ -27,7 +28,7 @@ const AdvancedOptionsMenu: React.FC = () => {
         isNotDefault={!isReleaseDefault}
         onChange={changeRelease}
       >
-        <option value={Release.Java21}>21</option>
+        { runtime == Runtime.Valhalla ? null : <option value={Release.Java21}>21</option> }
         <option value={Release.Java20}>20</option>
         <option value={Release.Java19}>19</option>
         <option value={Release.Java18}>18</option>

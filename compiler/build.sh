@@ -8,7 +8,19 @@ image_name="playground-latest"
 # full_name="${repository}/${image_name}"
 full_name="${image_name}"
 
-docker build -t "${full_name}" --platform linux/amd64 --build-arg BASE_IMAGE="amazoncorretto:21" .
+docker build -t "playground-valhalla"\
+    --platform linux/amd64\
+    --build-arg TARGZ_URL=https://download.java.net/java/early_access/valhalla/20/openjdk-20-valhalla+20-75_linux-x64_bin.tar.gz\
+    --build-arg TARGZ_SHA=cd0a008aee632cbff2f9c529aba17f4ad7f733cd974d36d2293169bc35e73ae7\
+    --build-arg TARGZ_FOLDER=jdk-20\
+    .
+
+docker build -t "playground-latest"\
+    --platform linux/amd64\
+    --build-arg TARGZ_URL=https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz\
+    --build-arg TARGZ_SHA=36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f \
+    --build-arg TARGZ_FOLDER=jdk-21\
+    .
 
 
 #channels_to_build="${CHANNELS_TO_BUILD-stable beta nightly}"

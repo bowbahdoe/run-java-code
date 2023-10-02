@@ -1,9 +1,7 @@
-import { Action, ActionType } from '../actions';
+import {Action, ActionType} from '../actions';
 import {
   AssemblyFlavor,
-  Runtime,
   DemangleAssembly,
-  Release,
   Editor,
   Orientation,
   PairCharacters,
@@ -11,7 +9,10 @@ import {
   PrimaryAction,
   PrimaryActionAuto,
   ProcessAssembly,
+  Release,
+  Runtime,
 } from '../types';
+import {act} from "react-dom/test-utils";
 
 export interface State {
   editor: Editor;
@@ -85,9 +86,18 @@ export default function configuration(state = DEFAULT, action: Action): State {
     case ActionType.ChangePrimaryAction:
       return { ...state, primaryAction: action.primaryAction };
     case ActionType.ChangeRuntime: {
-      return { ...state, runtime: action.runtime };
+      const maxRelease = (runtime: Runtime, release: Release) => {
+        if (runtime == Runtime.Valhalla && release > Release.Java20) {
+          return Release.Java20;
+        }
+        else {
+          return Release.Java21;
+        }
+      }
+      return { ...state, runtime: action.runtime, release: maxRelease(action.runtime, state.release)  };
     }
     case ActionType.ChangeRelease: {
+
       return { ...state, release: action.release };
     }
     case ActionType.ChangePreview:

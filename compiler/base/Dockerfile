@@ -1,14 +1,27 @@
 #syntax=docker/dockerfile:1.5
+
 FROM maven:3.9.4-amazoncorretto-21-al2023 AS dependencies
 
+COPY pom.xml pom.xml
+
+RUN mvn dependency:copy-dependencies
 
 
-FROM ${BASE_IMAGE} as jre
+FROM ubuntu:20.04 as jre
 
-ARG BASE_IMAGE
+ARG TARGZ_URL
+ARG TARGZ_SHA
+ARG TARGZ_FOLDER
 
-RUN jlink --add-modules ALL-MODULE-PATH --output jre
+RUN apt update && apt install -y wget
 
+RUN wget "$TARGZ_URL" -O openjdk.tgz
+RUN echo "$TARGZ_SHA *openjdk.tgz" | sha256sum --strict --check -
+
+# Extract the JDK
+RUN tar -xzvf openjdk.tgz
+
+RUN cp -r $TARGZ_FOLDER jre
 
 FROM ubuntu:20.04 as sources
 
@@ -25,6 +38,7 @@ RUN /playground/attach_notice.sh /playground/security_notice.txt /etc/passwd && 
     /playground/attach_notice.sh /playground/security_notice.txt /etc/shadow && \
     rm -f /playground/attach_notice.sh
 
+COPY --from=dependencies target/dependency /playground/dependencies
 COPY --chown=playground --from=jre jre /playground/jre
 
 USER playground

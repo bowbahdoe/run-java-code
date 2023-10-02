@@ -4,6 +4,7 @@ use std::{io, os::unix::fs::PermissionsExt, path::PathBuf, string, time::Duratio
 use tempfile::TempDir;
 use tokio::{fs, process::Command, time};
 use tracing::debug;
+use crate::sandbox::Action::Run;
 
 pub(crate) const DOCKER_PROCESS_TIMEOUT_SOFT: Duration = Duration::from_secs(10);
 const DOCKER_PROCESS_TIMEOUT_HARD: Duration = Duration::from_secs(12);
@@ -139,33 +140,48 @@ fn basic_secure_docker_command() -> Command {
 
 fn build_execution_command(
     req: &(impl ActionRequest + PreviewRequest + ReleaseRequest + RuntimeRequest),
-) -> Vec<&'static str> {
+) -> Vec<String> {
     use self::Action::*;
 
-    let mut cmd = vec![];
+    let mut cmd: Vec<String> = vec![];
 
     let release = req
         .release()
         .unwrap_or(req.runtime().default_release())
         .java_release();
 
-    if req.action() == Run {
-        cmd.push("java");
-        cmd.extend(&["--source", release]);
+    let action = req.action();
+
+    if action == Run {
+        cmd.push("java".to_string());
+        cmd.extend(["--module-path".to_string(), "dependencies".to_string()]);
+        cmd.extend(["--add-modules".to_string(), "ALL-MODULE-PATH".to_string()]);
+        cmd.extend(["--source".to_string(), release.to_string()]);
 
         // Enable using java.lang.foreign w/o warnings
-        cmd.push("--enable-native-access=ALL-UNNAMED");
-    } else {
-        cmd.push("javac");
-        cmd.extend(&["--release", release]);
-        cmd.extend(&["-d", "out"])
+        // cmd.push("--enable-native-access=ALL-UNNAMED".to_string());
+
+        if req.preview() {
+            cmd.push("--enable-preview".to_string());
+        }
+
+        cmd.push("src/Main.java".to_string());
+
+    } else if action == Build {
+        cmd.push("javac".to_string());
+        cmd.extend(["--module-path".to_string(), "dependencies".to_string()]);
+        cmd.extend(["--add-modules".to_string(), "ALL-MODULE-PATH".to_string()]);
+        cmd.extend(["--release".to_string(), release.to_string()]);
+        cmd.extend(["-d".to_string(), "out".to_string()]);
+
+        if req.preview() {
+            cmd.push("--enable-preview".to_string());
+        }
+
+        cmd.push("src/Main.java".to_string());
     }
 
-    if req.preview() {
-        cmd.push("--enable-preview");
-    }
 
-    cmd.push("src/Main.java");
     cmd
 }
 
@@ -200,24 +216,6 @@ impl Sandbox {
             scratch,
             input_file,
             output_dir,
-        })
-    }
-
-    pub async fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
-        self.write_source_code(&req.code).await?;
-
-        let command = self.compile_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        let stdout = vec_to_str(output.stdout)?;
-        let stderr = vec_to_str(output.stderr)?;
-
-        Ok(CompileResponse {
-            success: output.status.success(),
-            code: "".to_string(),
-            stdout,
-            stderr,
         })
     }
 
@@ -288,21 +286,6 @@ impl Sandbox {
         Ok(())
     }
 
-    fn compile_command(
-        &self,
-        req: impl ActionRequest + ReleaseRequest + PreviewRequest + RuntimeRequest,
-    ) -> Command {
-        let mut cmd = self.docker_command(Some(req.action()));
-        let execution_cmd = build_execution_command(&req);
-
-        cmd.arg(&req.runtime().container_name())
-            .args(&execution_cmd);
-
-        debug!("Compilation command is {:?}", cmd);
-
-        cmd
-    }
-
     fn execute_command(
         &self,
         req: impl ActionRequest + ReleaseRequest + PreviewRequest + RuntimeRequest,
@@ -319,8 +302,9 @@ impl Sandbox {
         cmd
     }
 
+
     fn docker_command(&self, action: Option<Action>) -> Command {
-        let action = action.unwrap_or(Action::Run);
+        let action = action.unwrap_or(Run);
 
         let mut mount_input_file = self.input_file.as_os_str().to_os_string();
         mount_input_file.push(":");
@@ -419,7 +403,7 @@ impl Runtime {
     fn default_release(&self) -> Release {
         match *self {
             Runtime::Latest => Release::_21,
-            Runtime::Valhalla => Release::_21,
+            Runtime::Valhalla => Release::_20,
         }
     }
 
@@ -428,7 +412,7 @@ impl Runtime {
 
         match *self {
             Latest => "playground-latest",
-            Valhalla => "playground-latest",
+            Valhalla => "playground-valhalla",
         }
     }
 }
@@ -477,17 +461,12 @@ impl Release {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
 pub enum Action {
     Run,
-    Build,
+    Build
 }
 
 impl Action {
     fn file_name(&self) -> &'static str {
-        use self::Action::*;
-
-        match *self {
-            Run => "src/Main.java",
-            Build => "src/Main.java",
-        }
+        "src/Main.java"
     }
 }
 
