@@ -1,10 +1,10 @@
+use crate::sandbox::Action::Run;
 use serde_derive::Deserialize;
 use snafu::prelude::*;
 use std::{io, os::unix::fs::PermissionsExt, path::PathBuf, string, time::Duration};
 use tempfile::TempDir;
 use tokio::{fs, process::Command, time};
 use tracing::debug;
-use crate::sandbox::Action::Run;
 
 pub(crate) const DOCKER_PROCESS_TIMEOUT_SOFT: Duration = Duration::from_secs(10);
 const DOCKER_PROCESS_TIMEOUT_HARD: Duration = Duration::from_secs(12);
@@ -166,7 +166,6 @@ fn build_execution_command(
         }
 
         cmd.push("src/Main.java".to_string());
-
     } else if action == Build {
         cmd.push("javac".to_string());
         cmd.extend(["--module-path".to_string(), "dependencies".to_string()]);
@@ -180,7 +179,6 @@ fn build_execution_command(
 
         cmd.push("src/Main.java".to_string());
     }
-
 
     cmd
 }
@@ -301,7 +299,6 @@ impl Sandbox {
 
         cmd
     }
-
 
     fn docker_command(&self, action: Option<Action>) -> Command {
         let action = action.unwrap_or(Run);
@@ -461,7 +458,7 @@ impl Release {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
 pub enum Action {
     Run,
-    Build
+    Build,
 }
 
 impl Action {
