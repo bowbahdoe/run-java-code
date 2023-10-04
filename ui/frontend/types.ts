@@ -19,7 +19,13 @@ export interface Crate {
   version: string;
 }
 
-export enum Version {
+export interface Version {
+  version: string;
+  hash: string;
+  date: string;
+}
+
+export enum JavaVersion {
   Java17 = 'java 17',
   Java18 = 'java 18',
   Java19 = 'java 19',

@@ -2,7 +2,6 @@ import { Action, ActionType } from '../actions';
 import {
   AssemblyFlavor,
   Backtrace,
-  Version,
   DemangleAssembly,
   Edition,
   Editor,
@@ -13,6 +12,7 @@ import {
   PrimaryAction,
   PrimaryActionAuto,
   ProcessAssembly,
+  JavaVersion,
 } from '../types';
 
 export interface State {
@@ -30,7 +30,7 @@ export interface State {
   demangleAssembly: DemangleAssembly;
   processAssembly: ProcessAssembly;
   primaryAction: PrimaryAction;
-  version: Version;
+  version: JavaVersion;
   mode: Mode;
   edition: Edition;
   backtrace: Backtrace;
@@ -52,7 +52,7 @@ const DEFAULT: State = {
   demangleAssembly: DemangleAssembly.Demangle,
   processAssembly: ProcessAssembly.Filter,
   primaryAction: PrimaryActionAuto.Auto,
-  version: Version.Java21,
+  version: JavaVersion.Java21,
   mode: Mode.Debug,
   edition: Edition.JavaStandardEdition,
   backtrace: Backtrace.Disabled,

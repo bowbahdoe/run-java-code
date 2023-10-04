@@ -10,6 +10,8 @@ import {
   Preview,
   PrimaryActionAuto,
   PrimaryActionCore,
+  Version,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   VersionInfo,
 } from '../types';
 
@@ -82,8 +84,8 @@ const primaryActionSelector = createSelector(
 
 const LABELS =
 {
-  Compile: 'compile',
-  Execute: 'execute',
+  compile: 'Compile',
+  execute: 'Execute',
 }
 
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
@@ -94,14 +96,14 @@ const getJava19 = (state: State) => state.versions?.java19;
 const getJava20 = (state: State) => state.versions?.java20;
 const getJava21 = (state: State) => state.versions?.java21;
 
-const versionNumber = (v: VersionInfo | undefined) => v ? v.version : '';
+const versionNumber = (v: Version | undefined) => v ? v.version : '';
 export const java17VersionNumber = createSelector(getJava17, versionNumber);
 export const java18VersionNumber = createSelector(getJava18, versionNumber);
 export const java19VersionNumber = createSelector(getJava19, versionNumber);
 export const java20VersionNumber = createSelector(getJava20, versionNumber);
 export const java21VersionNumber = createSelector(getJava21, versionNumber);
 
-const versionDetails = (v: VersionInfo | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
+const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
 export const java17VersionText = createSelector(getJava17, versionDetails);
 export const java18VersionText = createSelector(getJava18, versionDetails);
 export const java19VersionText = createSelector(getJava19, versionDetails);
