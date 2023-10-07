@@ -48,7 +48,7 @@ $bg-dark: #f9f9f9;
 
 .buttonBuild {
   composes: button;
-  border-color: hsl(15deg 66.7% 32%);
+  border-color: #00597a; /* Darker Java Blue */
   background: var(--rust);
   color: white;
 
