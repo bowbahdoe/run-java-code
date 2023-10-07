@@ -254,6 +254,10 @@ workflows:
       release_artifacts:
         name: "Release artifacts"
         runs-on: ubuntu-latest
+        needs:
+          - build_compiler_containers
+          - build_backend
+          - build_frontend
         if: github.event_name == 'push' && github.event.ref == 'refs/heads/all/publish'
         permissions:
           contents: read
