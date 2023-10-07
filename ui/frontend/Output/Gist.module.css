@@ -37,7 +37,6 @@ $copied-duration: 1s ease-in-out;
   cursor: pointer;
   color: var(--bs-blue);
   text-decoration: none;
-  text-decoration: none;
 }
 
 .link:hover,
