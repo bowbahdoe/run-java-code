@@ -331,8 +331,6 @@ impl Sandbox {
 async fn run_command_with_timeout(mut command: Command) -> Result<std::process::Output> {
     use std::os::unix::process::ExitStatusExt;
 
-    let now = std::time::Instant::now();
-
     let timeout = DOCKER_PROCESS_TIMEOUT_HARD;
 
     let output = command.output().await.context(UnableToStartCompilerSnafu)?;
