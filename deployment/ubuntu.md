@@ -3,16 +3,33 @@
 Here's an example session. This could definitely be improved and
 automated.
 
+#### Switch to root
+
+```
+sudo su
+```
+
 #### Dependencies (as root)
+
 
 ```
 apt-get update
 apt-get upgrade -y
 apt-get install git awscli nginx
 
-# Install Docker CE
-# Configure apt-get per instructions
-# https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/
+# Add Docker's official GPG key:
+apt-get install ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+apt-get update
+
 apt-get install docker-ce
 
 # Use a production-quality storage driver that doesn't leak disk space
@@ -29,7 +46,7 @@ mount | grep cgroup/pids
 # https://docs.docker.com/engine/installation/linux/linux-postinstall/#your-kernel-does-not-support-cgroup-swap-limit-capabilities
 
 service docker restart
-usermod -a -G docker ubuntu # user needs to log out and in again
+usermod -a -G docker ubuntu
 
 fallocate -l 1G /swap.fs
 chmod 0600 /swap.fs
@@ -56,8 +73,16 @@ Reboot the instance at this point.
 
 #### Get the code
 ```
-git clone https://github.com/rust-lang/rust-playground.git
-cd rust-playground
+git clone https://github.com/McCue-Software-Solutions/java-playground.git
+cd java-playground
+```
+
+#### Make update.sh
+
+Copy the update.sh from this repo then run
+
+```
+chmod +x update.sh
 ```
 
 #### Set a crontab to update the assets, binary, and docker containers
@@ -68,14 +93,24 @@ crontab -e
 
 Review the [example crontab](crontab) in this repo. It calls [`update.sh`](update.sh) also in this repo.
 
+#### Start snapd
+
+```
+sudo service snapd start
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+sudo certbot --nginx
+```
+
 #### Install the SystemD service
 
 [playground.service](playground.service)
 
 ```
-cp playground.service /etc/systemd/system/playground.service
-service playground start
-systemctl enable playground.service
+sudo cp playground.service /etc/systemd/system/playground.service
+sudo service playground stop
+sudo service playground start
+sudo systemctl enable playground.service
 ```
 
 #### Install the Nginx reverse proxy
@@ -83,8 +118,9 @@ systemctl enable playground.service
 [playground-reverse-proxy](playground-reverse-proxy)
 
 ```
-cp playground-reverse-proxy /etc/nginx/sites-enabled
-service nginx reload
+sudo rm /etc/nginx/sites-enabled/default
+sudo cp playground-reverse-proxy /etc/nginx/sites-enabled
+sudo service nginx reload
 ```
 
 #### Configure SSL

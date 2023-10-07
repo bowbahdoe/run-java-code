@@ -29,3 +29,14 @@
     text-decoration: underline;
   }
 }
+
+.link {
+  cursor: pointer;
+  color: var(--bs-link-color);
+  text-decoration: none;
+}
+
+.link:hover,
+.link:active {
+  color: var(--bs-link-hover-color);
+}

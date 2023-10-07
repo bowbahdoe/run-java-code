@@ -94,7 +94,7 @@ const RuntimeMenuButton: React.FC = () => {
 
   const Button = React.forwardRef<HTMLButtonElement, { toggle: () => void }>(({ toggle }, ref) => (
     <SegmentedButton title="Runtime &mdash; Choose the Java runtime" ref={ref} onClick={toggle}>
-      <HeaderButton isExpandable>{label}</HeaderButton>
+      <HeaderButton isExpandable>{label.replace('_', ' ')}</HeaderButton>
     </SegmentedButton>
   ));
   Button.displayName = 'RuntimeMenuButton.Button';
@@ -150,7 +150,7 @@ const ConfigMenuButton: React.FC = () => {
 };
 
 const HelpButton: React.FC = () => (
-  <SegmentedLink title="View help" action={actions.navigateToHelp}>
+  <SegmentedLink className={styles.link} title="View help" action={actions.navigateToHelp}>
     <HeaderButton icon={<HelpIcon />} />
   </SegmentedLink>
 );

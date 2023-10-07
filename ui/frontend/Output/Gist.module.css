@@ -32,3 +32,14 @@ $copied-duration: 1s ease-in-out;
     color: green;
   }
 }
+
+.link {
+  cursor: pointer;
+  color: var(--bs-link-color);
+  text-decoration: none;
+}
+
+.link:hover,
+.link:active {
+  color: var(--bs-link-hover-color);
+}

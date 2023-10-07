@@ -8,13 +8,18 @@ import styles from './Help.module.css';
 
 const ACE_URL = 'https://github.com/ajaxorg/ace';
 const MAVEN_CENTRAL_URL = 'https://central.sonatype.com/';
-const CRATES_URL = 'https://github.com/rust-lang/rust-playground/blob/main/compiler/base/Cargo.toml';
+const CRATES_URL = 'https://github.com/McCue-Software-Solutions/java-playground/blob/main/compiler/base/pom.xml';
 const GIST_URL = 'https://gist.github.com/';
 const I32_URL = 'http://integer32.com/';
 const LOCALSTORAGE_URL = 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API';
-const REPO_URL = 'https://github.com/rust-lang/rust-playground';
+const REPO_URL = 'https://github.com/McCue-Software-Solutions/java-playground';
 const SHEPMASTER_URL = 'https://github.com/shepmaster/';
 const RUST_PLAYGROUND_URL = 'https://play.rust-lang.org/help';
+const ETHAN_GITHUB_URL = 'https://github.com/bowbahdoe';
+const SALMA_GITHUB_URL = 'https://github.com/bowbahdoe';
+const MICHAEL_GITHUB_URL = 'https://github.com/mhlowry';
+const TIANCI_GITHUB_URL = 'https://github.com/tk1github';
+const LEO_GITHUB_URL = 'https://github.com/LeonardoA77';
 
 const CRATE_EXAMPLE = `import io.vavr.collection.Vector;
 
@@ -31,28 +36,38 @@ const Help: React.FC = () => {
   return (
     <section className={styles.container}>
       <h1>The Java Playground</h1>
-      <Link action={actions.navigateToIndex}>Return to the playground</Link>
+      <Link className={styles.link} action={actions.navigateToIndex}>Return to the playground</Link>
 
       <LinkableSection id="about" header="About" level="h2">
         <p>
-          The playground is an <a href={REPO_URL}>open source project</a>.
+          The playground is an <a className={styles.link} href={REPO_URL}>open source project</a>.
           If you have any suggestions for features, issues with the
           implementation, or just want to read the code for yourself,
           you are invited to participate!
         </p>
 
         <p>
-          This playground is a fork of the <a href={RUST_PLAYGROUND_URL}>Rust Playground</a>,
+          This playground is a fork of the <a  className={styles.link} href={RUST_PLAYGROUND_URL}>Rust Playground</a>,
           and we owe a great debt to every contributor to
-          that project, notably <a href={SHEPMASTER_URL}>Jake Goulding</a> from <a href={I32_URL}>Integer 32</a>.
+          that project, notably <a className={styles.link} href={SHEPMASTER_URL}>Jake Goulding</a>{' from '}
+          <a className={styles.link} href={I32_URL}>Integer 32</a>.
+        </p>
+
+        <p>
+          This fork was created by <a  className={styles.link} href={LEO_GITHUB_URL}>Leonardo Allicock</a>{', '}
+          <a className={styles.link} href={MICHAEL_GITHUB_URL}>Michael Lowry</a>{', '}
+          <a className={styles.link} href={SALMA_GITHUB_URL}>Salma Hassanin</a>{', '}
+          <a className={styles.link} href={TIANCI_GITHUB_URL}>Tianci Liu</a>{', and '}
+          <a className={styles.link} href={ETHAN_GITHUB_URL}> Ethan McCue</a>.
         </p>
       </LinkableSection>
 
       <LinkableSection id="features" header="Features" level="h2">
-        <LinkableSection id="features-crates" header="Crates" level="h3">
+        <LinkableSection id="features-libraries" header="Libraries" level="h3">
           <p>
             The playground provides a selection of libraries
-          from <a href={MAVEN_CENTRAL_URL}>Maven Central</a>. To use a library, add the appropriate
+          from <a className={styles.link} href={MAVEN_CENTRAL_URL}>Maven Central</a>.
+            To use a library, add the appropriate
             {' '}
             <Code>import</Code> statements.
           </p>
@@ -60,7 +75,7 @@ const Help: React.FC = () => {
           <Example code={CRATE_EXAMPLE} />
 
           <p>
-            See the <a href={CRATES_URL}>complete list of libraries</a> to know
+            See the <a className={styles.link} href={CRATES_URL}>complete list of libraries</a> to know
             what’s available.
           </p>
 
@@ -110,7 +125,7 @@ const Help: React.FC = () => {
             {' '}
             <strong>Share</strong> button. This will create a
             {' '}
-            <a href={GIST_URL}>GitHub Gist</a>. You will also be provided with
+            <a className={styles.link} href={GIST_URL}>GitHub Gist</a>. You will also be provided with
             a URL to load that Gist back into the playground.
           </p>
         </LinkableSection>
@@ -191,7 +206,7 @@ const Help: React.FC = () => {
 
         <LinkableSection id="features-customization" header="Customization" level="h3">
           <p>
-            The <a href={ACE_URL}>Ajax.org Cloud9 Editor (Ace)</a> is used to
+            The <a className={styles.link} href={ACE_URL}>Ajax.org Cloud9 Editor (Ace)</a> is used to
             provide a better interface for editing code. Ace comes with
             several keybinding options (such as Emacs and Vim) as well as many
             themes.
@@ -211,7 +226,7 @@ const Help: React.FC = () => {
           <p>
             The most recently entered code will be automatically saved in your browser’s
             {' '}
-            <a href={LOCALSTORAGE_URL}>local storage</a>. This allows you to recover
+            <a className={styles.link} href={LOCALSTORAGE_URL}>local storage</a>. This allows you to recover
             your last work even if you close the browser.
           </p>
 
