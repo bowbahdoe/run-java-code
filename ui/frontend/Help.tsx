@@ -49,12 +49,16 @@ const Help: React.FC = () => {
         <p>
           This playground is a fork of the <a  className={styles.link} href={RUST_PLAYGROUND_URL}>Rust Playground</a>,
           and we owe a great debt to every contributor to
-          that project, notably <a className={styles.link} href={SHEPMASTER_URL}>Jake Goulding</a> from <a className={styles.link} href={I32_URL}>Integer 32</a>.
+          that project, notably <a className={styles.link} href={SHEPMASTER_URL}>Jake Goulding</a> from
+          <a className={styles.link} href={I32_URL}>Integer 32</a>.
         </p>
 
         <p>
-          This fork was created by <a  className={styles.link} href={LEO_GITHUB_URL}>Leonardo Allicock</a>, <a className={styles.link} href={MICHAEL_GITHUB_URL}>Michael Lowry</a>, <a className={styles.link} href={SALMA_GITHUB_URL}>Salma Hassanin</a>, <a className={styles.link} href={TIANCI_GITHUB_URL}>Tianci Liu</a>,
-          and <a className={styles.link} href={ETHAN_GITHUB_URL}> Ethan McCue</a>.
+          This fork was created by <a  className={styles.link} href={LEO_GITHUB_URL}>Leonardo Allicock</a>{', '}
+          <a className={styles.link} href={MICHAEL_GITHUB_URL}>Michael Lowry</a>{', '}
+          <a className={styles.link} href={SALMA_GITHUB_URL}>Salma Hassanin</a>{', '}
+          <a className={styles.link} href={TIANCI_GITHUB_URL}>Tianci Liu</a>{', and '}
+          <a className={styles.link} href={ETHAN_GITHUB_URL}> Ethan McCue</a>.
         </p>
       </LinkableSection>
 
@@ -62,7 +66,8 @@ const Help: React.FC = () => {
         <LinkableSection id="features-libraries" header="Libraries" level="h3">
           <p>
             The playground provides a selection of libraries
-          from <a className={styles.link} href={MAVEN_CENTRAL_URL}>Maven Central</a>. To use a library, add the appropriate
+          from <a className={styles.link} href={MAVEN_CENTRAL_URL}>Maven Central</a>.
+            To use a library, add the appropriate
             {' '}
             <Code>import</Code> statements.
           </p>
