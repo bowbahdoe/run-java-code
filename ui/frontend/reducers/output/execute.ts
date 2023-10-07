@@ -86,9 +86,13 @@ const slice = createSlice({
         state.requestsInProgress += 1;
       })
       .addCase(performExecute.fulfilled, (state, action) => {
-        let { stdout, stderr } = action.payload;
-        stderr = stderr?.replace("Note: Main.java uses preview features of Java SE 21.\n" +
-            "Note: Recompile with -Xlint:preview for details.\n\n", '')
+        const { stdout } = action.payload;
+        let { stderr } = action.payload;
+        stderr = stderr?.replace(
+          'Note: Main.java uses preview features of Java SE 21.\n' +
+            'Note: Recompile with -Xlint:preview for details.\n\n',
+          '',
+        );
         Object.assign(state, { stdout, stderr });
         state.requestsInProgress -= 1;
       })

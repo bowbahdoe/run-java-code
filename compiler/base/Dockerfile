@@ -23,7 +23,7 @@ RUN tar -xzvf openjdk.tgz
 
 RUN cp -r $TARGZ_FOLDER jre
 
-FROM ubuntu:20.04 as sources
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND="noninteractive"
 
@@ -38,7 +38,7 @@ RUN /playground/attach_notice.sh /playground/security_notice.txt /etc/passwd && 
     /playground/attach_notice.sh /playground/security_notice.txt /etc/shadow && \
     rm -f /playground/attach_notice.sh
 
-COPY --from=dependencies target/dependency /playground/dependencies
+COPY --chown=playground --from=dependencies target/dependency /playground/dependencies
 COPY --chown=playground --from=jre jre /playground/jre
 
 USER playground
@@ -47,12 +47,6 @@ ENV PATH=/playground/jre/bin:$PATH
 WORKDIR /playground
 
 ADD --chown=playground entrypoint.sh /playground/tools/
-
-# Compiler and pre-compiled crates
-
-FROM sources
-
-ARG channel
 
 ADD --chown=playground postinstall.sh /playground/tools/
 RUN /playground/tools/postinstall.sh

@@ -1,29 +1,31 @@
-.Help-module__container--OwsEEdjsVbpKDgh93A9A {
+.container {
   margin: 1em auto;
-  background-color: rgb(214, 213, 215);
+  background-color: #fff;
   padding: 1em;
   max-width: 800px;
   line-height: 1.5;
 }
 
-.Help-module__code--kkvSsGLjue7oz32nRQns {
-  background: rgb(219, 219, 219);
+.code {
+  background: #eee;
   padding: 0 0.25em;
 }
 
-.Help-module__logo--ErSdx8bvJPa1hmI48SHf {
+.logo {
   text-align: center;
 }
 
-.Help-module__header--G3kNKxeiQ2bzvpzrRmiK:hover::after {
+.header {
+  &:hover::after {
     content: ' §';
   }
-
-.Help-module__headerLink--DeecMfOHV8JXP_bMAj5A {
-  color: rgb(141, 141, 141);
-  text-decoration: none;
 }
 
-.Help-module__headerLink--DeecMfOHV8JXP_bMAj5A:hover {
+.headerLink {
+  color: black;
+  text-decoration: none;
+
+  &:hover {
     text-decoration: underline;
   }
+}

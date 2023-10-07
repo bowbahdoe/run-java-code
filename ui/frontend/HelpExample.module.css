@@ -12,7 +12,7 @@
   cursor: pointer;
   border: none;
   border-bottom-left-radius: 0.5em;
-  background: rgb(229, 228, 231, 0.8);
+  background: rgb(255 255 255 / 80%);
 }
 
 .container:hover .loadExample {
