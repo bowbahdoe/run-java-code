@@ -1,4 +1,4 @@
-$current-tab: #f9ffff;
+$current-tab: var(--bs-white);
 $background-tab: #fcfcfc; /* desaturate($current-tab, 100%); */
 
 .container {

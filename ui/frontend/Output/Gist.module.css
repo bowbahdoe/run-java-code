@@ -35,11 +35,11 @@ $copied-duration: 1s ease-in-out;
 
 .link {
   cursor: pointer;
-  color: var(--bs-blue);
+  color: var(--bs-link-color);
   text-decoration: none;
 }
 
 .link:hover,
 .link:active {
-  color: var(--bs-orange);
+  color: var(--bs-link-hover-color);
 }

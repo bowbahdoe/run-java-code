@@ -9,7 +9,6 @@
   --header-tint: #428bca;
   --header-border-radius: 4px;
   --header-accent-border: #bdbdbd;
-
   --bs-blue: #3a75b0;
   --bs-indigo: #6610f2;
   --bs-purple: #6f42c1;
@@ -134,12 +133,13 @@
 
 .link {
   cursor: pointer;
-  color: var(--bs-blue);
+  color: var(--bs-link-color);
   text-decoration: none;
 }
+
 .link:hover,
 .link:active {
-  color: var(--bs-orange);
+  color: var(--bs-link-hover-color);
 }
 
 /* Modify normalized styles */
