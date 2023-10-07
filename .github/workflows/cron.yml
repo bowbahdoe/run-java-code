@@ -17,8 +17,6 @@ jobs:
       matrix:
         channel:
         - stable
-        - beta
-        - nightly
     env:
       IMAGE_NAME: ghcr.io/integer32llc/rust-playground-ci-rust-${{ matrix.channel }}
       DOCKER_HUB_IMAGE_NAME: shepmaster/rust-${{ matrix.channel }}
