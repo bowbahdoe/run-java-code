@@ -1,5 +1,6 @@
+use crate::sandbox::Action;
 use crate::{
-    metrics, parse_runtime, parse_crate_type, parse_release,
+    metrics, parse_action, parse_release, parse_runtime,
     sandbox::{self, Sandbox},
     Error, ExecutionSnafu, Result, SandboxCreationSnafu, WebSocketTaskPanicSnafu,
 };
@@ -38,14 +39,12 @@ enum WSMessageRequest {
 }
 
 #[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct ExecuteRequest {
     runtime: String,
     release: String,
-    crate_type: String,
-    tests: bool,
+    action: String,
     code: String,
-    preview: bool
+    preview: bool,
 }
 
 impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
@@ -55,17 +54,15 @@ impl TryFrom<ExecuteRequest> for sandbox::ExecuteRequest {
         let ExecuteRequest {
             runtime,
             release,
-            crate_type,
-            tests,
+            action,
             code,
-            preview
+            preview,
         } = value;
 
         Ok(sandbox::ExecuteRequest {
             runtime: parse_runtime(&runtime)?,
             release: parse_release(&release)?,
-            crate_type: parse_crate_type(&crate_type)?,
-            tests,
+            action: parse_action(&action)?.unwrap_or(Action::Run),
             preview,
             code,
         })
@@ -193,8 +190,14 @@ async fn handle_core(mut socket: WebSocket) {
 }
 
 async fn connect_handshake(socket: &mut WebSocket) -> bool {
-    let Some(Ok(Message::Text(txt))) = socket.recv().await else { return false };
-    let Ok(HandshakeMessage::Connected { payload, .. }) = serde_json::from_str::<HandshakeMessage>(&txt) else { return false };
+    let Some(Ok(Message::Text(txt))) = socket.recv().await else {
+        return false;
+    };
+    let Ok(HandshakeMessage::Connected { payload, .. }) =
+        serde_json::from_str::<HandshakeMessage>(&txt)
+    else {
+        return false;
+    };
     if !payload.i_accept_this_is_an_unsupported_api {
         return false;
     }

@@ -4,13 +4,12 @@ import { createSelector } from '@reduxjs/toolkit';
 import { State } from '../reducers';
 import {
   AceResizeKey,
-  Runtime,
   Release,
   Orientation,
   Preview,
   PrimaryActionAuto,
   PrimaryActionCore,
-  Version,
+  Version, Runtime,
 } from '../types';
 
 export const codeSelector = (state: State) => state.code;
@@ -24,28 +23,13 @@ const HAS_MAIN_FUNCTION_RE =
   /^\s*(public\s+)?\s*(static\s+)?\s*\s*void\s+main\s*(\(\s*\)|\(String\s*\[\]\s*[a-z|A-Z|0-9]+\))/m;
 export const hasMainFunctionSelector = createSelector(codeSelector, code => !!code.match(HAS_MAIN_FUNCTION_RE));
 
-const CRATE_TYPE_RE = /^\s*#!\s*\[\s*crate_type\s*=\s*"([^"]*)"\s*]/m;
-export const crateTypeSelector = createSelector(codeSelector, code => (code.match(CRATE_TYPE_RE) || [])[1]);
-
 const autoPrimaryActionSelector = createSelector(
-  crateTypeSelector,
-  hasTestsSelector,
   hasMainFunctionSelector,
-  (crateType, hasTests, hasMainFunction) => {
-    if (crateType && crateType !== 'proc-macro') {
-      if (crateType === 'bin') {
-        return PrimaryActionCore.Execute;
-      } else {
-        return PrimaryActionCore.Compile;
-      }
+  ( hasMainFunction) => {
+    if (hasMainFunction) {
+      return PrimaryActionCore.Execute;
     } else {
-      /* if (hasTests) {
-        return PrimaryActionCore.Test;
-      } else */ if (hasMainFunction) {
-        return PrimaryActionCore.Execute;
-      } else {
-        return PrimaryActionCore.Compile;
-      }
+      return PrimaryActionCore.Compile;
     }
   },
 );
@@ -55,16 +39,13 @@ const autoPrimaryActionSelector = createSelector(
   primaryAction => primaryAction === PrimaryActionCore.Test,
 ); */
 
-export const getCrateType = createSelector(
-  crateTypeSelector,
+export const getAction = createSelector(
   autoPrimaryActionSelector,
-  (crateType, primaryAction) => {
-    if (crateType) {
-      return crateType;
-    } else if (primaryAction === PrimaryActionCore.Execute) {
-      return 'bin';
+  ( primaryAction) => {
+    if (primaryAction === PrimaryActionCore.Execute) {
+      return 'run';
     } else {
-      return 'lib';
+      return 'build';
     }
   },
 );
@@ -95,24 +76,21 @@ const LABELS: { [index in PrimaryActionCore]: string } = {
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
 
 const getLatest = (state: State) => state.versions?.latest;
+const getEarlyAccess = (state: State) => state.versions?.earlyAccess;
 const getValhalla = (state: State) => state.versions?.valhalla;
-const getRustfmt = (state: State) => state.versions?.rustfmt;
-const getClippy = (state: State) => state.versions?.clippy;
-const getMiri = (state: State) => state.versions?.miri;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
 export const latestVersionText = createSelector(getLatest, versionNumber);
+export const earlyAccessVersionText = createSelector(getEarlyAccess, versionNumber);
 export const valhallaVersionText = createSelector(getValhalla, versionNumber);
-export const clippyVersionText = createSelector(getClippy, versionNumber);
-export const rustfmtVersionText = createSelector(getRustfmt, versionNumber);
-export const miriVersionText = createSelector(getMiri, versionNumber);
 
 const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';
 
-export const clippyVersionDetailsText = createSelector(getClippy, versionDetails);
-export const rustfmtVersionDetailsText = createSelector(getRustfmt, versionDetails);
-export const miriVersionDetailsText = createSelector(getMiri, versionDetails);
+export const clippyVersionDetailsText = createSelector(getLatest, versionDetails);
+export const rustfmtVersionDetailsText = createSelector(getLatest, versionDetails);
+export const miriVersionDetailsText = createSelector(getLatest, versionDetails);
 
+const runtimeSelector = (state: State) => state.configuration.runtime;
 const releaseSelector = (state: State) => state.configuration.release;
 
 export const isWasmAvailable = false;
@@ -124,8 +102,16 @@ export const getRuntimeLabel = (state: State) => {
 };
 
 export const isReleaseDefault = createSelector(
+  runtimeSelector,
   releaseSelector,
-  release => release == Release.Java21,
+  (runtime, release) => {
+    if (runtime == Runtime.Valhalla) {
+      return release == Release.Java20;
+    }
+    else {
+      return release == Release.Java21;
+    }
+  }
 );
 
 export const getPreviewSet = (state: State) => (
@@ -133,7 +119,7 @@ export const getPreviewSet = (state: State) => (
 );
 
 export const getAdvancedOptionsSet = createSelector(
-    isReleaseDefault,
+  isReleaseDefault,
   (releaseDefault) => (
     !releaseDefault
   ),
@@ -281,8 +267,8 @@ export const anyNotificationsToShowSelector = createSelector(
 export const clippyRequestSelector = createSelector(
   codeSelector,
   releaseSelector,
-  getCrateType,
-  (code, release, crateType) => ({ code, release, crateType }),
+  getAction,
+  (code, release, action) => ({ code, release, action }),
 );
 
 export const formatRequestSelector = createSelector(
@@ -356,13 +342,12 @@ export const websocketStatusSelector = createSelector(
 export const executeRequestPayloadSelector = createSelector(
   codeSelector,
   (state: State) => state.configuration,
-  (_state: State, { crateType, tests }: { crateType: string, tests: boolean }) => ({ crateType, tests }),
-  (code, configuration, { crateType, tests }) => ({
+  (_state: State, { action }: { action: string }) => ({ action }),
+  (code, configuration, { action }) => ({
     runtime: configuration.runtime,
     release: configuration.release,
-    crateType,
-    tests,
+    action,
     code,
-    preview: configuration.preview == Preview.Enabled
+    preview: configuration.preview == Preview.Enabled,
   }),
 );

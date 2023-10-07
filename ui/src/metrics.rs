@@ -10,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::sandbox::{self, Runtime, CompileTarget, CrateType, Release};
+use crate::sandbox::{self, Action, Release, Runtime};
 
 lazy_static! {
     pub(crate) static ref REQUESTS: HistogramVec = register_histogram_vec!(
@@ -42,16 +42,10 @@ lazy_static! {
 pub(crate) enum Endpoint {
     Compile,
     Execute,
-    Format,
-    Miri,
-    Clippy,
     MetaCrates,
     MetaVersionLatest,
     MetaVersionValhalla,
-    MetaVersionRustfmt,
-    MetaVersionClippy,
-    MetaVersionMiri,
-    Evaluate,
+    MetaVersionEarlyAccess,
 }
 
 #[derive(Debug, Copy, Clone, strum::IntoStaticStr)]
@@ -63,99 +57,54 @@ pub(crate) enum Outcome {
     ErrorUserCode,
 }
 
-pub(crate) struct LabelsCore {
-    target: Option<CompileTarget>,
-    runtime: Option<Runtime>,
-    release: Option<Option<Release>>,
-    crate_type: Option<CrateType>,
-    tests: Option<bool>,
-    preview: Option<bool>
-}
-
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Labels {
     endpoint: Endpoint,
     outcome: Outcome,
-    target: Option<CompileTarget>,
     runtime: Option<Runtime>,
     release: Option<Option<Release>>,
-    crate_type: Option<CrateType>,
-    tests: Option<bool>,
-    preview: Option<bool>
+    action: Option<Action>,
+    preview: Option<bool>,
 }
 
 impl Labels {
-    const COUNT: usize = 8;
+    const COUNT: usize = 6;
 
     const LABELS: &'static [&'static str; Self::COUNT] = &[
-        "endpoint",
-        "outcome",
-        "target",
-        "runtime",
-        "release",
-        "crate_type",
-        "tests",
-        "preview"
+        "endpoint", "outcome", "runtime", "release", "action", "preview",
     ];
 
     fn as_values(&self) -> [&'static str; Self::COUNT] {
         let Self {
             endpoint,
             outcome,
-            target,
             runtime,
             release,
-            crate_type,
-            tests,
-            preview
+            action,
+            preview,
         } = *self;
 
         fn b(v: Option<bool>) -> &'static str {
             v.map_or("", |v| if v { "true" } else { "false" })
         }
 
-        let target = target.map_or("", Into::into);
         let runtime = runtime.map_or("", Into::into);
         let release = match release {
             None => "",
             Some(None) => "Unspecified",
             Some(Some(v)) => v.into(),
         };
-        let crate_type = crate_type.map_or("", Into::into);
-        let tests = b(tests);
+        let action = action.map_or("", Into::into);
         let preview = b(preview);
 
         [
             endpoint.into(),
             outcome.into(),
-            target,
             runtime,
             release,
-            crate_type,
-            tests,
-            preview
+            action,
+            preview,
         ]
-    }
-
-    pub(crate) fn complete(endpoint: Endpoint, labels_core: LabelsCore, outcome: Outcome) -> Self {
-        let LabelsCore {
-            target,
-            runtime,
-            release,
-            crate_type,
-            tests,
-            preview
-        } = labels_core;
-        Self {
-            endpoint,
-            outcome,
-            target,
-            runtime,
-            release,
-            crate_type,
-            tests,
-            preview
-        }
     }
 }
 
@@ -175,11 +124,9 @@ where
 impl GenerateLabels for sandbox::CompileRequest {
     fn generate_labels(&self, outcome: Outcome) -> Labels {
         let Self {
-            target,
             runtime,
-            crate_type,
+            action,
             release,
-            tests,
             preview,
             code: _,
         } = *self;
@@ -187,12 +134,10 @@ impl GenerateLabels for sandbox::CompileRequest {
         Labels {
             endpoint: Endpoint::Compile,
             outcome,
-            target: Some(target),
             runtime: Some(runtime),
             release: Some(release),
-            crate_type: Some(crate_type),
-            tests: Some(tests),
-            preview: Some(preview)
+            action: Some(action),
+            preview: Some(preview),
         }
     }
 }
@@ -202,8 +147,7 @@ impl GenerateLabels for sandbox::ExecuteRequest {
         let Self {
             runtime,
             release,
-            crate_type,
-            tests,
+            action,
             preview,
             code: _,
         } = *self;
@@ -211,71 +155,10 @@ impl GenerateLabels for sandbox::ExecuteRequest {
         Labels {
             endpoint: Endpoint::Execute,
             outcome,
-
-            target: None,
             runtime: Some(runtime),
             release: Some(release),
-            crate_type: Some(crate_type),
-            tests: Some(tests),
-            preview: Some(preview)
-        }
-    }
-}
-
-impl GenerateLabels for sandbox::FormatRequest {
-    fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self { release, code: _ } = *self;
-
-        Labels {
-            endpoint: Endpoint::Format,
-            outcome,
-
-            target: None,
-            runtime: None,
-            release: Some(release),
-            crate_type: None,
-            tests: None,
-            preview: None
-        }
-    }
-}
-
-impl GenerateLabels for sandbox::ClippyRequest {
-    fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self {
-            code: _,
-            release,
-            crate_type,
-        } = *self;
-
-        Labels {
-            endpoint: Endpoint::Clippy,
-            outcome,
-
-            target: None,
-            runtime: None,
-            release: Some(release),
-            crate_type: Some(crate_type),
-            tests: None,
-            preview: None
-        }
-    }
-}
-
-impl GenerateLabels for sandbox::MiriRequest {
-    fn generate_labels(&self, outcome: Outcome) -> Labels {
-        let Self { code: _, release } = *self;
-
-        Labels {
-            endpoint: Endpoint::Miri,
-            outcome,
-
-            target: None,
-            runtime: None,
-            release: Some(release),
-            crate_type: None,
-            tests: None,
-            preview: None
+            action: Some(action),
+            preview: Some(preview),
         }
     }
 }
@@ -328,24 +211,6 @@ impl SuccessDetails for sandbox::ExecuteResponse {
     }
 }
 
-impl SuccessDetails for sandbox::FormatResponse {
-    fn success_details(&self) -> Outcome {
-        common_success_details(self.success, &self.stderr)
-    }
-}
-
-impl SuccessDetails for sandbox::ClippyResponse {
-    fn success_details(&self) -> Outcome {
-        common_success_details(self.success, &self.stderr)
-    }
-}
-
-impl SuccessDetails for sandbox::MiriResponse {
-    fn success_details(&self) -> Outcome {
-        common_success_details(self.success, &self.stderr)
-    }
-}
-
 impl SuccessDetails for Vec<sandbox::CrateInformation> {
     fn success_details(&self) -> Outcome {
         Outcome::Success
@@ -365,19 +230,6 @@ where
     Resp: SuccessDetails,
 {
     track_metric_common_async(request, body, |_| {}).await
-}
-
-pub(crate) async fn track_metric_force_endpoint_async<Req, B, Resp>(
-    request: Req,
-    endpoint: Endpoint,
-    body: B,
-) -> sandbox::Result<Resp>
-where
-    Req: GenerateLabels,
-    for<'req> B: FnOnce(&'req Req) -> BoxFuture<'req, sandbox::Result<Resp>>,
-    Resp: SuccessDetails,
-{
-    track_metric_common_async(request, body, |labels| labels.endpoint = endpoint).await
 }
 
 async fn track_metric_common_async<Req, B, Resp, F>(
@@ -424,31 +276,15 @@ where
     let labels = Labels {
         endpoint,
         outcome,
-        target: None,
         runtime: None,
         release: None,
-        crate_type: None,
-        tests: None,
-        preview: None
+        action: None,
+        preview: None,
     };
 
     record_metric_complete(labels, elapsed);
 
     response
-}
-
-pub(crate) trait HasLabelsCore {
-    fn labels_core(&self) -> LabelsCore;
-}
-
-pub(crate) fn record_metric(
-    endpoint: Endpoint,
-    labels_core: LabelsCore,
-    outcome: Outcome,
-    elapsed: Duration,
-) {
-    let labels = Labels::complete(endpoint, labels_core, outcome);
-    record_metric_complete(labels, elapsed)
 }
 
 fn record_metric_complete(labels: Labels, elapsed: Duration) {

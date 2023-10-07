@@ -15,12 +15,9 @@ interface ToolsMenuProps {
 }
 
 const ToolsMenu: React.FC<ToolsMenuProps> = props => {
-  const rustfmtVersion = useSelector(selectors.rustfmtVersionText);
   const rustfmtVersionDetails = useSelector(selectors.rustfmtVersionDetailsText);
   const clippyVersionDetails = useSelector(selectors.clippyVersionDetailsText);
-  const clippyVersion = useSelector(selectors.clippyVersionText);
   const miriVersionDetails = useSelector(selectors.miriVersionDetailsText);
-  const miriVersion = useSelector(selectors.miriVersionText);
 
   const dispatch = useAppDispatch();
   const clippy = useCallback(() => {
@@ -42,13 +39,13 @@ const ToolsMenu: React.FC<ToolsMenuProps> = props => {
         name="Rustfmt"
         onClick={format}>
         <div>Format this code with Rustfmt.</div>
-        <MenuAside>{rustfmtVersion} ({rustfmtVersionDetails})</MenuAside>
+        <MenuAside> ({rustfmtVersionDetails})</MenuAside>
       </ButtonMenuItem>
       <ButtonMenuItem
         name="Clippy"
         onClick={clippy}>
         <div>Catch common mistakes and improve the code using the Clippy linter.</div>
-        <MenuAside>{clippyVersion} ({clippyVersionDetails})</MenuAside>
+        <MenuAside> ({clippyVersionDetails})</MenuAside>
       </ButtonMenuItem>
       <ButtonMenuItem
         name="Miri"
@@ -57,7 +54,7 @@ const ToolsMenu: React.FC<ToolsMenuProps> = props => {
           Execute this program in the Miri interpreter to detect certain
           cases of undefined behavior (like out-of-bounds memory access).
         </div>
-        <MenuAside>{miriVersion} ({miriVersionDetails})</MenuAside>
+        <MenuAside> ({miriVersionDetails})</MenuAside>
       </ButtonMenuItem>
     </MenuGroup>
   );

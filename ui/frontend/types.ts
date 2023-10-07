@@ -79,7 +79,8 @@ export type PrimaryAction = PrimaryActionCore | PrimaryActionAuto;
 
 export enum Runtime {
   Latest = 'latest',
-  Valhalla = 'valhalla'
+  Valhalla = 'valhalla',
+  EarlyAccess = 'early_access'
 }
 
 export enum Release {
@@ -96,7 +97,8 @@ export enum Release {
   Java18 = '18',
   Java19 = '19',
   Java20 = '20',
-  Java21 = '21'
+  Java21 = '21',
+  Java22 = '22'
 }
 
 export enum Preview {

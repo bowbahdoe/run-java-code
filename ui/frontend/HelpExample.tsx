@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import root from 'react-shadow';
 
-import 'prismjs/components/prism-rust.min';
+import 'prismjs/components/prism-java.min';
 import { PrismCode } from 'react-prism';
 
 import * as actions from './actions';
@@ -30,7 +30,7 @@ const HelpExample: React.FC<HelpExampleProps> = ({ code }) => {
         <link href={prismTheme} rel="stylesheet" />
 
         <pre>
-          <PrismCode className="language-rust">
+          <PrismCode className="language-java">
             {code}
           </PrismCode>
         </pre>

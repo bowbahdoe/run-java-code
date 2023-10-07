@@ -1,24 +1,33 @@
 #syntax=docker/dockerfile:1.5
 
-FROM ubuntu:20.04 as toolchain
+FROM maven:3.9.4-amazoncorretto-21-al2023 AS dependencies
 
-ARG channel
+COPY pom.xml pom.xml
+
+RUN mvn dependency:copy-dependencies
+
+
+FROM ubuntu:20.04 as jre
+
+ARG TARGZ_URL
+ARG TARGZ_SHA
+ARG TARGZ_FOLDER
+
+RUN apt update && apt install -y wget
+
+RUN wget "$TARGZ_URL" -O openjdk.tgz
+RUN echo "$TARGZ_SHA *openjdk.tgz" | sha256sum --strict --check -
+
+# Extract the JDK
+RUN tar -xzvf openjdk.tgz
+
+RUN cp -r $TARGZ_FOLDER jre
+
+FROM ubuntu:20.04 as sources
 
 ENV DEBIAN_FRONTEND="noninteractive"
 
-# `build-essential` and `file` are needed for backtrace-sys
-# `cmake`, `git`, `python` are needed for wasm tools
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    curl \
-    file \
-    gcc \
-    git \
-    libssl-dev \
-    pkg-config \
-    python \
- && rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m playground -d /playground
 RUN usermod -p '!!' root # Disable all passwords for root
@@ -29,73 +38,15 @@ RUN /playground/attach_notice.sh /playground/security_notice.txt /etc/passwd && 
     /playground/attach_notice.sh /playground/security_notice.txt /etc/shadow && \
     rm -f /playground/attach_notice.sh
 
+COPY --from=dependencies target/dependency /playground/dependencies
+COPY --chown=playground --from=jre jre /playground/jre
+
 USER playground
 ENV USER=playground
-ENV PATH=/playground/.cargo/bin:$PATH
+ENV PATH=/playground/jre/bin:$PATH
 WORKDIR /playground
 
-# Ensure that we are using the latest stable version of rustup and the
-# latest version of the current channel. A new manifest will trigger
-# these lines to run again, forcing a new download of rustup and
-# installation of Rust.
-ADD --chown=playground https://static.rust-lang.org/rustup/release-stable.toml /playground/tools/rustup-manifest.toml
-ADD --chown=playground https://static.rust-lang.org/dist/channel-rust-${channel}-date.txt /playground/tools/rust-channel-version
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain "${channel}"
-
 ADD --chown=playground entrypoint.sh /playground/tools/
-
-# Fetch all the crate source files
-
-FROM toolchain as bare-sources
-
-RUN cargo init /playground
-
-ADD --chown=playground Cargo.toml /playground/Cargo.toml
-ADD --chown=playground crate-information.json /playground/crate-information.json
-RUN cargo fetch
-
-# Build our tool for modifying Cargo.toml at runtime
-
-FROM bare-sources as munge
-
-ADD --chown=playground modify-cargo-toml /playground/modify-cargo-toml
-RUN cargo build --release --manifest-path=/playground/modify-cargo-toml/Cargo.toml
-
-# Set up cargo-chef for faster builds
-
-FROM bare-sources as chef-available
-
-RUN cargo install cargo-chef
-
-WORKDIR /orchestrator
-
-# Prepare the orchestrator's dependencies
-
-FROM chef-available as prepare-orchestrator
-
-COPY --chown=playground asm-cleanup /asm-cleanup
-COPY --chown=playground modify-cargo-toml /modify-cargo-toml
-COPY --chown=playground orchestrator /orchestrator
-RUN cargo chef prepare
-
-# Build the orchestrator
-
-FROM chef-available as build-orchestrator
-
-COPY --chown=playground asm-cleanup /asm-cleanup
-COPY --chown=playground modify-cargo-toml /modify-cargo-toml
-COPY --chown=playground --from=prepare-orchestrator /orchestrator/recipe.json /orchestrator/recipe.json
-RUN cargo chef cook --release
-
-COPY --chown=playground orchestrator /orchestrator
-RUN cargo install --path .
-
-# Compiler and sources
-
-FROM bare-sources as sources
-
-COPY --from=munge /playground/modify-cargo-toml/target/release/modify-cargo-toml /playground/.cargo/bin
-COPY --from=build-orchestrator /playground/.cargo/bin/worker /playground/.cargo/bin/worker
 
 # Compiler and pre-compiled crates
 
@@ -103,12 +54,7 @@ FROM sources
 
 ARG channel
 
-RUN cargo build
-RUN cargo build --release
-RUN rm src/*.rs
-
 ADD --chown=playground postinstall.sh /playground/tools/
-RUN /playground/tools/postinstall.sh ${channel}
-ADD --chown=playground cargo-wasm /playground/.cargo/bin/
+RUN /playground/tools/postinstall.sh
 
 ENTRYPOINT ["/playground/tools/entrypoint.sh"]

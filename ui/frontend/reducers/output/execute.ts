@@ -3,7 +3,7 @@ import * as z from 'zod';
 
 import { SimpleThunkAction, adaptFetchError, jsonPost, routes } from '../../actions';
 import { executeRequestPayloadSelector, useWebsocketSelector } from '../../selectors';
-import { Runtime, Release } from '../../types';
+import { Release, Runtime } from '../../types';
 import {
   WsPayloadAction,
   createWebsocketResponseAction,
@@ -33,8 +33,7 @@ type wsExecuteResponsePayload = z.infer<typeof wsExecuteResponsePayloadSchema>;
 type wsExecuteRequestPayload = {
   runtime: Runtime;
   release: Release;
-  crateType: string;
-  tests: boolean;
+  action: string;
   code: string;
 };
 
@@ -46,8 +45,7 @@ const sliceName = 'output/execute';
 
 export interface ExecuteRequestBody {
   runtime: string;
-  crateType: string;
-  tests: boolean;
+  action: string;
   code: string;
   release: string;
   preview: boolean;
@@ -88,7 +86,9 @@ const slice = createSlice({
         state.requestsInProgress += 1;
       })
       .addCase(performExecute.fulfilled, (state, action) => {
-        const { stdout, stderr } = action.payload;
+        let { stdout, stderr } = action.payload;
+        stderr = stderr?.replace("Note: Main.java uses preview features of Java SE 21.\n" +
+            "Note: Recompile with -Xlint:preview for details.\n\n", '')
         Object.assign(state, { stdout, stderr });
         state.requestsInProgress -= 1;
       })
@@ -116,10 +116,10 @@ const slice = createSlice({
 export const { wsExecuteRequest } = slice.actions;
 
 export const performCommonExecute =
-  (crateType: string, tests: boolean): SimpleThunkAction =>
+  (action: string): SimpleThunkAction =>
   (dispatch, getState) => {
     const state = getState();
-    const body = executeRequestPayloadSelector(state, { crateType, tests });
+    const body = executeRequestPayloadSelector(state, { action });
     const useWebSocket = useWebsocketSelector(state);
 
     if (useWebSocket) {

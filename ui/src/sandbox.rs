@@ -1,15 +1,7 @@
+use crate::sandbox::Action::Run;
 use serde_derive::Deserialize;
 use snafu::prelude::*;
-use std::{
-    collections::BTreeMap,
-    ffi::OsStr,
-    fmt, io,
-    io::ErrorKind,
-    os::unix::fs::PermissionsExt,
-    path::{Path, PathBuf},
-    string,
-    time::Duration,
-};
+use std::{io, os::unix::fs::PermissionsExt, path::PathBuf, string, time::Duration};
 use tempfile::TempDir;
 use tokio::{fs, process::Command, time};
 use tracing::debug;
@@ -139,9 +131,7 @@ fn basic_secure_docker_command() -> Command {
         ),
     );
 
-    if cfg!(feature = "fork-bomb-prevention") {
-        cmd.args(&["--pids-limit", "512"]);
-    }
+    cmd.args(&["--pids-limit", "512"]);
 
     cmd.kill_on_drop(true);
 
@@ -149,45 +139,48 @@ fn basic_secure_docker_command() -> Command {
 }
 
 fn build_execution_command(
-    target: Option<CompileTarget>,
-    release: Release,
-    runtime: Runtime,
-    req: impl CrateTypeRequest,
-    tests: bool,
-    preview: bool
-) -> Vec<&'static str> {
-    use self::CompileTarget::*;
-    use self::CrateType::*;
+    req: &(impl ActionRequest + PreviewRequest + ReleaseRequest + RuntimeRequest),
+) -> Vec<String> {
+    use self::Action::*;
 
-    let mut cmd = vec![
-        "java",
-    ];
-    cmd.extend(&["--source", release.java_release()]);
-    // Enable using java.lang.foreign w/o warnings
-    cmd.push("--enable-native-access=ALL-UNNAMED");
+    let mut cmd: Vec<String> = vec![];
 
-    if preview {
-        cmd.push("--enable-preview");
+    let release = req
+        .release()
+        .unwrap_or(req.runtime().default_release())
+        .java_release();
+
+    let action = req.action();
+
+    if action == Run {
+        cmd.push("java".to_string());
+        cmd.extend(["--module-path".to_string(), "dependencies".to_string()]);
+        cmd.extend(["--add-modules".to_string(), "ALL-MODULE-PATH".to_string()]);
+        cmd.extend(["--source".to_string(), release.to_string()]);
+
+        // Enable using java.lang.foreign w/o warnings
+        // cmd.push("--enable-native-access=ALL-UNNAMED".to_string());
+
+        if req.preview() {
+            cmd.push("--enable-preview".to_string());
+        }
+
+        cmd.push("Main.java".to_string());
+    } else if action == Build {
+        cmd.push("javac".to_string());
+        cmd.extend(["--module-path".to_string(), "dependencies".to_string()]);
+        cmd.extend(["--add-modules".to_string(), "ALL-MODULE-PATH".to_string()]);
+        cmd.extend(["--release".to_string(), release.to_string()]);
+        cmd.extend(["-d".to_string(), "out".to_string()]);
+
+        if req.preview() {
+            cmd.push("--enable-preview".to_string());
+        }
+
+        cmd.push("Main.java".to_string());
     }
 
-    cmd.push("src/Main.java");
     cmd
-
-}
-
-fn set_execution_environment(
-    cmd: &mut Command,
-    target: Option<CompileTarget>,
-    req: impl CrateTypeRequest + ReleaseRequest,
-) {
-    use self::CompileTarget::*;
-
-    if let Some(Wasm) = target {
-        cmd.args(&["--env", "PLAYGROUND_NO_DEPENDENCIES=true"]);
-        cmd.args(&["--env", "PLAYGROUND_RELEASE_LTO=true"]);
-    }
-
-    cmd.apply_crate_type(&req);
 }
 
 pub struct Sandbox {
@@ -224,126 +217,13 @@ impl Sandbox {
         })
     }
 
-    pub async fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
-        self.write_source_code(&req.code).await?;
-
-        let command = self.compile_command(req.target, req.release.unwrap_or(req.runtime.default_release()), req.runtime, req.tests, req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        // The compiler writes the file to a name like
-        // `compilation-3b75174cac3d47fb.ll`, so we just find the
-        // first with the right extension.
-        async fn path_to_first_file_with_extension(
-            dir: &Path,
-            extension: &OsStr,
-        ) -> Result<Option<PathBuf>> {
-            let mut files = fs::read_dir(dir).await.context(UnableToReadOutputSnafu)?;
-
-            while let Some(entry) = files.next_entry().await.transpose() {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.extension() == Some(extension) {
-                        return Ok(Some(path));
-                    }
-                }
-            }
-
-            Ok(None)
-        }
-
-        let file =
-            path_to_first_file_with_extension(&self.output_dir, req.target.extension()).await?;
-        let stdout = vec_to_str(output.stdout)?;
-        let mut stderr = vec_to_str(output.stderr)?;
-
-        let mut code = match file {
-            Some(file) => read(&file).await?.unwrap_or_default(),
-            None => {
-                // If we didn't find the file, it's *most* likely that
-                // the user's code was invalid. Tack on our own error
-                // to the compiler's error instead of failing the
-                // request.
-                use std::fmt::Write;
-                write!(
-                    &mut stderr,
-                    "\nUnable to locate file for {} output",
-                    req.target
-                )
-                .expect("Unable to write to a string");
-                String::new()
-            }
-        };
-
-        if let CompileTarget::Assembly(_, demangle, process) = req.target {
-            if demangle == DemangleAssembly::Demangle {
-                code = asm_cleanup::demangle_asm(&code);
-            }
-
-            if process == ProcessAssembly::Filter {
-                code = asm_cleanup::filter_asm(&code);
-            }
-        } else if CompileTarget::Hir == req.target {
-            // TODO: Run rustfmt on the generated HIR.
-        }
-
-        Ok(CompileResponse {
-            success: output.status.success(),
-            code,
-            stdout,
-            stderr,
-        })
-    }
-
     pub async fn execute(&self, req: &ExecuteRequest) -> Result<ExecuteResponse> {
         self.write_source_code(&req.code).await?;
-        let command = self.execute_command(req.release.unwrap_or(req.runtime.default_release()), req.runtime, req.tests, req);
+        let command = self.execute_command(req);
 
         let output = run_command_with_timeout(command).await?;
 
         Ok(ExecuteResponse {
-            success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
-    pub async fn format(&self, req: &FormatRequest) -> Result<FormatResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.format_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(FormatResponse {
-            success: output.status.success(),
-            code: read(self.input_file.as_ref())
-                .await?
-                .context(OutputMissingSnafu)?,
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
-    pub async fn clippy(&self, req: &ClippyRequest) -> Result<ClippyResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.clippy_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(ClippyResponse {
-            success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
-        })
-    }
-
-    pub async fn miri(&self, req: &MiriRequest) -> Result<MiriResponse> {
-        self.write_source_code(&req.code).await?;
-        let command = self.miri_command(req);
-
-        let output = run_command_with_timeout(command).await?;
-
-        Ok(MiriResponse {
             success: output.status.success(),
             stdout: vec_to_str(output.stdout)?,
             stderr: vec_to_str(output.stderr)?,
@@ -370,14 +250,15 @@ impl Sandbox {
     pub async fn version(&self, runtime: Runtime) -> Result<Version> {
         let mut command = basic_secure_docker_command();
         command.args(&[runtime.container_name()]);
+        println!("Getting version for {:?} - {}", runtime, runtime.container_name());
         command.args(&["java", "--version"]);
-
 
         let output = run_command_with_timeout(command).await?;
 
         let version_output = vec_to_str(output.stdout)?;
 
-        let version = version_output.lines()
+        let version = version_output
+            .lines()
             .take(1)
             .fold(String::new(), |a, b| a + " " + b);
 
@@ -385,43 +266,6 @@ impl Sandbox {
             release: version.trim().to_string(),
             commit_hash: version.trim().to_string(),
             commit_date: version.trim().to_string(),
-        })
-    }
-
-    pub async fn version_rustfmt(&self) -> Result<Version> {
-        let mut command = basic_secure_docker_command();
-        command.args(&["rustfmt", "cargo", "fmt", "--version"]);
-        self.cargo_tool_version(command).await
-    }
-
-    pub async fn version_clippy(&self) -> Result<Version> {
-        let mut command = basic_secure_docker_command();
-        command.args(&["clippy", "cargo", "clippy", "--version"]);
-        self.cargo_tool_version(command).await
-    }
-
-    pub async fn version_miri(&self) -> Result<Version> {
-        let mut command = basic_secure_docker_command();
-        command.args(&["miri", "cargo", "miri", "--version"]);
-        self.cargo_tool_version(command).await
-    }
-
-
-
-    // Parses versions of the shape `toolname 0.0.0 (0000000 0000-00-00)`
-    async fn cargo_tool_version(&self, command: Command) -> Result<Version> {
-        let output = run_command_with_timeout(command).await?;
-        let version_output = vec_to_str(output.stdout)?;
-        let mut parts = version_output.split_whitespace().fuse().skip(1);
-
-        let release = parts.next().unwrap_or("").into();
-        let commit_hash = parts.next().unwrap_or("").trim_start_matches('(').into();
-        let commit_date = parts.next().unwrap_or("").trim_end_matches(')').into();
-
-        Ok(Version {
-            release,
-            commit_hash,
-            commit_date,
         })
     }
 
@@ -441,100 +285,29 @@ impl Sandbox {
         Ok(())
     }
 
-    fn compile_command(
-        &self,
-        target: CompileTarget,
-        release: Release,
-        runtime: Runtime,
-        tests: bool,
-        req: impl CrateTypeRequest + ReleaseRequest + PreviewRequest,
-    ) -> Command {
-        let mut cmd = self.docker_command(Some(req.crate_type()));
-        set_execution_environment(&mut cmd, Some(target), &req);
-        let execution_cmd = build_execution_command(
-            Some(target),
-            release,
-            runtime,
-            &req,
-            tests,
-
-            req.preview()
-        );
-
-        cmd.arg(&runtime.container_name()).args(&execution_cmd);
-
-        debug!("Compilation command is {:?}", cmd);
-
-        cmd
-    }
-
     fn execute_command(
         &self,
-        release: Release,
-        runtime: Runtime,
-        tests: bool,
-        req: impl CrateTypeRequest + ReleaseRequest + PreviewRequest,
+        req: impl ActionRequest + ReleaseRequest + PreviewRequest + RuntimeRequest,
     ) -> Command {
-        let mut cmd = self.docker_command(Some(req.crate_type()));
-        set_execution_environment(&mut cmd, None, &req);
+        let mut cmd = self.docker_command(Some(req.action()));
 
-        let execution_cmd = build_execution_command(
-            None,
-            release,
-            runtime,
-            &req,
-            tests,
-        req.preview()
-        );
+        let execution_cmd = build_execution_command(&req);
 
-        cmd.arg(&runtime.container_name()).args(&execution_cmd);
+        cmd.arg(&req.runtime().container_name())
+            .args(&execution_cmd);
 
         debug!("Execution command is {:?}", cmd);
 
         cmd
     }
 
-    fn format_command(&self, req: impl ReleaseRequest) -> Command {
-        let crate_type = CrateType::Binary;
-
-        let mut cmd = self.docker_command(Some(crate_type));
-
-        cmd.arg("rustfmt").args(&["cargo", "fmt"]);
-
-        debug!("Formatting command is {:?}", cmd);
-
-        cmd
-    }
-
-    fn clippy_command(&self, req: impl CrateTypeRequest + ReleaseRequest) -> Command {
-        let mut cmd = self.docker_command(Some(req.crate_type()));
-
-        cmd.apply_crate_type(&req);
-
-        cmd.arg("clippy").args(&["cargo", "clippy"]);
-
-        debug!("Clippy command is {:?}", cmd);
-
-        cmd
-    }
-
-    fn miri_command(&self, req: impl ReleaseRequest) -> Command {
-        let mut cmd = self.docker_command(None);
-
-        cmd.arg("miri").args(&["cargo", "miri-playground"]);
-
-        debug!("Miri command is {:?}", cmd);
-
-        cmd
-    }
-
-    fn docker_command(&self, crate_type: Option<CrateType>) -> Command {
-        let crate_type = crate_type.unwrap_or(CrateType::Binary);
+    fn docker_command(&self, action: Option<Action>) -> Command {
+        let action = action.unwrap_or(Run);
 
         let mut mount_input_file = self.input_file.as_os_str().to_os_string();
         mount_input_file.push(":");
         mount_input_file.push("/playground/");
-        mount_input_file.push(crate_type.file_name());
+        mount_input_file.push(action.file_name());
 
         let mut mount_output_dir = self.output_dir.as_os_str().to_os_string();
         mount_output_dir.push(":");
@@ -553,6 +326,8 @@ impl Sandbox {
 
 async fn run_command_with_timeout(mut command: Command) -> Result<std::process::Output> {
     use std::os::unix::process::ExitStatusExt;
+
+    let now = std::time::Instant::now();
 
     let timeout = DOCKER_PROCESS_TIMEOUT_HARD;
 
@@ -613,88 +388,26 @@ async fn run_command_with_timeout(mut command: Command) -> Result<std::process::
 
     let code = timed_out.context(CompilerExecutionTimedOutSnafu { timeout })?;
 
+
+
     output.status = code;
 
     Ok(output)
 }
 
-async fn read(path: &Path) -> Result<Option<String>> {
-    match fs::read_to_string(path).await {
-        Ok(s) => Ok(Some(s)),
-        Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(e).context(UnableToReadOutputSnafu),
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AssemblyFlavor {
-    Att,
-    Intel,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum DemangleAssembly {
-    Demangle,
-    Mangle,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ProcessAssembly {
-    Filter,
-    Raw,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum CompileTarget {
-    Assembly(AssemblyFlavor, DemangleAssembly, ProcessAssembly),
-    LlvmIr,
-    Mir,
-    Hir,
-    Wasm,
-}
-
-impl CompileTarget {
-    fn extension(&self) -> &'static OsStr {
-        let ext = match *self {
-            CompileTarget::Assembly(_, _, _) => "s",
-            CompileTarget::LlvmIr => "ll",
-            CompileTarget::Mir => "mir",
-            CompileTarget::Hir => "hir",
-            CompileTarget::Wasm => "wat",
-        };
-        OsStr::new(ext)
-    }
-}
-
-impl fmt::Display for CompileTarget {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use self::CompileTarget::*;
-
-        match *self {
-            Assembly(_, _, _) => "assembly".fmt(f),
-            LlvmIr => "LLVM IR".fmt(f),
-            Mir => "Rust MIR".fmt(f),
-            Hir => "Rust HIR".fmt(f),
-            Wasm => "WebAssembly".fmt(f),
-        }
-    }
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
 pub enum Runtime {
     Latest,
-    Valhalla
+    Valhalla,
+    EarlyAccess
 }
 
 impl Runtime {
-    pub fn latest() -> Runtime {
-        Runtime::Latest
-    }
-
     fn default_release(&self) -> Release {
         match *self {
             Runtime::Latest => Release::_21,
             Runtime::Valhalla => Release::_20,
+            Runtime::EarlyAccess => Release::_21
         }
     }
 
@@ -702,8 +415,9 @@ impl Runtime {
         use self::Runtime::*;
 
         match *self {
-            Latest => "amazoncorretto:21",
-            Valhalla => "shipilev/openjdk:valhalla"
+            Latest => "javaplayground/latest",
+            Valhalla => "javaplayground/valhalla",
+            EarlyAccess => "javaplayground/early_access",
         }
     }
 }
@@ -724,6 +438,7 @@ pub enum Release {
     _19,
     _20,
     _21,
+    _22
 }
 
 impl Release {
@@ -744,85 +459,43 @@ impl Release {
             _18 => "18",
             _19 => "19",
             _20 => "20",
-            _21 => "21"
+            _21 => "21",
+            _22 => "22",
         }
     }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum CrateType {
-    Binary,
-    Library(LibraryType),
+pub enum Action {
+    Run,
+    Build,
 }
 
-impl CrateType {
+impl Action {
     fn file_name(&self) -> &'static str {
-        use self::CrateType::*;
-
-        match *self {
-            Binary => "src/Main.java",
-            Library(_) => "src/Main.java",
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::IntoStaticStr)]
-pub enum LibraryType {
-    Lib,
-    Dylib,
-    Rlib,
-    Staticlib,
-    Cdylib,
-    ProcMacro,
-}
-
-impl LibraryType {
-    fn cargo_ident(&self) -> &'static str {
-        use self::LibraryType::*;
-
-        match *self {
-            Lib => "lib",
-            Dylib => "dylib",
-            Rlib => "rlib",
-            Staticlib => "staticlib",
-            Cdylib => "cdylib",
-            ProcMacro => "proc-macro",
-        }
+        "Main.java"
     }
 }
 
 trait DockerCommandExt {
-    fn apply_crate_type(&mut self, req: impl CrateTypeRequest);
     fn apply_release(&mut self, req: impl ReleaseRequest);
 }
 
 impl DockerCommandExt for Command {
-    fn apply_crate_type(&mut self, req: impl CrateTypeRequest) {
-        if let CrateType::Library(lib) = req.crate_type() {
-            self.args(&[
-                "--env",
-                &format!("PLAYGROUND_CRATE_TYPE={}", lib.cargo_ident()),
-            ]);
-        }
-    }
-
     fn apply_release(&mut self, req: impl ReleaseRequest) {
         if let Some(release) = req.release() {
-            self.args(&[
-                "--release",
-                release.java_release()
-            ]);
+            self.args(&["--release", release.java_release()]);
         }
     }
 }
 
-trait CrateTypeRequest {
-    fn crate_type(&self) -> CrateType;
+trait ActionRequest {
+    fn action(&self) -> Action;
 }
 
-impl<R: CrateTypeRequest> CrateTypeRequest for &'_ R {
-    fn crate_type(&self) -> CrateType {
-        (*self).crate_type()
+impl<R: ActionRequest> ActionRequest for &'_ R {
+    fn action(&self) -> Action {
+        (*self).action()
     }
 }
 
@@ -846,20 +519,28 @@ impl<R: PreviewRequest> PreviewRequest for &'_ R {
     }
 }
 
+trait RuntimeRequest {
+    fn runtime(&self) -> Runtime;
+}
+
+impl<R: RuntimeRequest> RuntimeRequest for &'_ R {
+    fn runtime(&self) -> Runtime {
+        (*self).runtime()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CompileRequest {
-    pub target: CompileTarget,
     pub runtime: Runtime,
-    pub crate_type: CrateType,
+    pub action: Action,
     pub release: Option<Release>,
-    pub tests: bool,
     pub preview: bool,
     pub code: String,
 }
 
-impl CrateTypeRequest for CompileRequest {
-    fn crate_type(&self) -> CrateType {
-        self.crate_type
+impl ActionRequest for CompileRequest {
+    fn action(&self) -> Action {
+        self.action
     }
 }
 
@@ -875,6 +556,12 @@ impl PreviewRequest for CompileRequest {
     }
 }
 
+impl RuntimeRequest for CompileRequest {
+    fn runtime(&self) -> Runtime {
+        self.runtime
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CompileResponse {
     pub success: bool,
@@ -887,15 +574,14 @@ pub struct CompileResponse {
 pub struct ExecuteRequest {
     pub runtime: Runtime,
     pub release: Option<Release>,
-    pub crate_type: CrateType,
-    pub tests: bool,
+    pub action: Action,
     pub preview: bool,
     pub code: String,
 }
 
-impl CrateTypeRequest for ExecuteRequest {
-    fn crate_type(&self) -> CrateType {
-        self.crate_type
+impl ActionRequest for ExecuteRequest {
+    fn action(&self) -> Action {
+        self.action
     }
 }
 
@@ -911,80 +597,14 @@ impl PreviewRequest for ExecuteRequest {
     }
 }
 
+impl RuntimeRequest for ExecuteRequest {
+    fn runtime(&self) -> Runtime {
+        self.runtime
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ExecuteResponse {
-    pub success: bool,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct FormatRequest {
-    pub code: String,
-    pub release: Option<Release>,
-}
-
-impl ReleaseRequest for FormatRequest {
-    fn release(&self) -> Option<Release> {
-        self.release
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct FormatResponse {
-    pub success: bool,
-    pub code: String,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct ClippyRequest {
-    pub code: String,
-    pub release: Option<Release>,
-    pub crate_type: CrateType,
-}
-
-impl CrateTypeRequest for ClippyRequest {
-    fn crate_type(&self) -> CrateType {
-        self.crate_type
-    }
-}
-
-impl ReleaseRequest for ClippyRequest {
-    fn release(&self) -> Option<Release> {
-        self.release
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ClippyResponse {
-    pub success: bool,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct MiriRequest {
-    pub code: String,
-    pub release: Option<Release>,
-}
-
-impl ReleaseRequest for MiriRequest {
-    fn release(&self) -> Option<Release> {
-        self.release
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct MiriResponse {
-    pub success: bool,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct MacroExpansionResponse {
     pub success: bool,
     pub stdout: String,
     pub stderr: String,
@@ -993,6 +613,7 @@ pub struct MacroExpansionResponse {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::sandbox::Error::CompilerExecutionTimedOut;
 
     // Running the tests completely in parallel causes spurious
     // failures due to my resource-limited Docker
@@ -1011,9 +632,10 @@ mod test {
     }
 
     const HELLO_WORLD_CODE: &'static str = r#"
-    public class HelloWorld {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
+    public class Main {
+      public static void main(String[] args) {
+        System.out.println("Hello, world!");
+      }
     }
 }
     "#;
@@ -1021,9 +643,8 @@ mod test {
     impl Default for ExecuteRequest {
         fn default() -> Self {
             ExecuteRequest {
-                runtime: Runtime::latest(),
-                crate_type: CrateType::Binary,
-                tests: false,
+                runtime: Runtime::Latest,
+                action: Action::Run,
                 code: HELLO_WORLD_CODE.to_string(),
                 release: None,
                 preview: false,
@@ -1034,23 +655,11 @@ mod test {
     impl Default for CompileRequest {
         fn default() -> Self {
             CompileRequest {
-                target: CompileTarget::LlvmIr,
-                runtime: Runtime::latest(),
-                crate_type: CrateType::Binary,
-                tests: false,
+                runtime: Runtime::Latest,
+                action: Action::Run,
                 code: HELLO_WORLD_CODE.to_string(),
                 release: None,
                 preview: false,
-            }
-        }
-    }
-
-    impl Default for ClippyRequest {
-        fn default() -> Self {
-            ClippyRequest {
-                code: HELLO_WORLD_CODE.to_string(),
-                crate_type: CrateType::Binary,
-                release: None,
             }
         }
     }
@@ -1066,456 +675,20 @@ mod test {
         assert!(resp.stdout.contains("Hello, world!"));
     }
 
-    const COMPILATION_MODE_CODE: &'static str = r#"
-    #[cfg(debug_assertions)]
-    fn main() {
-        println!("Compiling in debug mode");
-    }
-
-    #[cfg(not(debug_assertions))]
-    fn main() {
-        println!("Compiling in release mode");
-    }
-    "#;
-
-    #[tokio::test]
-    async fn debug_mode() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            code: COMPILATION_MODE_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("debug mode"));
-    }
-
-    #[tokio::test]
-    async fn release_mode() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            code: COMPILATION_MODE_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("release mode"));
-    }
-
-    static VERSION_CODE: &'static str = r#"
-    use std::process::Command;
-
-    fn main() {
-        let output = Command::new("rustc").arg("--version").output().unwrap();
-        let output = String::from_utf8(output.stdout).unwrap();
-        println!("{}", output);
-    }
-    "#;
-
-    #[tokio::test]
-    async fn stable_runtime() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: VERSION_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("rustc"));
-        assert!(!resp.stdout.contains("beta"));
-        assert!(!resp.stdout.contains("nightly"));
-    }
-
-    #[tokio::test]
-    async fn beta_runtime() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: VERSION_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("rustc"));
-        assert!(resp.stdout.contains("beta"));
-        assert!(!resp.stdout.contains("nightly"));
-    }
-
-    #[tokio::test]
-    async fn nightly_runtime() {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: VERSION_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
-
-        assert!(resp.stdout.contains("rustc"));
-        assert!(!resp.stdout.contains("beta"));
-        assert!(resp.stdout.contains("nightly"));
-    }
-
-    // Code that will only work in Rust 2015
-    const EDITION_CODE: &str = r#"
-    fn main() {
-        let async = true;
-    }
-    "#;
-
-    const EDITION_ERROR: &str = "found keyword `async`";
-
-    #[tokio::test]
-    async fn rust_release_default() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: EDITION_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let resp = Sandbox::new().await?.execute(&req).await?;
-
-        assert!(!resp.stderr.contains(EDITION_ERROR), "was: {}", resp.stderr);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn rust_release_2015() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: EDITION_CODE.to_string(),
-            release: Some(Release::Rust2015),
-            ..ExecuteRequest::default()
-        };
-
-        let resp = Sandbox::new().await?.execute(&req).await?;
-
-        assert!(!resp.stderr.contains(EDITION_ERROR), "was: {}", resp.stderr);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn rust_release_2018() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            runtime: Runtime::latest(),
-            code: EDITION_CODE.to_string(),
-            release: Some(Release::Rust2018),
-            ..ExecuteRequest::default()
-        };
-
-        let resp = Sandbox::new().await?.execute(&req).await?;
-
-        assert!(resp.stderr.contains(EDITION_ERROR), "was: {}", resp.stderr);
-        Ok(())
-    }
-
-    const BACKTRACE_CODE: &str = r#"
-    fn trigger_the_problem() {
-        None::<u8>.unwrap();
-    }
-
-    fn main() {
-        trigger_the_problem()
-    }
-    "#;
-
-    const BACKTRACE_NOTE: &str =
-        "run with `RUST_BACKTRACE=1` environment variable to display a backtrace";
-
-    #[tokio::test]
-    async fn backtrace_disabled() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            code: BACKTRACE_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await?;
-        let resp = sb.execute(&req).await?;
-
-        assert!(resp.stderr.contains(BACKTRACE_NOTE), "Was: {}", resp.stderr);
-        assert!(
-            !resp.stderr.contains("stack backtrace:"),
-            "Was: {}",
-            resp.stderr
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn backtrace_enabled() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = ExecuteRequest {
-            code: BACKTRACE_CODE.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await?;
-        let resp = sb.execute(&req).await?;
-
-        assert!(
-            !resp.stderr.contains(BACKTRACE_NOTE),
-            "Was: {}",
-            resp.stderr
-        );
-        assert!(
-            resp.stderr.contains("stack backtrace:"),
-            "Was: {}",
-            resp.stderr
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn output_llvm_ir() {
-        let _singleton = one_test_at_a_time();
-        let req = CompileRequest {
-            target: CompileTarget::LlvmIr,
-            ..CompileRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.compile(&req).await.expect("Unable to compile code");
-
-        assert!(resp.code.contains("ModuleID"));
-        assert!(resp.code.contains("target datalayout"));
-        assert!(resp.code.contains("target triple"));
-    }
-
-    #[tokio::test]
-    async fn output_assembly() {
-        let _singleton = one_test_at_a_time();
-        let req = CompileRequest {
-            target: CompileTarget::Assembly(
-                AssemblyFlavor::Att,
-                DemangleAssembly::Mangle,
-                ProcessAssembly::Raw,
-            ),
-            ..CompileRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.compile(&req).await.expect("Unable to compile code");
-
-        assert!(resp.code.contains(".text"));
-        assert!(resp.code.contains(".file"));
-        assert!(resp.code.contains(".section"));
-        assert!(resp.code.contains(".p2align"));
-    }
-
-    #[tokio::test]
-    async fn output_demangled_assembly() {
-        let _singleton = one_test_at_a_time();
-        let req = CompileRequest {
-            target: CompileTarget::Assembly(
-                AssemblyFlavor::Att,
-                DemangleAssembly::Demangle,
-                ProcessAssembly::Raw,
-            ),
-            ..CompileRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.compile(&req).await.expect("Unable to compile code");
-
-        assert!(resp.code.contains("core::fmt::Arguments::new_const"));
-        assert!(resp.code.contains("std::io::stdio::_print@GOTPCREL"));
-    }
-
-    #[tokio::test]
-    #[should_panic]
-    async fn output_filtered_assembly() {
-        let _singleton = one_test_at_a_time();
-        let req = CompileRequest {
-            target: CompileTarget::Assembly(
-                AssemblyFlavor::Att,
-                DemangleAssembly::Mangle,
-                ProcessAssembly::Filter,
-            ),
-            ..CompileRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.compile(&req).await.expect("Unable to compile code");
-
-        assert!(resp.code.contains(".text"));
-        assert!(resp.code.contains(".file"));
-    }
-
-    #[tokio::test]
-    async fn formatting_code() {
-        let _singleton = one_test_at_a_time();
-        let req = FormatRequest {
-            code: "fn foo () { method_call(); }".to_string(),
-            release: None,
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.format(&req).await.expect("Unable to format code");
-
-        let lines: Vec<_> = resp.code.lines().collect();
-
-        assert_eq!(lines[0], "fn foo() {");
-        assert_eq!(lines[1], "    method_call();");
-        assert_eq!(lines[2], "}");
-    }
-
-    // Code that is only syntactically valid in Rust 2018
-    const FORMAT_IN_EDITION_2018: &str = r#"fn main() { use std::num::ParseIntError; let result: Result<i32, ParseIntError> = try { "1".parse::<i32>()? + "2".parse::<i32>()? + "3".parse::<i32>()? }; assert_eq!(result, Ok(6)); }"#;
-
-    const FORMAT_ERROR: &str = r#"error: expected identifier, found `"1"`"#;
-
-    #[tokio::test]
-    async fn formatting_code_release_2015() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = FormatRequest {
-            code: FORMAT_IN_EDITION_2018.to_string(),
-            release: Some(Release::Rust2015),
-        };
-
-        let resp = Sandbox::new().await?.format(&req).await?;
-
-        assert!(resp.stderr.contains(FORMAT_ERROR));
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn formatting_code_release_2018() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let req = FormatRequest {
-            code: FORMAT_IN_EDITION_2018.to_string(),
-            release: Some(Release::Rust2018),
-        };
-
-        let resp = Sandbox::new().await?.format(&req).await?;
-        assert!(!resp.stderr.contains(FORMAT_ERROR));
-
-        let lines: Vec<_> = resp.code.lines().collect();
-        assert_eq!(lines[0], r#"fn main() {"#);
-        assert_eq!(lines[1], r#"    use std::num::ParseIntError;"#);
-        assert_eq!(lines[2], r#"    let result: Result<i32, ParseIntError> ="#);
-        assert_eq!(
-            lines[3],
-            r#"        try { "1".parse::<i32>()? + "2".parse::<i32>()? + "3".parse::<i32>()? };"#
-        );
-        assert_eq!(lines[4], r#"    assert_eq!(result, Ok(6));"#);
-        assert_eq!(lines[5], r#"}"#);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn linting_code() {
-        let _singleton = one_test_at_a_time();
-        let code = r#"
-        fn main() {
-            let a = 0.0 / 0.0;
-            println!("NaN is {}", a);
-        }
-        "#;
-
-        let req = ClippyRequest {
-            code: code.to_string(),
-            ..ClippyRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.clippy(&req).await.expect("Unable to lint code");
-
-        assert!(resp.stderr.contains("deny(clippy::eq_op)"));
-        assert!(resp.stderr.contains("warn(clippy::zero_divided_by_zero)"));
-    }
-
-    #[tokio::test]
-    async fn linting_code_options() {
-        let _singleton = one_test_at_a_time();
-        let code = r#"
-        use itertools::Itertools; // Release 2018 feature
-
-        fn example() {
-            let a = 0.0 / 0.0;
-            println!("NaN is {}", a);
-        }
-        "#;
-
-        let req = ClippyRequest {
-            code: code.to_string(),
-            crate_type: CrateType::Library(LibraryType::Rlib),
-            release: Some(Release::Rust2018),
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.clippy(&req).await.expect("Unable to lint code");
-
-        assert!(resp.stderr.contains("deny(clippy::eq_op)"));
-        assert!(resp.stderr.contains("warn(clippy::zero_divided_by_zero)"));
-    }
-
-    #[tokio::test]
-    async fn interpreting_code() -> Result<()> {
-        let _singleton = one_test_at_a_time();
-        let code = r#"
-        fn main() {
-            let mut a: [u8; 0] = [];
-            unsafe { *a.get_unchecked_mut(1) = 1; }
-        }
-        "#;
-
-        let req = MiriRequest {
-            code: code.to_string(),
-            release: None,
-        };
-
-        let sb = Sandbox::new().await?;
-        let resp = sb.miri(&req).await?;
-
-        assert!(
-            resp.stderr.contains("Undefined Behavior"),
-            "was: {}",
-            resp.stderr
-        );
-        assert!(
-            resp.stderr.contains("pointer to 1 byte"),
-            "was: {}",
-            resp.stderr
-        );
-        assert!(
-            resp.stderr.contains("starting at offset 0"),
-            "was: {}",
-            resp.stderr
-        );
-        assert!(
-            resp.stderr.contains("is out-of-bounds"),
-            "was: {}",
-            resp.stderr
-        );
-        assert!(resp.stderr.contains("has size 0"), "was: {}", resp.stderr);
-        Ok(())
-    }
-
     #[tokio::test]
     async fn network_connections_are_disabled() {
         let _singleton = one_test_at_a_time();
         let code = r#"
-            fn main() {
-                match ::std::net::TcpStream::connect("google.com:80") {
-                    Ok(_) => println!("Able to connect to the outside world"),
-                    Err(e) => println!("Failed to connect {}, {:?}", e, e),
+            import java.net.URL;
+
+            public class Main {
+                public static void main(String[] args) {
+                   try {
+                       new URL("https://google.com:443").openStream().readAllBytes();
+                       System.out.println("Able to connect to the outside world");
+                   } catch (Exception e) {
+                      System.out.println("Failed to connect " + e);
+                   }
                 }
             }
         "#;
@@ -1527,7 +700,6 @@ mod test {
 
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
         let resp = sb.execute(&req).await.expect("Unable to execute code");
-
         assert!(resp.stdout.contains("Failed to connect"));
     }
 
@@ -1535,10 +707,12 @@ mod test {
     async fn memory_usage_is_limited() {
         let _singleton = one_test_at_a_time();
         let code = r#"
-            fn main() {
-                let gigabyte = 1024 * 1024 * 1024;
-                let mut big = vec![0u8; 1 * gigabyte];
-                for i in &mut big { *i += 1; }
+            public class Main {
+                public static void main(String[] args) {
+                   int gigabyte = 1024 * 1024 * 1024;
+                   var big = new int[gigabyte];
+                   for (int i = 0; i < big.length; i++) { big[i] = big[i] + 1; }
+                }
             }
         "#;
 
@@ -1550,101 +724,92 @@ mod test {
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
         let resp = sb.execute(&req).await.expect("Unable to execute code");
 
-        assert!(resp.stderr.contains("Killed"), "was: {}", resp.stderr);
+        assert!(
+            resp.stderr.contains("java.lang.OutOfMemoryError"),
+            "was: {}",
+            resp.stderr
+        );
+    }
+
+    #[tokio::test]
+    async fn memory_usage_is_limited_even_with_bytebuffer() {
+        let _singleton = one_test_at_a_time();
+        let code = r#"
+            import java.nio.ByteBuffer;
+            public class Main {
+                public static void main(String[] args) {
+                   int gigabyte = 1024 * 1024 * 1024;
+                   var byteBuffer = ByteBuffer.allocate(gigabyte);
+                }
+            }
+        "#;
+
+        let req = ExecuteRequest {
+            code: code.to_string(),
+            ..ExecuteRequest::default()
+        };
+
+        let sb = Sandbox::new().await.expect("Unable to create sandbox");
+        let resp = sb.execute(&req).await.expect("Unable to execute code");
+
+        assert!(
+            resp.stderr.contains("java.lang.OutOfMemoryError"),
+            "was: {}",
+            resp.stderr
+        );
     }
 
     #[tokio::test]
     async fn wallclock_time_is_limited() {
         let _singleton = one_test_at_a_time();
         let code = r#"
-            fn main() {
-                let a_long_time = std::time::Duration::from_secs(20);
-                std::thread::sleep(a_long_time);
+            public class Main {
+                public static void main(String[] args) throws Exception {
+                    Thread.sleep(20000000);
+                }
             }
         "#;
 
+        println!("A");
         let req = ExecuteRequest {
             code: code.to_string(),
             ..ExecuteRequest::default()
         };
 
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        let resp = sb.execute(&req).await.expect("Unable to execute code");
+        let resp = sb.execute(&req).await;
 
-        assert!(resp.stderr.contains("Killed"), "was: {}", resp.stderr);
-    }
-
-    #[tokio::test]
-    async fn wallclock_time_is_limited_from_outside() {
-        let _singleton = one_test_at_a_time();
-        let code = r##"
-            use std::{process::Command, thread, time::Duration};
-
-            fn main() {
-                let output = Command::new("pgrep").args(&["timeout"]).output().unwrap();
-                assert!(output.status.success());
-
-                let out = String::from_utf8(output.stdout).expect("Unable to parse output");
-                let timeout_pid: u32 = out.trim().parse().expect("Unable to find timeout PID");
-
-                let output = Command::new("sh")
-                    .args(&["-c", &format!("kill -s STOP {}", timeout_pid)])
-                    .output()
-                    .unwrap();
-                assert!(output.status.success());
-
-                for _ in 0.. {
-                    thread::sleep(Duration::from_secs(1));
-                }
+        assert!(match resp {
+            Err(CompilerExecutionTimedOut {
+                timeout: DOCKER_PROCESS_TIMEOUT_HARD,
+                ..
+            }) => {
+                true
             }
-        "##;
-
-        async fn docker_process_count() -> usize {
-            let mut cmd = docker_command!("ps", "-a");
-            let output = cmd.output().await.expect("Unable to get process count");
-            let output = String::from_utf8_lossy(&output.stdout);
-            // Skip one line of header
-            output.lines().skip(1).count()
-        }
-
-        assert_eq!(
-            0,
-            docker_process_count().await,
-            "There must be no running docker processes"
-        );
-
-        let req = ExecuteRequest {
-            code: code.to_string(),
-            ..ExecuteRequest::default()
-        };
-
-        let sb = Sandbox::new().await.expect("Unable to create sandbox");
-        match sb.execute(&req).await {
-            Ok(_) => panic!("Expected an error"),
-            Err(Error::CompilerExecutionTimedOut { .. }) => { /* Ok */ }
-            Err(e) => panic!("Got the wrong error: {}", e),
-        }
-
-        assert_eq!(
-            0,
-            docker_process_count().await,
-            "A docker process continues to run"
-        );
+            Ok(_) | Err(_) => {
+                false
+            }
+        });
     }
 
     #[tokio::test]
     async fn number_of_pids_is_limited() {
         let _singleton = one_test_at_a_time();
         let forkbomb = r##"
-            fn main() {
-                ::std::process::Command::new("sh").arg("-c").arg(r#"
-                    z() {
-                        z&
-                        z
-                    }
-                    z
-                "#).status().unwrap();
-            }
+import java.util.List;
+public class Main {
+  public static void main(String[] args) throws Exception {
+    new ProcessBuilder(List.of(
+		"sh",
+        "-c",
+        "z() {\n" +
+                   "     z&\n" +
+                   "     z\n" +
+                   " }\n" +
+                   " z"
+    )).start().waitFor();
+  }
+}
         "##;
 
         let req = ExecuteRequest {
@@ -1655,6 +820,6 @@ mod test {
         let sb = Sandbox::new().await.expect("Unable to create sandbox");
         let resp = sb.execute(&req).await.expect("Unable to execute code");
 
-        assert!(resp.stderr.contains("Cannot fork"));
+        assert!(resp.stderr.contains("unable to create native thread: possibly out of memory or process/resource limits reached"));
     }
 }

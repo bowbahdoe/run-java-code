@@ -1,7 +1,7 @@
 import fetch from 'isomorphic-fetch';
 import {AnyAction, ThunkAction as ReduxThunkAction} from '@reduxjs/toolkit';
 
-import {clippyRequestSelector, codeSelector, getCrateType,} from './selectors';
+import {clippyRequestSelector, codeSelector, getAction} from './selectors';
 import State from './state';
 import {
   AssemblyFlavor,
@@ -25,7 +25,7 @@ import {
   Version,
 } from './types';
 
-import {ExecuteRequestBody, performCommonExecute, wsExecuteRequest} from './reducers/output/execute';
+import { performCommonExecute, wsExecuteRequest} from './reducers/output/execute';
 import {performGistLoad} from './reducers/output/gist';
 
 export const routes = {
@@ -38,11 +38,9 @@ export const routes = {
   meta: {
     crates: '/meta/crates',
     version: {
-      rustfmt: '/meta/version/rustfmt',
-      clippy: '/meta/version/clippy',
-      miri: '/meta/version/miri',
       latest: '/meta/version/latest',
       valhalla: '/meta/version/valhalla',
+      earlyAccess: '/meta/version/early_access',
     },
     gistSave: '/meta/gist',
     gistLoad: '/meta/gist/id',
@@ -247,25 +245,15 @@ export const adaptFetchError = async <R>(cb: () => Promise<R>): Promise<R> => {
 function performAutoOnly(): ThunkAction {
   return function(dispatch, getState) {
     const state = getState();
-    const crateType = getCrateType(state);
-    // const tests = runAsTest(state);
+    const action = getAction(state);
 
-    return dispatch(performCommonExecute(crateType, false /* tests */));
+    return dispatch(performCommonExecute(action));
   };
 }
 
-const performExecuteOnly = (): ThunkAction => performCommonExecute('bin', false);
-const performCompileOnly = (): ThunkAction => performCommonExecute('lib', false);
-const performTestOnly = (): ThunkAction => performCommonExecute('lib', true);
+const performExecuteOnly = (): ThunkAction => performCommonExecute('run');
+const performCompileOnly = (): ThunkAction => performCommonExecute('build');
 
-interface CompileRequestBody extends ExecuteRequestBody {
-  target: string;
-  assemblyFlavor: string;
-  demangleAssembly: string;
-  processAssembly: string;
-}
-
-type CompileResponseBody = CompileSuccess;
 
 interface CompileSuccess {
   code: string;
@@ -277,48 +265,6 @@ interface CompileFailure {
   error: string;
 }
 
-function performCompileShow(
-  target: string,
-  { request, success, failure }: {
-    request: () => Action,
-    success: (body: CompileResponseBody) => Action,
-    failure: (f: CompileFailure) => Action,
-  }): ThunkAction {
-  // TODO: Check a cache
-  return function(dispatch, getState) {
-    dispatch(request());
-
-    const state = getState();
-    const code = codeSelector(state);
-    const { configuration: {
-      runtime,
-      release,
-      assemblyFlavor,
-      demangleAssembly,
-      processAssembly,
-    } } = state;
-    const crateType = getCrateType(state);
-    const tests = false; // runAsTest(state);
-    const preview = state.configuration.preview === Preview.Enabled;
-    const body: CompileRequestBody = {
-      runtime,
-      release,
-      crateType,
-      tests,
-      code,
-      target,
-      assemblyFlavor,
-      demangleAssembly,
-      processAssembly,
-      preview
-    };
-
-    return jsonPost<CompileResponseBody>(routes.compile, body)
-      .then(json => dispatch(success(json)))
-      .catch(json => dispatch(failure(json)));
-  };
-}
-
 const requestCompileAssembly = () =>
   createAction(ActionType.CompileAssemblyRequest);
 
@@ -327,13 +273,6 @@ const receiveCompileAssemblySuccess = ({ code, stdout, stderr }: CompileSuccess)
 
 const receiveCompileAssemblyFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileAssemblyFailed, { error });
-
-const performCompileToAssemblyOnly = () =>
-  performCompileShow('asm', {
-    request: requestCompileAssembly,
-    success: receiveCompileAssemblySuccess,
-    failure: receiveCompileAssemblyFailure,
-  });
 
 const requestCompileLlvmIr = () =>
   createAction(ActionType.CompileLlvmIrRequest);
@@ -344,13 +283,6 @@ const receiveCompileLlvmIrSuccess = ({ code, stdout, stderr }: CompileSuccess) =
 const receiveCompileLlvmIrFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileLlvmIrFailed, { error });
 
-const performCompileToLLVMOnly = () =>
-  performCompileShow('llvm-ir', {
-    request: requestCompileLlvmIr,
-    success: receiveCompileLlvmIrSuccess,
-    failure: receiveCompileLlvmIrFailure,
-  });
-
 const requestCompileHir = () =>
   createAction(ActionType.CompileHirRequest);
 
@@ -359,13 +291,6 @@ const receiveCompileHirSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
 
 const receiveCompileHirFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileHirFailed, { error });
-
-const performCompileToHirOnly = () =>
-  performCompileShow('hir', {
-    request: requestCompileHir,
-    success: receiveCompileHirSuccess,
-    failure: receiveCompileHirFailure,
-  });
 
 const requestCompileMir = () =>
   createAction(ActionType.CompileMirRequest);
@@ -376,13 +301,6 @@ const receiveCompileMirSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
 const receiveCompileMirFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileMirFailed, { error });
 
-const performCompileToMirOnly = () =>
-  performCompileShow('mir', {
-    request: requestCompileMir,
-    success: receiveCompileMirSuccess,
-    failure: receiveCompileMirFailure,
-  });
-
 const requestCompileWasm = () =>
   createAction(ActionType.CompileWasmRequest);
 
@@ -391,13 +309,6 @@ const receiveCompileWasmSuccess = ({ code, stdout, stderr }: CompileSuccess) =>
 
 const receiveCompileWasmFailure = ({ error }: CompileFailure) =>
   createAction(ActionType.CompileWasmFailed, { error });
-
-const performCompileToWasm = () =>
-  performCompileShow('wasm', {
-    request: requestCompileWasm,
-    success: receiveCompileWasmSuccess,
-    failure: receiveCompileWasmFailure,
-  });
 
 const PRIMARY_ACTIONS: { [index in PrimaryAction]: () => ThunkAction } = {
   [PrimaryActionCore.Compile]: performCompileOnly,
@@ -450,7 +361,7 @@ const requestClippy = () =>
 interface ClippyRequestBody {
   code: string;
   release: string;
-  crateType: string;
+  action: string;
 }
 
 interface ClippyResponseBody {
@@ -541,15 +452,13 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  latest, valhalla, rustfmt, clippy, miri,
+  latest, valhalla, earlyAccess
 }: {
   latest: Version,
   valhalla: Version,
-  rustfmt: Version,
-  clippy: Version,
-  miri: Version,
+  earlyAccess: Version
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { latest, valhalla, rustfmt, clippy, miri });
+  createAction(ActionType.VersionsLoadSucceeded, { latest, valhalla, earlyAccess });
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
@@ -557,19 +466,15 @@ export function performVersionsLoad(): ThunkAction {
 
     const latest = jsonGet(routes.meta.version.latest);
     const valhalla = jsonGet(routes.meta.version.valhalla);
-    const rustfmt = jsonGet(routes.meta.version.rustfmt);
-    const clippy = jsonGet(routes.meta.version.clippy);
-    const miri = jsonGet(routes.meta.version.miri);
+    const earlyAccess = jsonGet(routes.meta.version.earlyAccess);
 
-    const all = Promise.all([ latest, valhalla, rustfmt, clippy, miri]);
+    const all = Promise.all([ latest, valhalla, earlyAccess ]);
 
     return all
-      .then(([ latest, valhalla, rustfmt, clippy, miri]) => dispatch(receiveVersionsLoadSuccess({
+      .then(([ latest, valhalla, earlyAccess ]) => dispatch(receiveVersionsLoadSuccess({
         latest,
         valhalla,
-        rustfmt,
-        clippy,
-        miri,
+        earlyAccess
       })));
     // TODO: Failure case
   };
@@ -592,6 +497,8 @@ function parseRuntime(s?: string): Runtime | null {
       return Runtime.Latest
     case 'valhalla':
       return Runtime.Valhalla
+    case 'early_access':
+      return Runtime.EarlyAccess
     default:
       return null;
   }
@@ -627,6 +534,8 @@ function parseRelease(s?: string): Release | null {
       return Release.Java20;
     case '21':
       return Release.Java21;
+    case '22':
+      return Release.Java22;
     default:
       return null;
   }
@@ -634,9 +543,9 @@ function parseRelease(s?: string): Release | null {
 
 function parsePreview(s?: string): Preview | null {
   switch (s) {
-    case 'true':
+    case 'enabled':
       return Preview.Enabled;
-    case 'false':
+    case 'disabled':
       return Preview.Disabled;
     default:
       return null;
@@ -648,12 +557,12 @@ export function indexPageLoad({
   gist,
   runtime: runtimeString,
   release: releaseString,
-  preview: previewString
+  preview: previewString,
 }: { code?: string, gist?: string, runtime?: string, release?: string, preview?: string }): ThunkAction {
   return function(dispatch) {
     const runtime = parseRuntime(runtimeString) || Runtime.Latest;
-    let release = parseRelease(releaseString) || Release.Java21;
-    let preview = parsePreview(previewString) || Preview.Disabled;
+    const release = parseRelease(releaseString) || Release.Java21;
+    const preview = parsePreview(previewString) || Preview.Disabled;
 
     dispatch(navigateToIndex());
 
@@ -663,9 +572,9 @@ export function indexPageLoad({
       dispatch(performGistLoad({ id: gist, runtime, release, preview }));
     }
 
-    dispatch(changeRuntime(runtime));
     dispatch(changeRelease(release));
     dispatch(changePreview(preview));
+    dispatch(changeRuntime(runtime));
   };
 }
 

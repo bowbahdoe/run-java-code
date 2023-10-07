@@ -33,7 +33,7 @@ const stateSelector = ({ page, configuration: { runtime, release, preview }, out
   configuration: {
     runtime: runtime,
     release: release,
-    preview: preview
+    preview: preview,
   },
   output: {
     gist: {
@@ -61,7 +61,7 @@ const stateToLocation = ({ page, configuration, output }: Substate): Partial<Pat
       }
 
       if (configuration.preview === Preview.Enabled) {
-        query.preview = true;
+        query.preview = configuration.preview;
       }
 
       return {

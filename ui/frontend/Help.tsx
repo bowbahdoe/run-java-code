@@ -9,76 +9,31 @@ import styles from './Help.module.css';
 import integer32Logo from './assets/integer32-logo.svg';
 
 const ACE_URL = 'https://github.com/ajaxorg/ace';
-const CLIPPY_URL = 'https://github.com/Manishearth/rust-clippy';
-const MIRI_URL = 'https://github.com/rust-lang/miri';
-const CRATES_IO_URL = 'https://crates.io/';
+const MAVEN_CENTRAL_URL = 'https://central.sonatype.com/';
 const RUST_COOKBOOK_URL = 'https://rust-lang-nursery.github.io/rust-cookbook/';
 const CRATES_URL = 'https://github.com/rust-lang/rust-playground/blob/main/compiler/base/Cargo.toml';
 const GIST_URL = 'https://gist.github.com/';
 const I32_URL = 'http://integer32.com/';
 const LOCALSTORAGE_URL = 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API';
-const ORIGINAL_PLAYGROUND_URL = 'https://github.com/rust-lang/rust-playpen';
 const REPO_URL = 'https://github.com/rust-lang/rust-playground';
-const RUSTFMT_URL = 'https://github.com/rust-lang-nursery/rustfmt';
 const SHEPMASTER_URL = 'https://github.com/shepmaster/';
+const RUST_PLAYGROUND_URL = 'https://play.rust-lang.org/help';
 
-const CRATE_EXAMPLE = `extern crate rand;
-use rand::Rng;
+const CRATE_EXAMPLE = `import io.vavr.collection.Vector;
 
-fn main() {
-    let mut rng = rand::thread_rng();
-    println!("{}", rng.gen::<u8>());
-}`;
-
-const CLIPPY_EXAMPLE = `fn main() {
-    match true {
-        true => println!("true"),
-        false => println!("false"),
+class Main {
+    public static void main(String[] args) {
+        System.out.println(Vector.of(
+          "a", "b", "c"
+        ));
     }
-}`;
-
-const MIRI_EXAMPLE = `fn main() {
-    let mut a: [u8; 0] = [];
-    unsafe {
-        *a.get_unchecked_mut(1) = 1;
-    }
-}`;
-
-const RUSTFMT_EXAMPLE = `// wow, this is ugly!
-fn main ()
-{ struct Foo { a: u8, b: String, }
-match 4 {2=>{},_=>{}} }`;
-
-const LINK_EXAMPLE = 'https://play.integer32.com/?code=fn main() { println!("hello world!"); }';
-
-const TEST_EXAMPLE = `#[test]
-fn test_something() {
-    assert_ne!(42, 0);
-}`;
-
-const LIBRARY_EXAMPLE = `#![crate_type="lib"]
-
-pub fn library_fn() -> u8 {
-    42
-}`;
-
-const OUTPUT_EXAMPLE = `#[inline(never)]
-pub fn a_loop() -> i32 {
-    let mut sum = 0;
-    for i in 0..100 {
-        sum += i;
-    }
-    sum
 }
-
-fn main() {
-    println!("{}", a_loop());
-}`;
+`;
 
 const Help: React.FC = () => {
   return (
     <section className={styles.container}>
-      <h1>The Rust Playground</h1>
+      <h1>The Java Playground</h1>
       <Link action={actions.navigateToIndex}>Return to the playground</Link>
 
       <LinkableSection id="about" header="About" level="h2">
@@ -90,43 +45,35 @@ const Help: React.FC = () => {
         </p>
 
         <p>
-          This playground is modeled after the <a href={ORIGINAL_PLAYGROUND_URL}>original
-        Rust playground</a>, and we owe a great debt to every contributor to
-                                      that project.
-        </p>
-
-        <p>
-          This playground was created by <a href={SHEPMASTER_URL}>Jake Goulding</a>,
-        part of <a href={I32_URL}>Integer 32</a>.
-        </p>
-
-        <p className={styles.logo}>
-          <a href={I32_URL}>
-            <img src={integer32Logo} alt="Integer 32 Logo" />
-          </a>
+          This playground is a fork of the <a href={RUST_PLAYGROUND_URL}>Rust Playground</a>,
+          and we owe a great debt to every contributor to
+          that project, notably <a href={SHEPMASTER_URL}>Jake Goulding</a> from <a href={I32_URL}>Integer 32</a>.
         </p>
       </LinkableSection>
 
       <LinkableSection id="features" header="Features" level="h2">
         <LinkableSection id="features-crates" header="Crates" level="h3">
           <p>
-            The playground provides the top 100 most downloaded crates
-          from <a href={CRATES_IO_URL}>crates.io</a>, the crates from
-          the <a href={RUST_COOKBOOK_URL}>Rust Cookbook</a>, and all
-                                        of their dependencies. To use a crate, add the appropriate
+            The playground provides a selection of libraries
+          from <a href={MAVEN_CENTRAL_URL}>Maven Central</a>. To use a library, add the appropriate
             {' '}
-            <Code>extern crate foo</Code> line to the code.
+            <Code>import</Code> statements.
           </p>
 
           <Example code={CRATE_EXAMPLE} />
 
           <p>
-            See the <a href={CRATES_URL}>complete list of crates</a> to know
+            See the <a href={CRATES_URL}>complete list of libraries</a> to know
             what’s available.
+          </p>
+
+          <p>
+            If there is a library you want added reach out. So long as it works on the module-path, doesn't
+            require adding any JVM flags, and is relatively maintained or stable it will be considered.
           </p>
         </LinkableSection>
 
-        <LinkableSection id="features-formatting" header="Formatting code" level="h3">
+        {/*<LinkableSection id="features-formatting" header="Formatting code" level="h3">
           <p>
             <a href={RUSTFMT_URL}>rustfmt</a> is a tool for formatting Rust code
           according to the Rust style guidelines. Click on the <strong>Format</strong>
@@ -135,9 +82,9 @@ const Help: React.FC = () => {
           </p>
 
           <Example code={RUSTFMT_EXAMPLE} />
-        </LinkableSection>
+        </LinkableSection>*/}
 
-        <LinkableSection id="features-linting" header="Linting code" level="h3">
+        {/*<LinkableSection id="features-linting" header="Linting code" level="h3">
           <p>
             <a href={CLIPPY_URL}>Clippy</a> is a collection of lints to catch common
           mistakes and improve your Rust code. Click on the <strong>Clippy</strong>
@@ -147,9 +94,9 @@ const Help: React.FC = () => {
           </p>
 
           <Example code={CLIPPY_EXAMPLE} />
-        </LinkableSection>
+        </LinkableSection>*/}
 
-        <LinkableSection id="features-miri" header="Checking code for undefined behavior" level="h3">
+        {/*<LinkableSection id="features-miri" header="Checking code for undefined behavior" level="h3">
           <p>
             <a href={MIRI_URL}>Miri</a> is an interpreter for Rust’s mid-level intermediate
             representation (MIR) and can be used to detect certain kinds of undefined behavior
@@ -158,7 +105,7 @@ const Help: React.FC = () => {
           </p>
 
           <Example code={MIRI_EXAMPLE} />
-        </LinkableSection>
+        </LinkableSection>*/}
 
         <LinkableSection id="features-sharing" header="Sharing code" level="h3">
           <p>
@@ -173,17 +120,15 @@ const Help: React.FC = () => {
 
         <LinkableSection id="features-linking" header="Linking to the playground with initial code" level="h3">
           <p>
-            If you have a web page with Rust code that you’d like to
+            If you have a web page with Java code that you’d like to
             show in action, you can link to the playground with the
-          Rust code in the query parameter <Code>code</Code>. Make sure to
+          Java code in the query parameter <Code>code</Code>. Make sure to
                                         escape any special characters. Keep the code short, as URLs have
                                         limitations on the maximum length.
           </p>
-
-          <pre className={styles.code}><code>{LINK_EXAMPLE}</code></pre>
         </LinkableSection>
 
-        <LinkableSection id="features-tests" header="Executing tests" level="h3">
+        {/*<LinkableSection id="features-tests" header="Executing tests" level="h3">
           <p>
             If your code contains the <Code>#[test]</Code> attribute and does not
           contain a <Code>main</Code> method, <Code>cargo test</Code> will be
@@ -191,9 +136,9 @@ const Help: React.FC = () => {
           </p>
 
           <Example code={TEST_EXAMPLE} />
-        </LinkableSection>
+        </LinkableSection>*/}
 
-        <LinkableSection id="features-library" header="Compiling as a library" level="h3">
+        {/*<LinkableSection id="features-library" header="Compiling as a library" level="h3">
           <p>
             If your code contains the <Code>#![crate_type=&quot;lib&quot;]</Code> attribute,
             {' '}
@@ -202,9 +147,9 @@ const Help: React.FC = () => {
           </p>
 
           <Example code={LIBRARY_EXAMPLE} />
-        </LinkableSection>
+        </LinkableSection>*/}
 
-        <LinkableSection id="features-output-formats" header="Output formats" level="h3">
+        {/*<LinkableSection id="features-output-formats" header="Output formats" level="h3">
           <p>
             Instead of executing the code, you can also see intermediate
             output of the compiler as x86_64 assembly, LLVM IR, Rust MIR, or
@@ -215,9 +160,9 @@ const Help: React.FC = () => {
           </p>
 
           <Example code={OUTPUT_EXAMPLE} />
-        </LinkableSection>
+        </LinkableSection>*/}
 
-        <LinkableSection id="features-modes" header="Compilation modes" level="h3">
+        {/*<LinkableSection id="features-modes" header="Compilation modes" level="h3">
           <p>
             Rust has two primary compilation modes: <strong>Debug</strong> and
             {' '}
@@ -230,9 +175,9 @@ const Help: React.FC = () => {
             {' '}
             menu.
           </p>
-        </LinkableSection>
+        </LinkableSection>*/}
 
-        <LinkableSection id="features-channels" header="Rust channels" level="h3">
+        {/*<LinkableSection id="features-channels" header="Rust channels" level="h3">
           <p>
             Rust releases new <strong>stable</strong> versions every 6
           weeks. Between these stable releases, <strong>beta</strong> versions of the
@@ -245,7 +190,7 @@ const Help: React.FC = () => {
             {' '}
             <strong>Runtime</strong> menu.
           </p>
-        </LinkableSection>
+        </LinkableSection>*/}
 
         <LinkableSection id="features-customization" header="Customization" level="h3">
           <p>
