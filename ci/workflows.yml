@@ -4,6 +4,15 @@ components:
         DOCKER_HUB_USERNAME: shepmaster
         GH_CONTAINER_REGISTRY_USERNAME: mccue-software-solutions
         AWS_ACCESS_KEY_ID: AKIAWESVHZ3JQAY5NM5K
+        TARGZ_URL_latest: https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
+        TARGZ_SHA_latest: 36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f
+        TARGZ_FOLDER_latest: jdk-21
+        TARGZ_URL_valhalla: https://download.java.net/java/early_access/valhalla/20/openjdk-20-valhalla+20-75_linux-x64_bin.tar.gz
+        TARGZ_SHA_valhalla: cd0a008aee632cbff2f9c529aba17f4ad7f733cd974d36d2293169bc35e73ae7
+        TARGZ_FOLDER_valhalla: jdk-20
+        TARGZ_URL_early_access: https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
+        TARGZ_SHA_early_access: 36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f
+        TARGZ_FOLDER_early_access: jdk-22
 
   - checkout: &checkout
       name: "Checkout code"
@@ -40,15 +49,17 @@ components:
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
   - build_compiler_containers_job: &build_compiler_containers_job
-      name: "Build ${{ matrix.channel }} compiler container"
+      name: "Build ${{ matrix.channel }} container"
       runs-on: ubuntu-latest
 
       strategy:
         matrix:
-          channel: [stable]
+          channel: [latest, valhalla, early_access]
 
   - build_compiler_containers_job_env: &build_compiler_containers_job_env
-      IMAGE_NAME: ghcr.io/integer32llc/rust-playground-ci-rust-${{ matrix.channel }}
+      TARGZ_URL: TARGZ_URL_${{matrix.channel}}
+      TARGZ_SHA: TARGZ_SHA_${{matrix.channel}}
+      TARGZ_FOLDER: TARGZ_FOLDER_${{matrix.channel}}
 
   - build_compiler_containers_final: &build_compiler_containers_final
       name: "Build and push container"
@@ -57,7 +68,9 @@ components:
         context: compiler/base/
         file: compiler/base/Dockerfile
         build-args: |-
-          channel=${{ matrix.channel }}
+          TARGZ_URL=${{ env.TARGZ_URL }}
+          TARGZ_SHA=${{ env.TARGZ_SHA }}
+          TARGZ_FOLDER=${{ env.TARGZ_FOLDER }}
         pull: true
         push: true
         tags: |-
@@ -75,11 +88,6 @@ components:
           docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} ghcr.io/integer32llc/rust-playground-ci-rust-$c
           docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} shepmaster/rust-$c
           docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} rust-$c
-        done
-        for t in clippy miri rustfmt; do
-          docker tag ghcr.io/integer32llc/rust-playground-ci-tool-$t:${{ github.run_id }} ghcr.io/integer32llc/rust-playground-ci-tool-$t
-          docker tag ghcr.io/integer32llc/rust-playground-ci-tool-$t:${{ github.run_id }} shepmaster/$t
-          docker tag ghcr.io/integer32llc/rust-playground-ci-tool-$t:${{ github.run_id }} $t
         done
 
   - pull_current_container: &pull_current_container
@@ -334,7 +342,7 @@ workflows:
         <<: *build_compiler_containers_job
         env:
           <<: *build_compiler_containers_job_env
-          DOCKER_HUB_IMAGE_NAME: shepmaster/rust-${{ matrix.channel }}
+          DOCKER_HUB_IMAGE_NAME: javaplayground/${{ matrix.channel }}
         continue-on-error: true
 
         steps:
