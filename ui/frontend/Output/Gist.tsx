@@ -58,7 +58,6 @@ const Links: React.FC = () => {
   const codeUrl = useSelector(selectors.codeUrlSelector);
   const gistUrl = useSelector((state: State) => state.output.gist.url);
   const permalink = useSelector(selectors.permalinkSelector);
-  const urloUrl = useSelector(selectors.urloUrlSelector);
   const textChanged = useSelector(selectors.textChangedSinceShareSelector);
 
   return (
@@ -74,7 +73,7 @@ const Links: React.FC = () => {
   );
 };
 
-interface NewWindowProps {
+/* interface NewWindowProps {
   children: React.ReactNode;
   href: string;
 }
@@ -83,6 +82,6 @@ const NewWindow: React.FC<NewWindowProps> = props => (
   <p>
     <a href={props.href} target="_blank" rel="noopener noreferrer">{props.children}</a>
   </p>
-);
+); */
 
 export default Gist;

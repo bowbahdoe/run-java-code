@@ -40,10 +40,10 @@ const RuntimeMenu: React.FC<RuntimeMenuProps> = props => {
           <Desc>({latestVersion})</Desc>
         </SelectOne>
         <SelectOne
-            name="Early Access"
-            currentValue={runtime}
-            thisValue={Runtime.EarlyAccess}
-            changeValue={changeRuntime}
+          name="Early Access"
+          currentValue={runtime}
+          thisValue={Runtime.EarlyAccess}
+          changeValue={changeRuntime}
         >
           <Desc>Build using an early access build</Desc>
           <Desc>({earlyAccessVersion})</Desc>

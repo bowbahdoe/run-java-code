@@ -41,7 +41,7 @@ const BuildMenu: React.FC<BuildMenuProps> = props => {
 };
 
 const Code: React.FC<{ children: string }> = ({ children }) => (
-    <code className={styles.code}>{children}</code>
+  <code className={styles.code}>{children}</code>
 );
 
 export default BuildMenu;

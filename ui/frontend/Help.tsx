@@ -6,11 +6,8 @@ import Link from './uss-router/Link';
 
 import styles from './Help.module.css';
 
-import integer32Logo from './assets/integer32-logo.svg';
-
 const ACE_URL = 'https://github.com/ajaxorg/ace';
 const MAVEN_CENTRAL_URL = 'https://central.sonatype.com/';
-const RUST_COOKBOOK_URL = 'https://rust-lang-nursery.github.io/rust-cookbook/';
 const CRATES_URL = 'https://github.com/rust-lang/rust-playground/blob/main/compiler/base/Cargo.toml';
 const GIST_URL = 'https://gist.github.com/';
 const I32_URL = 'http://integer32.com/';
@@ -68,7 +65,7 @@ const Help: React.FC = () => {
           </p>
 
           <p>
-            If there is a library you want added reach out. So long as it works on the module-path, doesn't
+            If there is a library you want added reach out. So long as it works on the module-path, does not
             require adding any JVM flags, and is relatively maintained or stable it will be considered.
           </p>
         </LinkableSection>
