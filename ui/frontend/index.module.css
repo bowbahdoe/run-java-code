@@ -1,12 +1,12 @@
 :root {
   --primary-font: 'Open Sans', sans-serif;
-  --rust: #a42;
-  --rust-dark: #80331a;
+  --rust: #007396; /* Java Blue */
+  --rust-dark: #00597a; /* Darker Java Blue */
   --border-color: #bbb;
   --border: 1px solid var(--border-color);
   --header-main-border: #dedede;
   --header-transition: 0.2s ease-in-out;
-  --header-tint: #428bca;
+  --header-tint: #428bca; /* Blue */
   --header-border-radius: 4px;
   --header-accent-border: #bdbdbd;
 }
@@ -40,7 +40,7 @@ body {
 /* stylelint-disable-next-line selector-class-pattern */
 :global(.language-rust_errors) {
   & :global(.warning) {
-    color: #f79a06;
+    color: #5db95d;
   }
 
   & :global(.error) {
