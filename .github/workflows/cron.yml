@@ -9,31 +9,28 @@ env:
   DOCKER_HUB_USERNAME: shepmaster
   GH_CONTAINER_REGISTRY_USERNAME: mccue-software-solutions
   AWS_ACCESS_KEY_ID: AKIAWESVHZ3JQAY5NM5K
-  TARGZ_URL_latest: https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
-  TARGZ_SHA_latest: 36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f
-  TARGZ_FOLDER_latest: jdk-21
-  TARGZ_URL_valhalla: https://download.java.net/java/early_access/valhalla/20/openjdk-20-valhalla+20-75_linux-x64_bin.tar.gz
-  TARGZ_SHA_valhalla: cd0a008aee632cbff2f9c529aba17f4ad7f733cd974d36d2293169bc35e73ae7
-  TARGZ_FOLDER_valhalla: jdk-20
-  TARGZ_URL_early_access: https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
-  TARGZ_SHA_early_access: 36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f
-  TARGZ_FOLDER_early_access: jdk-22
 jobs:
   build_compiler_containers:
-    name: Build ${{ matrix.channel }} container
+    name: Build ${{ matrix.runtime }} container
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        channel:
-        - latest
-        - valhalla
-        - early_access
+        include:
+        - runtime: latest
+          TARGZ_URL: https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
+          TARGZ_SHA: 36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f
+          TARGZ_FOLDER: jdk-21
+        - runtime: valhalla
+          TARGZ_URL: https://download.java.net/java/early_access/valhalla/20/openjdk-20-valhalla+20-75_linux-x64_bin.tar.gz
+          TARGZ_SHA: cd0a008aee632cbff2f9c529aba17f4ad7f733cd974d36d2293169bc35e73ae7
+          TARGZ_FOLDER: jdk-20
+        - runtime: early_access
+          TARGZ_URL: https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
+          TARGZ_SHA: 36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f
+          TARGZ_FOLDER: jdk-22
     env:
-      IMAGE_NAME: ghcr.io/mccue-software-solutions/java-playground-ci-${{ matrix.channel }}
-      TARGZ_URL: TARGZ_URL_${{matrix.channel}}
-      TARGZ_SHA: TARGZ_SHA_${{matrix.channel}}
-      TARGZ_FOLDER: TARGZ_FOLDER_${{matrix.channel}}
-      DOCKER_HUB_IMAGE_NAME: javaplayground/${{ matrix.channel }}
+      IMAGE_NAME: ghcr.io/mccue-software-solutions/java-playground-ci-${{ matrix.runtime }}
+      DOCKER_HUB_IMAGE_NAME: javaplayground/${{ matrix.runtime }}
     continue-on-error: true
     steps:
     - name: Checkout code
@@ -59,9 +56,9 @@ jobs:
         context: compiler/base/
         file: compiler/base/Dockerfile
         build-args: |-
-          TARGZ_URL=${{ env.TARGZ_URL }}
-          TARGZ_SHA=${{ env.TARGZ_SHA }}
-          TARGZ_FOLDER=${{ env.TARGZ_FOLDER }}
+          TARGZ_URL=${{ matrix.TARGZ_URL }}
+          TARGZ_SHA=${{ matrix.TARGZ_SHA }}
+          TARGZ_FOLDER=${{ matrix.TARGZ_FOLDER }}
         pull: true
         push: true
         tags: "${{ env.IMAGE_NAME }}:${{ github.run_id }}"
