@@ -6,7 +6,7 @@ name: Scheduled rebuild
   schedule:
   - cron: 7 2 * * *
 env:
-  DOCKER_HUB_USERNAME: shepmaster
+  DOCKER_HUB_USERNAME: javaplayground
   GH_CONTAINER_REGISTRY_USERNAME: mccue-software-solutions
   AWS_ACCESS_KEY_ID: AKIAWESVHZ3JQAY5NM5K
 jobs:

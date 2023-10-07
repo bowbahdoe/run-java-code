@@ -1,7 +1,7 @@
 components:
   - global_env: &global_env
       env:
-        DOCKER_HUB_USERNAME: shepmaster
+        DOCKER_HUB_USERNAME: javaplayground
         GH_CONTAINER_REGISTRY_USERNAME: mccue-software-solutions
         AWS_ACCESS_KEY_ID: AKIAWESVHZ3JQAY5NM5K
 
@@ -256,7 +256,7 @@ workflows:
       release_artifacts:
         name: "Release artifacts"
         runs-on: ubuntu-latest
-        if: github.event_name == 'push' && github.event.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.event.ref == 'refs/heads/all/publish'
         permissions:
           contents: read
           id-token: write
