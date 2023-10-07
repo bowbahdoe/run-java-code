@@ -637,6 +637,7 @@ mod test {
         System.out.println("Hello, world!");
       }
     }
+}
     "#;
 
     impl Default for ExecuteRequest {

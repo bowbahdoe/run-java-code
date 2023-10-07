@@ -29,7 +29,7 @@ const BuildMenu: React.FC<BuildMenuProps> = props => {
   const execute = useDispatchAndClose(actions.performExecute, props.close);
 
   return (
-    <MenuGroup title="What do you want to do?">
+    <MenuGroup title="Run Now">
       <ButtonMenuItem name="Run" onClick={execute}>
           Build and run the code, showing the output. Equivalent to <Code>java Main.java</Code>.
       </ButtonMenuItem>

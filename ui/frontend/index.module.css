@@ -1,14 +1,14 @@
 :root {
-  --primary-font: 'Open Sans', sans-serif;
-  --rust: #a42;
-  --rust-dark: #80331a;
-  --border-color: #bbb;
+  --primary-font: 'Arial', sans-serif;
+  --rust: #636363;
+  --rust-dark: #6b6b6c;
+  --border-color: rgb(135, 135, 137);
   --border: 1px solid var(--border-color);
-  --header-main-border: #dedede;
-  --header-transition: 0.2s ease-in-out;
-  --header-tint: #428bca;
-  --header-border-radius: 4px;
-  --header-accent-border: #bdbdbd;
+  --header-main-border: rgb(73, 73, 74);
+  --header-transition: 0.3s ease-in-out;
+  --header-tint: #4f4f50;
+  --header-border-radius: 6px;
+  --header-accent-border: rgb(79, 79, 79);
 }
 
 /* Modify normalized styles */
@@ -17,33 +17,30 @@ input,
 optgroup,
 select,
 textarea {
-  color: text;
-  font-family: var(--primary-font);
+color: text;
+font-family: var(--primary-font);
 }
 
 html {
-  box-sizing: border-box;
+box-sizing: border-box;
 }
 
 *,
 *::before,
 *::after {
-  box-sizing: inherit;
+box-sizing: inherit;
 }
 
 body {
-  background-color: #e1e1db;
-  padding: 0 1em;
-  font-family: var(--primary-font);
+background-color: #c8c8c9;
+padding: 0 1em;
+font-family: var(--primary-font);
 }
 
 /* stylelint-disable-next-line selector-class-pattern */
-:global(.language-rust_errors) {
-  & :global(.warning) {
-    color: #f79a06;
-  }
-
-  & :global(.error) {
-    color: #bf1b1b;
-  }
+.language-rust_errors .warning {
+  color: #100d08;
+}
+.language-rust_errors .error {
+  color: #bf1b1b;
 }
