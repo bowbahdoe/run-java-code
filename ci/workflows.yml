@@ -279,10 +279,6 @@ workflows:
                 docker push ghcr.io/integer32llc/rust-playground-ci-rust-$c
                 docker push shepmaster/rust-$c
               done
-              for t in clippy miri rustfmt; do
-                docker push ghcr.io/integer32llc/rust-playground-ci-tool-$t
-                docker push shepmaster/$t
-              done
 
           - name: "Download backend"
             uses: actions/download-artifact@v3

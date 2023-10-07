@@ -33,6 +33,7 @@ jobs:
         - early_access
     if: 'github.event_name == ''push'' || contains(github.event.pull_request.labels.*.name, ''CI: approved'')'
     env:
+      IMAGE_NAME: ghcr.io/mccue-software-solutions/java-playground-ci-${{ matrix.channel }}
       TARGZ_URL: TARGZ_URL_${{matrix.channel}}
       TARGZ_SHA: TARGZ_SHA_${{matrix.channel}}
       TARGZ_FOLDER: TARGZ_FOLDER_${{matrix.channel}}
@@ -186,10 +187,6 @@ jobs:
         for c in stable beta nightly; do
           docker push ghcr.io/integer32llc/rust-playground-ci-rust-$c
           docker push shepmaster/rust-$c
-        done
-        for t in clippy miri rustfmt; do
-          docker push ghcr.io/integer32llc/rust-playground-ci-tool-$t
-          docker push shepmaster/$t
         done
     - name: Download backend
       uses: actions/download-artifact@v3

@@ -29,6 +29,7 @@ jobs:
         - valhalla
         - early_access
     env:
+      IMAGE_NAME: ghcr.io/mccue-software-solutions/java-playground-ci-${{ matrix.channel }}
       TARGZ_URL: TARGZ_URL_${{matrix.channel}}
       TARGZ_SHA: TARGZ_SHA_${{matrix.channel}}
       TARGZ_FOLDER: TARGZ_FOLDER_${{matrix.channel}}
