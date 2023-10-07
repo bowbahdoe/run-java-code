@@ -16,8 +16,8 @@
 }
 
 .Help-module__header--G3kNKxeiQ2bzvpzrRmiK:hover::after {
-    content: ' §';
-  }
+  content: ' §';
+}
 
 .Help-module__headerLink--DeecMfOHV8JXP_bMAj5A {
   color: rgb(141, 141, 141);
@@ -25,5 +25,5 @@
 }
 
 .Help-module__headerLink--DeecMfOHV8JXP_bMAj5A:hover {
-    text-decoration: underline;
-  }
+  text-decoration: underline;
+}
