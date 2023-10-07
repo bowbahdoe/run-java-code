@@ -49,7 +49,7 @@ const Help: React.FC = () => {
         <p>
           This playground is a fork of the <a  className={styles.link} href={RUST_PLAYGROUND_URL}>Rust Playground</a>,
           and we owe a great debt to every contributor to
-          that project, notably <a className={styles.link} href={SHEPMASTER_URL}>Jake Goulding</a>{" from "}
+          that project, notably <a className={styles.link} href={SHEPMASTER_URL}>Jake Goulding</a>{' from '}
           <a className={styles.link} href={I32_URL}>Integer 32</a>.
         </p>
 
