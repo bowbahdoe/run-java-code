@@ -2,7 +2,7 @@ components:
   - global_env: &global_env
       env:
         DOCKER_HUB_USERNAME: shepmaster
-        GH_CONTAINER_REGISTRY_USERNAME: shepmaster
+        GH_CONTAINER_REGISTRY_USERNAME: mccue-software-solutions
         AWS_ACCESS_KEY_ID: AKIAWESVHZ3JQAY5NM5K
 
   - checkout: &checkout
@@ -25,12 +25,12 @@ components:
           image=moby/buildkit:v0.11.6
 
   - login_ghcr: &login_ghcr
-      name: "Login to GitHub Container Registry"
-      uses: docker/login-action@v2
+      name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
       with:
         registry: ghcr.io
-        username: ${{ env.GH_CONTAINER_REGISTRY_USERNAME }}
-        password: ${{ secrets.GH_CONTAINER_REGISTRY_TOKEN }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
   - login_docker_hub: &login_docker_hub
       name: "Login to Docker Hub"
