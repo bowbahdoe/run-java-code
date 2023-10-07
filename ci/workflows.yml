@@ -336,7 +336,6 @@ workflows:
           - *login_ghcr
           - *login_docker_hub
           - *build_compiler_containers_final
-
           - *pull_current_container
           - *rename_current_container
           - *push_current_container
