@@ -123,10 +123,6 @@ workflows:
           - *checkout_pr
           - *docker_buildx
           - *login_ghcr
-          - *build_compiler_containers_toolchain
-          - *build_compiler_containers_bare_sources
-          - *build_compiler_containers_munge
-          - *build_compiler_containers_sources
           - *build_compiler_containers_final
 
       build_backend:
@@ -346,10 +342,6 @@ workflows:
           - *docker_buildx
           - *login_ghcr
           - *login_docker_hub
-          - *build_compiler_containers_toolchain
-          - *build_compiler_containers_bare_sources
-          - *build_compiler_containers_munge
-          - *build_compiler_containers_sources
           - *build_compiler_containers_final
 
           - *pull_current_container

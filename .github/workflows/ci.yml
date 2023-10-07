@@ -38,70 +38,6 @@ jobs:
         registry: ghcr.io
         username: "${{ github.actor }}"
         password: "${{ secrets.GITHUB_TOKEN }}"
-    - name: Build and push 'toolchain' container
-      env:
-        TAG_PREFIX: "${{ env.IMAGE_NAME }}:toolchain"
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/base/
-        file: compiler/base/Dockerfile
-        build-args: channel=${{ matrix.channel }}
-        target: toolchain
-        pull: true
-        push: true
-        tags: "${{ env.TAG_PREFIX }}--${{ github.run_id }}"
-        cache-from: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-          ${{ env.TAG_PREFIX }}--latest
-        cache-to: type=inline
-    - name: Build and push 'bare-sources' container
-      env:
-        TAG_PREFIX: "${{ env.IMAGE_NAME }}:bare-sources"
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/base/
-        file: compiler/base/Dockerfile
-        build-args: channel=${{ matrix.channel }}
-        target: bare-sources
-        pull: true
-        push: true
-        tags: "${{ env.TAG_PREFIX }}--${{ github.run_id }}"
-        cache-from: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-          ${{ env.TAG_PREFIX }}--latest
-        cache-to: type=inline
-    - name: Build and push 'munge' container
-      env:
-        TAG_PREFIX: "${{ env.IMAGE_NAME }}:munge"
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/base/
-        file: compiler/base/Dockerfile
-        build-args: channel=${{ matrix.channel }}
-        target: munge
-        pull: true
-        push: true
-        tags: "${{ env.TAG_PREFIX }}--${{ github.run_id }}"
-        cache-from: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-          ${{ env.TAG_PREFIX }}--latest
-        cache-to: type=inline
-    - name: Build and push 'sources' container
-      env:
-        TAG_PREFIX: "${{ env.IMAGE_NAME }}:sources"
-      uses: docker/build-push-action@v4
-      with:
-        context: compiler/base/
-        file: compiler/base/Dockerfile
-        build-args: channel=${{ matrix.channel }}
-        target: sources
-        pull: true
-        push: true
-        tags: "${{ env.TAG_PREFIX }}--${{ github.run_id }}"
-        cache-from: |-
-          ${{ env.TAG_PREFIX }}--${{ github.run_id }}
-          ${{ env.TAG_PREFIX }}--latest
-        cache-to: type=inline
     - name: Build and push container
       uses: docker/build-push-action@v4
       with:
@@ -111,10 +47,6 @@ jobs:
         pull: true
         push: true
         tags: "${{ env.IMAGE_NAME }}:${{ github.run_id }}"
-        cache-from: |-
-          ${{ env.IMAGE_NAME }}:${{ github.run_id }}
-          ${{ env.IMAGE_NAME }}:latest
-        cache-to: type=inline
   build_backend:
     name: Build backend
     runs-on: ubuntu-latest
