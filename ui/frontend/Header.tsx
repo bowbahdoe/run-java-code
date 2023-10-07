@@ -94,7 +94,7 @@ const RuntimeMenuButton: React.FC = () => {
 
   const Button = React.forwardRef<HTMLButtonElement, { toggle: () => void }>(({ toggle }, ref) => (
     <SegmentedButton title="Runtime &mdash; Choose the Java runtime" ref={ref} onClick={toggle}>
-      <HeaderButton isExpandable>{label}</HeaderButton>
+      <HeaderButton isExpandable>{label.replace('_', ' ')}</HeaderButton>
     </SegmentedButton>
   ));
   Button.displayName = 'RuntimeMenuButton.Button';
