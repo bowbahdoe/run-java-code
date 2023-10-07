@@ -65,7 +65,7 @@ components:
   - build_compiler_containers_final: &build_compiler_containers_final
       name: "Build and push container"
       uses: docker/build-push-action@v4
-      
+
       with:
         context: compiler/base/
         file: compiler/base/Dockerfile
@@ -296,35 +296,26 @@ workflows:
               name: frontend
               path: server/build/
 
-          - name: "Configure AWS credentials (i32)"
-            uses: aws-actions/configure-aws-credentials@v2
+          - name: "Configure AWS credentials"
+            uses: aws-actions/configure-aws-credentials@v4
             with:
               aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
               aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
               aws-region: us-east-2
 
-          - name: "Push backend (i32)"
-            run: |-
-              aws s3 cp server/ui s3://playground-artifacts-i32
-
-          - name: "Push frontend (i32)"
-            run: |-
-              aws s3 sync server/build/ s3://playground-artifacts-i32/build
-
-          - name: "Configure AWS credentials (rust-lang)"
-            uses: aws-actions/configure-aws-credentials@v2
+          - name: Configure AWS Credentials
+            uses: aws-actions/configure-aws-credentials@v4
             with:
-              role-skip-session-tagging: true
-              role-to-assume: arn:aws:iam::890664054962:role/upload-playground-artifacts
-              aws-region: us-west-1
+              role-to-assume: arn:aws:iam::762254388821:role/java-playground-github-actions-role
+              aws-region: us-east-2
 
-          - name: "Push backend (rust-lang)"
+          - name: "Push backend"
             run: |-
-              aws s3 cp server/ui s3://rust-playground-artifacts
+              aws s3 cp server/ui s3://java-playground-artifacts
 
-          - name: "Push frontend (rust-lang)"
+          - name: "Push frontend"
             run: |-
-              aws s3 sync server/build/ s3://rust-playground-artifacts/build
+              aws s3 sync server/build/ s3://java-playground-artifacts/build
 
 
   cron:
