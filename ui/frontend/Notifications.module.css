@@ -25,6 +25,6 @@ $space: 0.25em;
 .close {
   composes: -buttonReset from './shared.module.css';
   cursor: pointer;
-  background: #e1e1db;
+  background: var(--bs-white);
   padding: $space;
 }

@@ -39,7 +39,7 @@ class Copied extends React.PureComponent<CopiedProps, CopiedState> {
   public render() {
     return (
       <p className={this.state.copied ? styles.active : styles.container}>
-        <a href={this.props.href}>{this.props.children}</a>
+        <a className={styles.link} href={this.props.href}>{this.props.children}</a>
         <CopyToClipboard text={this.props.href} onCopy={this.copied}>
           <button className={styles.button}><ClipboardIcon /></button>
         </CopyToClipboard>

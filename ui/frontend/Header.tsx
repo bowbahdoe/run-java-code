@@ -150,7 +150,7 @@ const ConfigMenuButton: React.FC = () => {
 };
 
 const HelpButton: React.FC = () => (
-  <SegmentedLink title="View help" action={actions.navigateToHelp}>
+  <SegmentedLink className={styles.link} title="View help" action={actions.navigateToHelp}>
     <HeaderButton icon={<HelpIcon />} />
   </SegmentedLink>
 );

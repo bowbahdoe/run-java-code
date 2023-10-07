@@ -19,3 +19,13 @@
 .setRuntimeMode {
   margin-right: auto;
 }
+
+.link {
+  color: var(--bs-blue);
+  text-decoration: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+.link:hover, .link:active {
+  color: var(--bs-orange);
+}

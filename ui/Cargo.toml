@@ -1,5 +1,5 @@
 [package]
-authors = ["Jake Goulding <jake.goulding@integer32.com>"]
+authors = ["Jake Goulding <jake.goulding@integer32.com>", "Ethan McCue <ethan@mccue.dev>"]
 name = "ui"
 version = "0.1.0"
 edition = "2018"
