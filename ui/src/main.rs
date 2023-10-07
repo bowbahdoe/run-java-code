@@ -203,8 +203,8 @@ pub enum Error {
     InvalidMode { value: String },
     #[snafu(display("The value {:?} is not a valid release", value))]
     InvalidRelease { value: String },
-    #[snafu(display("The value {:?} is not a valid crate type", value))]
-    InvalidCrateType { value: String },
+    #[snafu(display("The value {:?} is not a valid action", value))]
+    InvalidAction { value: String },
     #[snafu(display("No request was provided"))]
     RequestMissing,
     #[snafu(display("The cache has been poisoned"))]
@@ -379,6 +379,7 @@ fn parse_runtime(s: &str) -> Result<sandbox::Runtime> {
     Ok(match s {
         "latest" => sandbox::Runtime::Latest,
         "valhalla" => sandbox::Runtime::Valhalla,
+        "early_access" => sandbox::Runtime::EarlyAccess,
 
         value => InvalidRuntimeSnafu { value }.fail()?,
     })
@@ -401,6 +402,7 @@ fn parse_release(s: &str) -> Result<Option<sandbox::Release>> {
         "19" => Some(sandbox::Release::_19),
         "20" => Some(sandbox::Release::_20),
         "21" => Some(sandbox::Release::_21),
+        "22" => Some(sandbox::Release::_22),
         value => InvalidReleaseSnafu { value }.fail()?,
     })
 }
@@ -410,6 +412,6 @@ fn parse_action(s: &str) -> Result<Option<sandbox::Action>> {
         "" => None,
         "run" => Some(Action::Run),
         "build" => Some(Action::Build),
-        value => InvalidReleaseSnafu { value }.fail()?,
+        value => InvalidActionSnafu { value }.fail()?,
     })
 }

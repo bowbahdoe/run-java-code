@@ -69,6 +69,7 @@ pub(crate) async fn serve(config: Config) {
         .route("/meta/crates", get_or_post(meta_crates))
         .route("/meta/version/latest", get_or_post(meta_version_latest))
         .route("/meta/version/valhalla", get_or_post(meta_version_valhalla))
+        .route("/meta/version/early_access", get_or_post(meta_version_early_access))
         .route("/meta/gist", post(meta_gist_create))
         .route("/meta/gist/", post(meta_gist_create)) // compatibility with lax frontend code
         .route("/meta/gist/:id", get(meta_gist_get))
@@ -192,6 +193,16 @@ async fn meta_version_valhalla(
 ) -> Result<impl IntoResponse> {
     let value =
         track_metric_no_request_async(Endpoint::MetaVersionValhalla, || cache.version_valhalla())
+            .await?;
+    apply_timestamped_caching(value, if_none_match)
+}
+
+async fn meta_version_early_access(
+    Extension(cache): Extension<Arc<SandboxCache>>,
+    if_none_match: Option<TypedHeader<IfNoneMatch>>,
+) -> Result<impl IntoResponse> {
+    let value =
+        track_metric_no_request_async(Endpoint::MetaVersionEarlyAccess, || cache.version_early_access())
             .await?;
     apply_timestamped_caching(value, if_none_match)
 }
@@ -341,6 +352,7 @@ struct SandboxCache {
     crates: CacheOne<MetaCratesResponse>,
     version_latest: CacheOne<MetaVersionResponse>,
     version_valhalla: CacheOne<MetaVersionResponse>,
+    version_early_access: CacheOne<MetaVersionResponse>,
 }
 
 impl SandboxCache {
@@ -369,6 +381,18 @@ impl SandboxCache {
             .fetch(|sandbox| async move {
                 let version = sandbox
                     .version(Runtime::Valhalla)
+                    .await
+                    .context(CachingSnafu)?;
+                Ok(version.into())
+            })
+            .await
+    }
+
+    async fn version_early_access(&self) -> Result<Stamped<MetaVersionResponse>> {
+        self.version_early_access
+            .fetch(|sandbox| async move {
+                let version = sandbox
+                    .version(Runtime::EarlyAccess)
                     .await
                     .context(CachingSnafu)?;
                 Ok(version.into())

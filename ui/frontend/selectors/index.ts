@@ -76,10 +76,12 @@ const LABELS: { [index in PrimaryActionCore]: string } = {
 export const getExecutionLabel = createSelector(primaryActionSelector, primaryAction => LABELS[primaryAction]);
 
 const getLatest = (state: State) => state.versions?.latest;
+const getEarlyAccess = (state: State) => state.versions?.earlyAccess;
 const getValhalla = (state: State) => state.versions?.valhalla;
 
 const versionNumber = (v: Version | undefined) => v ? v.version : '';
 export const latestVersionText = createSelector(getLatest, versionNumber);
+export const earlyAccessVersionText = createSelector(getEarlyAccess, versionNumber);
 export const valhallaVersionText = createSelector(getValhalla, versionNumber);
 
 const versionDetails = (v: Version | undefined) => v ? `${v.date} ${v.hash.slice(0, 20)}` : '';

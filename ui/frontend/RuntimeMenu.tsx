@@ -18,6 +18,7 @@ interface RuntimeMenuProps {
 const RuntimeMenu: React.FC<RuntimeMenuProps> = props => {
   const runtime = useSelector((state: State) => state.configuration.runtime);
   const latestVersion = useSelector(selectors.latestVersionText);
+  const earlyAccessVersion = useSelector(selectors.earlyAccessVersionText);
   const valhallaVersion = useSelector(selectors.valhallaVersionText);
 
   const dispatch = useDispatch();
@@ -39,12 +40,21 @@ const RuntimeMenu: React.FC<RuntimeMenuProps> = props => {
           <Desc>({latestVersion})</Desc>
         </SelectOne>
         <SelectOne
+            name="Early Access"
+            currentValue={runtime}
+            thisValue={Runtime.EarlyAccess}
+            changeValue={changeRuntime}
+        >
+          <Desc>Build using an early access build</Desc>
+          <Desc>({earlyAccessVersion})</Desc>
+        </SelectOne>
+        <SelectOne
           name="Valhalla"
           currentValue={runtime}
           thisValue={Runtime.Valhalla}
           changeValue={changeRuntime}
         >
-          <Desc>Build using an early release Valhalla prototype</Desc>
+          <Desc>Build using an early access Valhalla prototype</Desc>
           <Desc>({valhallaVersion})</Desc>
         </SelectOne>
       </MenuGroup>

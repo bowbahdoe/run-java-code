@@ -45,6 +45,7 @@ pub(crate) enum Endpoint {
     MetaCrates,
     MetaVersionLatest,
     MetaVersionValhalla,
+    MetaVersionEarlyAccess,
 }
 
 #[derive(Debug, Copy, Clone, strum::IntoStaticStr)]

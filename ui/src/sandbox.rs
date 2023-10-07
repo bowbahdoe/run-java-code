@@ -165,7 +165,7 @@ fn build_execution_command(
             cmd.push("--enable-preview".to_string());
         }
 
-        cmd.push("src/Main.java".to_string());
+        cmd.push("Main.java".to_string());
     } else if action == Build {
         cmd.push("javac".to_string());
         cmd.extend(["--module-path".to_string(), "dependencies".to_string()]);
@@ -177,7 +177,7 @@ fn build_execution_command(
             cmd.push("--enable-preview".to_string());
         }
 
-        cmd.push("src/Main.java".to_string());
+        cmd.push("Main.java".to_string());
     }
 
     cmd
@@ -250,6 +250,7 @@ impl Sandbox {
     pub async fn version(&self, runtime: Runtime) -> Result<Version> {
         let mut command = basic_secure_docker_command();
         command.args(&[runtime.container_name()]);
+        println!("Getting version for {:?} - {}", runtime, runtime.container_name());
         command.args(&["java", "--version"]);
 
         let output = run_command_with_timeout(command).await?;
@@ -326,6 +327,8 @@ impl Sandbox {
 async fn run_command_with_timeout(mut command: Command) -> Result<std::process::Output> {
     use std::os::unix::process::ExitStatusExt;
 
+    let now = std::time::Instant::now();
+
     let timeout = DOCKER_PROCESS_TIMEOUT_HARD;
 
     let output = command.output().await.context(UnableToStartCompilerSnafu)?;
@@ -385,6 +388,8 @@ async fn run_command_with_timeout(mut command: Command) -> Result<std::process::
 
     let code = timed_out.context(CompilerExecutionTimedOutSnafu { timeout })?;
 
+
+
     output.status = code;
 
     Ok(output)
@@ -394,6 +399,7 @@ async fn run_command_with_timeout(mut command: Command) -> Result<std::process::
 pub enum Runtime {
     Latest,
     Valhalla,
+    EarlyAccess
 }
 
 impl Runtime {
@@ -401,6 +407,7 @@ impl Runtime {
         match *self {
             Runtime::Latest => Release::_21,
             Runtime::Valhalla => Release::_20,
+            Runtime::EarlyAccess => Release::_21
         }
     }
 
@@ -408,8 +415,9 @@ impl Runtime {
         use self::Runtime::*;
 
         match *self {
-            Latest => "playground-latest",
-            Valhalla => "playground-valhalla",
+            Latest => "javaplayground/latest",
+            Valhalla => "javaplayground/valhalla",
+            EarlyAccess => "javaplayground/early_access",
         }
     }
 }
@@ -430,6 +438,7 @@ pub enum Release {
     _19,
     _20,
     _21,
+    _22
 }
 
 impl Release {
@@ -451,6 +460,7 @@ impl Release {
             _19 => "19",
             _20 => "20",
             _21 => "21",
+            _22 => "22",
         }
     }
 }
@@ -463,7 +473,7 @@ pub enum Action {
 
 impl Action {
     fn file_name(&self) -> &'static str {
-        "src/Main.java"
+        "Main.java"
     }
 }
 

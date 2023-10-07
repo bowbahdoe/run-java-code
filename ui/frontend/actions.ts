@@ -40,6 +40,7 @@ export const routes = {
     version: {
       latest: '/meta/version/latest',
       valhalla: '/meta/version/valhalla',
+      earlyAccess: '/meta/version/early_access',
     },
     gistSave: '/meta/gist',
     gistLoad: '/meta/gist/id',
@@ -451,12 +452,13 @@ const requestVersionsLoad = () =>
   createAction(ActionType.RequestVersionsLoad);
 
 const receiveVersionsLoadSuccess = ({
-  latest, valhalla,
+  latest, valhalla, earlyAccess
 }: {
   latest: Version,
-  valhalla: Version
+  valhalla: Version,
+  earlyAccess: Version
 }) =>
-  createAction(ActionType.VersionsLoadSucceeded, { latest, valhalla });
+  createAction(ActionType.VersionsLoadSucceeded, { latest, valhalla, earlyAccess });
 
 export function performVersionsLoad(): ThunkAction {
   return function(dispatch) {
@@ -464,13 +466,15 @@ export function performVersionsLoad(): ThunkAction {
 
     const latest = jsonGet(routes.meta.version.latest);
     const valhalla = jsonGet(routes.meta.version.valhalla);
+    const earlyAccess = jsonGet(routes.meta.version.earlyAccess);
 
-    const all = Promise.all([ latest, valhalla]);
+    const all = Promise.all([ latest, valhalla, earlyAccess ]);
 
     return all
-      .then(([ latest, valhalla]) => dispatch(receiveVersionsLoadSuccess({
+      .then(([ latest, valhalla, earlyAccess ]) => dispatch(receiveVersionsLoadSuccess({
         latest,
         valhalla,
+        earlyAccess
       })));
     // TODO: Failure case
   };
@@ -493,6 +497,8 @@ function parseRuntime(s?: string): Runtime | null {
       return Runtime.Latest
     case 'valhalla':
       return Runtime.Valhalla
+    case 'early_access':
+      return Runtime.EarlyAccess
     default:
       return null;
   }
@@ -528,6 +534,8 @@ function parseRelease(s?: string): Release | null {
       return Release.Java20;
     case '21':
       return Release.Java21;
+    case '22':
+      return Release.Java22;
     default:
       return null;
   }
