@@ -65,6 +65,7 @@ components:
   - build_compiler_containers_final: &build_compiler_containers_final
       name: "Build and push container"
       uses: docker/build-push-action@v4
+      
       with:
         context: compiler/base/
         file: compiler/base/Dockerfile
