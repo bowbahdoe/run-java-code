@@ -80,15 +80,13 @@ components:
   - pull_containers: &pull_containers
       name: "Pull containers"
       run: |-
-        echo ghcr.io/integer32llc/rust-playground-ci-{rust-{stable,beta,nightly},tool-{clippy,rustfmt,miri}}:${{ github.run_id }} | xargs -n1 docker pull
+        echo ghcr.io/mccue-software-solutions/java-playground-ci-{latest,early_access,valhalla}:${{ github.run_id }} | xargs -n1 docker pull
 
   - rename_all_containers: &rename_all_containers
       name: "Rename containers"
       run: |-
-        for c in stable beta nightly; do
-          docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} ghcr.io/integer32llc/rust-playground-ci-rust-$c
-          docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} shepmaster/rust-$c
-          docker tag ghcr.io/integer32llc/rust-playground-ci-rust-$c:${{ github.run_id }} rust-$c
+        for c in latest early_access valhalla; do
+          docker tag ghcr.io/mccue-software-solutions/java-playground-ci-$c:${{ github.run_id }} javaplayground/$c
         done
 
   - pull_current_container: &pull_current_container
@@ -275,9 +273,8 @@ workflows:
 
           - name: "Push containers"
             run: |-
-              for c in stable beta nightly; do
-                docker push ghcr.io/integer32llc/rust-playground-ci-rust-$c
-                docker push shepmaster/rust-$c
+              for c in latest early_access valhalla; do
+                docker push javaplayground/$c
               done
 
           - name: "Download backend"
