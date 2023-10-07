@@ -175,7 +175,10 @@ jobs:
         username: "${{ env.DOCKER_HUB_USERNAME }}"
         password: "${{ secrets.DOCKER_HUB_TOKEN }}"
     - name: Pull containers
-      run: echo ghcr.io/mccue-software-solutions/java-playground-ci-{latest,early_access,valhalla}:${{ github.run_id }} | xargs -n1 docker pull
+      run: |-
+        for c in latest early_access valhalla; do
+          docker pull ghcr.io/mccue-software-solutions/java-playground-ci-$c:${{ github.run_id }}
+        done
     - name: Rename containers
       run: |-
         for c in latest early_access valhalla; do
