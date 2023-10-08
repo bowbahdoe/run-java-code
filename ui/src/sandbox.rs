@@ -250,11 +250,6 @@ impl Sandbox {
     pub async fn version(&self, runtime: Runtime) -> Result<Version> {
         let mut command = basic_secure_docker_command();
         command.args(&[runtime.container_name()]);
-        println!(
-            "Getting version for {:?} - {}",
-            runtime,
-            runtime.container_name()
-        );
         command.args(&["java", "--version"]);
 
         let output = run_command_with_timeout(command).await?;
@@ -770,7 +765,6 @@ mod test {
             }
         "#;
 
-        println!("A");
         let req = ExecuteRequest {
             code: code.to_string(),
             ..ExecuteRequest::default()

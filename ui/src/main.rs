@@ -94,10 +94,6 @@ impl Config {
         let metrics_token = std::env::var("PLAYGROUND_METRICS_TOKEN").ok();
         let cors_enabled = std::env::var_os("PLAYGROUND_CORS_ENABLED").is_some();
 
-        // Print the values to the console
-        println!("Metrics Token: {:?}", metrics_token);
-        println!("CORS Enabled: {}", cors_enabled);
-
         Self {
             address,
             cors_enabled,
