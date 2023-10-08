@@ -119,8 +119,10 @@ sudo systemctl enable playground.service
 
 ```
 sudo rm /etc/nginx/sites-enabled/default
-sudo cp playground-reverse-proxy /etc/nginx/sites-enabled
+sudo cp java-playground.com.conf /etc/nginx/sites-enabled
 sudo service nginx reload
 ```
 
 #### Configure SSL
+
+https://letsencrypt.org/getting-started/

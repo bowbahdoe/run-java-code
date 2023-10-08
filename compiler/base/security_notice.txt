@@ -1,11 +1,16 @@
-# Hello, and thanks for looking into the Rust Playground's security!
+# Hello, and thanks for looking into the Java Playground's security!
 #
 # This build is running on an unprivileged, sandboxed Docker container with no
 # network access, so while you can technically run arbitrary code on the
 # Playground you shouldn't be able to do any damage with it.
 #
 # Nothing is perfect though: if you find a way to escape the sandbox, please
-# disclose it following our security policy! You can find the policy at:
+# disclose it. Since this is a fork of the rust playground and any issues you
+# found probably exist there too, you should report it to them following their
+# security policy. in You can find the policy at:
 #
 #    https://www.rust-lang.org/policies/security
 #
+# Also inform one of us if you can
+#
+#    ethan@mccue.dev
