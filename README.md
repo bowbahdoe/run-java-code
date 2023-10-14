@@ -1,6 +1,6 @@
 # Java Playground
 
-This is the home of the [Rust Playground][real].
+This is the home of the [Java Playground][real].
 
 [real]: https://java-playground.com
 
@@ -18,8 +18,6 @@ It has a number of features, including:
 1. The ability to quickly load and save your code to a
    GitHub [Gist][gist] and share it with your friends.
 
-
-[Rust Cookbook]: https://rust-lang-nursery.github.io/rust-cookbook/
 [gist]: https://gist.github.com/
 
 ## Architecture
