@@ -7,4 +7,4 @@ MAILTO=admin@example.com
 # │  │  │  │  ┌───────────── day of week (0 - 6) (Sunday to Saturday; 7 is also Sunday on some systems)
 # │  │  │  │  │
 
- 23  *  *  *  * /home/ubuntu/update.sh
+0 23 * * * /home/ubuntu/update.sh
