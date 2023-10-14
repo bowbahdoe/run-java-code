@@ -59,11 +59,11 @@
             <version>2.15.3</version>
         </dependency>
 
-        <dependency>
+        <!-- <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-pcollections</artifactId>
             <version>2.15.3</version>
-        </dependency>
+        </dependency> -->
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
