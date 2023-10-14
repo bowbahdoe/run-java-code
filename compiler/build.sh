@@ -22,8 +22,8 @@ docker build -t "javaplayground/latest"\
 
 docker build -t "javaplayground/early_access"\
     --platform linux/amd64\
-    --build-arg TARGZ_URL=https://download.java.net/java/early_access/jdk22/17/GPL/openjdk-22-ea+17_linux-x64_bin.tar.gz\
-    --build-arg TARGZ_SHA=2e079b8de8557b2bfdf2c548f69cf0c8ed9a94e7a0460dfebbebb4bf936dea8b \
+    --build-arg TARGZ_URL=https://download.java.net/java/early_access/jdk22/19/GPL/openjdk-22-ea+19_linux-x64_bin.tar.gz\
+    --build-arg TARGZ_SHA=70bc0434cc0a8e1fa5351daa062cdd86b29caa784525f22e8a0cc0028e34a157 \
     --build-arg TARGZ_FOLDER=jdk-22\
     .
 
