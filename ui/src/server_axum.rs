@@ -8,7 +8,7 @@ use crate::{
     CachingSnafu, CompileRequest, Config, Error, ErrorJson, ExecuteRequest, ExecuteResponse,
     ExecutionSnafu, GhToken, GistCreationSnafu, GistLoadingSnafu, MetaCratesResponse,
     MetaGistCreateRequest, MetaGistResponse, MetaVersionResponse, MetricsToken, Result,
-    SandboxCreationSnafu,
+    SandboxCreationSnafu, EvaluateRequest, EvaluateResponse,
 };
 use async_trait::async_trait;
 use axum::{
@@ -65,6 +65,7 @@ pub(crate) async fn serve(config: Config) {
         .fallback_service(root_files)
         .nest_service("/assets", asset_files)
         .layer(rewrite_help_as_index)
+        .route("/evaluate.json", post(evaluate))
         .route("/execute", get_or_post(execute))
         .route("/meta/crates", get_or_post(meta_crates))
         .route("/meta/version/latest", get_or_post(meta_version_latest))
@@ -133,6 +134,20 @@ async fn rewrite_help_as_index<B>(
     next.run(req).await
 }
 
+async fn evaluate(
+
+    Json(req): Json<ExecuteRequest>,
+) -> Result<Json<ExecuteResponse>> {
+        with_sandbox_force_endpoint(
+            req,
+            Endpoint::Execute,
+            |sb, req| async move { sb.execute(req).await }.boxed(),
+            ExecutionSnafu,
+        )
+        .await
+        .map(Json) 
+}
+
 async fn execute(Json(req): Json<ExecuteRequest>) -> Result<Json<ExecuteResponse>> {
     with_sandbox(
         req,
@@ -158,6 +173,28 @@ where
         .map(Into::into)
         .context(ctx)
 }
+
+async fn with_sandbox_force_endpoint<F, Req, Resp, SbReq, SbResp, Ctx>(
+    req: Req,
+    endpoint: Endpoint,
+    f: F,
+    ctx: Ctx,
+) -> Result<Resp>
+where
+    for<'req> F: FnOnce(Sandbox, &'req SbReq) -> BoxFuture<'req, sandbox::Result<SbResp>>,
+    Resp: From<SbResp>,
+    SbReq: TryFrom<Req, Error = Error> + GenerateLabels,
+    SbResp: SuccessDetails,
+    Ctx: IntoError<Error, Source = sandbox::Error>,
+{
+    let sandbox = Sandbox::new().await.context(SandboxCreationSnafu)?;
+    let request = req.try_into()?;
+    track_metric_async(request, |request| f(sandbox, request))
+        .await
+        .map(Into::into)
+        .context(ctx)
+}
+
 pub(crate) trait HasEndpoint {
     const ENDPOINT: Endpoint;
 }
