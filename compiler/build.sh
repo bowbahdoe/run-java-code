@@ -17,7 +17,7 @@ docker build -t "javaplayground/latest"\
     --platform linux/amd64\
     --build-arg TARGZ_URL=https://download.java.net/java/GA/jdk21.0.1/415e3f918a1f4062a0074a2794853d0d/12/GPL/openjdk-21.0.1_linux-x64_bin.tar.gz\
     --build-arg TARGZ_SHA=7e80146b2c3f719bf7f56992eb268ad466f8854d5d6ae11805784608e458343f \
-    --build-arg TARGZ_FOLDER=jdk-21\
+    --build-arg TARGZ_FOLDER=jdk-21.0.1\
     .
 
 docker build -t "javaplayground/early_access"\
