@@ -17,16 +17,16 @@ jobs:
       matrix:
         include:
         - runtime: latest
-          TARGZ_URL: https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
-          TARGZ_SHA: 7c1f7689db0f4b48ee6978029c4a1aecd1442a8a7637cdf43a5471d0c79712a8
-          TARGZ_FOLDER: jdk-21
+          TARGZ_URL: https://download.java.net/java/GA/jdk21.0.1/415e3f918a1f4062a0074a2794853d0d/12/GPL/openjdk-21.0.1_linux-x64_bin.tar.gz
+          TARGZ_SHA: 7e80146b2c3f719bf7f56992eb268ad466f8854d5d6ae11805784608e458343f
+          TARGZ_FOLDER: jdk-21.0.1
         - runtime: valhalla
           TARGZ_URL: https://download.java.net/java/early_access/valhalla/20/openjdk-20-valhalla+20-75_linux-x64_bin.tar.gz
           TARGZ_SHA: cd0a008aee632cbff2f9c529aba17f4ad7f733cd974d36d2293169bc35e73ae7
           TARGZ_FOLDER: jdk-20
         - runtime: early_access
-          TARGZ_URL: https://download.java.net/java/early_access/jdk22/19/GPL/openjdk-22-ea+19_linux-x64_bin.tar.gz
-          TARGZ_SHA: 70bc0434cc0a8e1fa5351daa062cdd86b29caa784525f22e8a0cc0028e34a157
+          TARGZ_URL: https://download.java.net/java/early_access/jdk22/20/GPL/openjdk-22-ea+20_linux-x64_bin.tar.gz
+          TARGZ_SHA: 5f1627efa81951307900954bbf7b2e49d8c5303615cf116959c273e9707b0496
           TARGZ_FOLDER: jdk-22
     env:
       IMAGE_NAME: ghcr.io/mccue-software-solutions/java-playground-ci-${{ matrix.runtime }}
