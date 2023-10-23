@@ -16,14 +16,14 @@ docker build -t "javaplayground/valhalla"\
 docker build -t "javaplayground/latest"\
     --platform linux/amd64\
     --build-arg TARGZ_URL=https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz\
-    --build-arg TARGZ_SHA=36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f \
+    --build-arg TARGZ_SHA=7c1f7689db0f4b48ee6978029c4a1aecd1442a8a7637cdf43a5471d0c79712a8 \
     --build-arg TARGZ_FOLDER=jdk-21\
     .
 
 docker build -t "javaplayground/early_access"\
     --platform linux/amd64\
-    --build-arg TARGZ_URL=https://download.java.net/java/early_access/jdk22/19/GPL/openjdk-22-ea+19_linux-x64_bin.tar.gz\
-    --build-arg TARGZ_SHA=70bc0434cc0a8e1fa5351daa062cdd86b29caa784525f22e8a0cc0028e34a157 \
+    --build-arg TARGZ_URL=https://download.java.net/java/early_access/jdk22/20/GPL/openjdk-22-ea+20_linux-x64_bin.tar.gz\
+    --build-arg TARGZ_SHA=5f1627efa81951307900954bbf7b2e49d8c5303615cf116959c273e9707b0496 \
     --build-arg TARGZ_FOLDER=jdk-22\
     .
 
