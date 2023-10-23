@@ -16,7 +16,7 @@ docker build -t "javaplayground/valhalla"\
 docker build -t "javaplayground/latest"\
     --platform linux/amd64\
     --build-arg TARGZ_URL=https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz\
-    --build-arg TARGZ_SHA=36cd5e9661360a8fece4fd31cf678cd6611f3742633dab3b3244e037ba0b095f \
+    --build-arg TARGZ_SHA=7c1f7689db0f4b48ee6978029c4a1aecd1442a8a7637cdf43a5471d0c79712a8 \
     --build-arg TARGZ_FOLDER=jdk-21\
     .
 
