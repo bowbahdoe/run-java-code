@@ -226,5 +226,14 @@
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
+
+
+        <dependency>
+            <groupId>dev.mccue</groupId>
+            <artifactId>urlparameters</artifactId>
+            <version>0.0.2</version>
+        </dependency>
+
+                 
     </dependencies>
 </project>
