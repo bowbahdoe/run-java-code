@@ -1,12 +1,9 @@
-# Java Playground
+(DOWN): This was taken down for copyright reasons. Sorry everyone
 
-This is the home of the [Java Playground][real].
-
-[real]: https://java-playground.com
 
 ## What's it do?
 
-The playground allows you to experiment with Java before you install
+This allows you to experiment with Java before you install
 it locally, or in any other case where you might not have the compiler
 available.
 
