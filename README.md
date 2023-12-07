@@ -1,4 +1,6 @@
-(DOWN): This was taken down for copyright reasons. Sorry everyone
+# Run Java Code (in your browser)
+
+This is now hosted at [https://run.mccue.dev](https://run.mccue.dev)
 
 
 ## What's it do?
