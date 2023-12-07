@@ -177,12 +177,12 @@ jobs:
     - name: Pull containers
       run: |-
         for c in latest early_access valhalla; do
-          docker pull ghcr.io/mccue-software-solutions/run-java-code-ci-$c:${{ github.run_id }}
+          docker pull ghcr.io/bowbahdoe/run-java-code-ci-$c:${{ github.run_id }}
         done
     - name: Rename containers
       run: |-
         for c in latest early_access valhalla; do
-          docker tag ghcr.io/mccue-software-solutions/run-java-code-ci-$c:${{ github.run_id }} javaplayground/$c
+          docker tag ghcr.io/bowbahdoe/run-java-code-ci-$c:${{ github.run_id }} javaplayground/$c
         done
     - name: Push containers
       run: |-
