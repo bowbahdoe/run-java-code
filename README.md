@@ -61,12 +61,12 @@ should be cleaned when that request ends.
 
 A large set of thanks go to those individuals who have helped by
 reporting security holes or other attack vectors against the
-Playground. Each report helps us make the Playground better!
+site. Each report helps us make the site better!
 
 * Preliminary sandbox testing (PID limit) by Stefan O'Rear.
 
 If you'd like to perform tests that you think might disrupt service of
-the Playground, get in touch and we can create an isolated clone to
+the site, get in touch and we can create an isolated clone to
 perform tests on! Once fixed, you can choose to be credited here.
 
 ## Development
@@ -98,7 +98,7 @@ must be configured.
 ```
 cd compiler
 ./build.sh # If you want to test changes to the containers
-./fetch.sh # If you just want the current playground
+./fetch.sh # If you just want the current site
 ```
 
 ## Deployment
