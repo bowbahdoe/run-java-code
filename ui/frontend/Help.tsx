@@ -35,12 +35,12 @@ class Main {
 const Help: React.FC = () => {
   return (
     <section className={styles.container}>
-      <h1>The Java Playground</h1>
+      <h1>(UNOFFICIAL) Website that runs Java Code</h1>
       <Link className={styles.link} action={actions.navigateToIndex}>Return to the playground</Link>
 
       <LinkableSection id="about" header="About" level="h2">
         <p>
-          The playground is an <a className={styles.link} href={REPO_URL}>open source project</a>.
+          This is an <a className={styles.link} href={REPO_URL}>open source project</a>.
           If you have any suggestions for features, issues with the
           implementation, or just want to read the code for yourself,
           you are invited to participate!
