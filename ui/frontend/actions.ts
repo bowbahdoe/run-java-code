@@ -536,6 +536,8 @@ function parseRelease(s?: string): Release | null {
       return Release.Java21;
     case '22':
       return Release.Java22;
+    case '23':
+      return Release.Java23;
     default:
       return null;
   }
