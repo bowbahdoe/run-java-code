@@ -8,11 +8,11 @@ import styles from './Help.module.css';
 
 const ACE_URL = 'https://github.com/ajaxorg/ace';
 const MAVEN_CENTRAL_URL = 'https://central.sonatype.com/';
-const CRATES_URL = 'https://github.com/McCue-Software-Solutions/java-playground/blob/main/compiler/base/pom.xml';
+const CRATES_URL = 'https://github.com/bowbahdoe/run-java-code/blob/main/compiler/base/pom.xml';
 const GIST_URL = 'https://gist.github.com/';
 const I32_URL = 'http://integer32.com/';
 const LOCALSTORAGE_URL = 'https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API';
-const REPO_URL = 'https://github.com/McCue-Software-Solutions/java-playground';
+const REPO_URL = 'https://github.com/bowbahdoe/run-java-code';
 const SHEPMASTER_URL = 'https://github.com/shepmaster/';
 const RUST_PLAYGROUND_URL = 'https://play.rust-lang.org/help';
 const ETHAN_GITHUB_URL = 'https://github.com/bowbahdoe';

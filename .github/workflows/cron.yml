@@ -7,7 +7,7 @@ name: Scheduled rebuild
   - cron: 7 2 * * *
 env:
   DOCKER_HUB_USERNAME: javaplayground
-  GH_CONTAINER_REGISTRY_USERNAME: mccue-software-solutions
+  GH_CONTAINER_REGISTRY_USERNAME: bowbahdoe
   AWS_ACCESS_KEY_ID: AKIAWESVHZ3JQAY5NM5K
 jobs:
   build_compiler_containers:
@@ -29,7 +29,7 @@ jobs:
           TARGZ_SHA: 9305399006d6c477d1c84cc48d42d44839199f603c1802298225c13160f1d9d2
           TARGZ_FOLDER: jdk-23
     env:
-      IMAGE_NAME: ghcr.io/mccue-software-solutions/java-playground-ci-${{ matrix.runtime }}
+      IMAGE_NAME: ghcr.io/bowbahdoe/java-playground-ci-${{ matrix.runtime }}
       DOCKER_HUB_IMAGE_NAME: javaplayground/${{ matrix.runtime }}
     continue-on-error: true
     steps:

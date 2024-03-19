@@ -2,7 +2,7 @@ components:
   - global_env: &global_env
       env:
         DOCKER_HUB_USERNAME: javaplayground
-        GH_CONTAINER_REGISTRY_USERNAME: mccue-software-solutions
+        GH_CONTAINER_REGISTRY_USERNAME: bowbahdoe
         AWS_ACCESS_KEY_ID: AKIAWESVHZ3JQAY5NM5K
 
   - checkout: &checkout
@@ -60,7 +60,7 @@ components:
               TARGZ_FOLDER: jdk-23
 
   - build_compiler_containers_job_env: &build_compiler_containers_job_env
-      IMAGE_NAME: ghcr.io/mccue-software-solutions/java-playground-ci-${{ matrix.runtime }}
+      IMAGE_NAME: ghcr.io/bowbahdoe/java-playground-ci-${{ matrix.runtime }}
 
   - build_compiler_containers_final: &build_compiler_containers_final
       name: "Build and push container"
@@ -82,14 +82,14 @@ components:
       name: "Pull containers"
       run: |-
         for c in latest early_access valhalla; do
-          docker pull ghcr.io/mccue-software-solutions/java-playground-ci-$c:${{ github.run_id }}
+          docker pull ghcr.io/bowbahdoe/java-playground-ci-$c:${{ github.run_id }}
         done
 
   - rename_all_containers: &rename_all_containers
       name: "Rename containers"
       run: |-
         for c in latest early_access valhalla; do
-          docker tag ghcr.io/mccue-software-solutions/java-playground-ci-$c:${{ github.run_id }} javaplayground/$c
+          docker tag ghcr.io/bowbahdoe/java-playground-ci-$c:${{ github.run_id }} javaplayground/$c
         done
 
   - pull_current_container: &pull_current_container
