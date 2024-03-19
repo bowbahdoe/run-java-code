@@ -35,19 +35,19 @@ class Main {
 const Help: React.FC = () => {
   return (
     <section className={styles.container}>
-      <h1>The Java Playground</h1>
-      <Link className={styles.link} action={actions.navigateToIndex}>Return to the playground</Link>
+      <h1>(UNOFFICIAL) Website that runs Java Code</h1>
+      <Link className={styles.link} action={actions.navigateToIndex}>Return to the site</Link>
 
       <LinkableSection id="about" header="About" level="h2">
         <p>
-          The playground is an <a className={styles.link} href={REPO_URL}>open source project</a>.
+          This is an <a className={styles.link} href={REPO_URL}>open source project</a>.
           If you have any suggestions for features, issues with the
           implementation, or just want to read the code for yourself,
           you are invited to participate!
         </p>
 
         <p>
-          This playground is a fork of the <a  className={styles.link} href={RUST_PLAYGROUND_URL}>Rust Playground</a>,
+          This site is a fork of the <a  className={styles.link} href={RUST_PLAYGROUND_URL}>Rust Playground</a>,
           and we owe a great debt to every contributor to
           that project, notably <a className={styles.link} href={SHEPMASTER_URL}>Jake Goulding</a>{' from '}
           <a className={styles.link} href={I32_URL}>Integer 32</a>.
@@ -65,7 +65,7 @@ const Help: React.FC = () => {
       <LinkableSection id="features" header="Features" level="h2">
         <LinkableSection id="features-libraries" header="Libraries" level="h3">
           <p>
-            The playground provides a selection of libraries
+            The site provides a selection of libraries
           from <a className={styles.link} href={MAVEN_CENTRAL_URL}>Maven Central</a>.
             To use a library, add the appropriate
             {' '}
@@ -126,14 +126,14 @@ const Help: React.FC = () => {
             <strong>Share</strong> button. This will create a
             {' '}
             <a className={styles.link} href={GIST_URL}>GitHub Gist</a>. You will also be provided with
-            a URL to load that Gist back into the playground.
+            a URL to load that Gist back into the site.
           </p>
         </LinkableSection>
 
-        <LinkableSection id="features-linking" header="Linking to the playground with initial code" level="h3">
+        <LinkableSection id="features-linking" header="Linking to the site with initial code" level="h3">
           <p>
             If you have a web page with Java code that you’d like to
-            show in action, you can link to the playground with the
+            show in action, you can link to the site with the
           Java code in the query parameter <Code>code</Code>. Make sure to
                                         escape any special characters. Keep the code short, as URLs have
                                         limitations on the maximum length.
@@ -239,7 +239,7 @@ const Help: React.FC = () => {
 
       <LinkableSection id="limitations" header="Limitations" level="h2">
         <p>
-          To prevent the playground from being used to attack other computers and
+          To prevent the site from being used to attack other computers and
           to ensure it is available for everyone to use, some limitations
           are enforced.
         </p>

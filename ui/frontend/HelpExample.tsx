@@ -24,7 +24,7 @@ const HelpExample: React.FC<HelpExampleProps> = ({ code }) => {
   return (
     <div className={styles.container}>
       <button className={styles.loadExample} onClick={showExample}>
-        Load in playground
+        Load
       </button>
       <root.div>
         <link href={prismTheme} rel="stylesheet" />

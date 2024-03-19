@@ -144,7 +144,7 @@ module.exports = function(_, argv) {
         ACE_THEMES: JSON.stringify(allThemes),
       }),
       new HtmlPlugin({
-        title: "Java Playground",
+        title: "Run Java Code",
         template: 'index.ejs',
         filename: '../index.html',
       }),
