@@ -33,7 +33,7 @@ jobs:
           TARGZ_FOLDER: jdk-23
     if: 'github.event_name == ''push'' || contains(github.event.pull_request.labels.*.name, ''CI: approved'')'
     env:
-      IMAGE_NAME: ghcr.io/bowbahdoe/java-playground-ci-${{ matrix.runtime }}
+      IMAGE_NAME: ghcr.io/bowbahdoe/run-java-code-ci-${{ matrix.runtime }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -177,12 +177,12 @@ jobs:
     - name: Pull containers
       run: |-
         for c in latest early_access valhalla; do
-          docker pull ghcr.io/bowbahdoe/java-playground-ci-$c:${{ github.run_id }}
+          docker pull ghcr.io/bowbahdoe/run-java-code-ci-$c:${{ github.run_id }}
         done
     - name: Rename containers
       run: |-
         for c in latest early_access valhalla; do
-          docker tag ghcr.io/bowbahdoe/java-playground-ci-$c:${{ github.run_id }} javaplayground/$c
+          docker tag ghcr.io/bowbahdoe/run-java-code-ci-$c:${{ github.run_id }} javaplayground/$c
         done
     - name: Push containers
       run: |-
