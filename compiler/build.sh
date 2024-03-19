@@ -15,16 +15,16 @@ docker build -t "javaplayground/valhalla"\
 
 docker build -t "javaplayground/latest"\
     --platform linux/amd64\
-    --build-arg TARGZ_URL=https://download.java.net/java/GA/jdk21.0.1/415e3f918a1f4062a0074a2794853d0d/12/GPL/openjdk-21.0.1_linux-x64_bin.tar.gz\
-    --build-arg TARGZ_SHA=7e80146b2c3f719bf7f56992eb268ad466f8854d5d6ae11805784608e458343f \
-    --build-arg TARGZ_FOLDER=jdk-21.0.1\
+    --build-arg TARGZ_URL=https://download.java.net/java/GA/jdk22/830ec9fcccef480bb3e73fb7ecafe059/36/GPL/openjdk-22_linux-x64_bin.tar.gz\
+    --build-arg TARGZ_SHA=4d65cc6ed28711768fd72c2043a7925f7c83f5f51bb64970bd9d52f7791fc6ac\
+    --build-arg TARGZ_FOLDER=jdk-22\
     .
 
 docker build -t "javaplayground/early_access"\
     --platform linux/amd64\
-    --build-arg TARGZ_URL=https://download.java.net/java/early_access/jdk22/20/GPL/openjdk-22-ea+20_linux-x64_bin.tar.gz\
-    --build-arg TARGZ_SHA=5f1627efa81951307900954bbf7b2e49d8c5303615cf116959c273e9707b0496 \
-    --build-arg TARGZ_FOLDER=jdk-22\
+    --build-arg TARGZ_URL=https://download.java.net/java/early_access/jdk23/14/GPL/openjdk-23-ea+14_linux-x64_bin.tar.gz\
+    --build-arg TARGZ_SHA=9305399006d6c477d1c84cc48d42d44839199f603c1802298225c13160f1d9d2 \
+    --build-arg TARGZ_FOLDER=jdk-23\
     .
 
 
