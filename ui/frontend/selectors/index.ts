@@ -109,7 +109,7 @@ export const isReleaseDefault = createSelector(
       return release == Release.Java20;
     }
     else {
-      return release == Release.Java21;
+      return release == Release.Java22;
     }
   }
 );
@@ -313,7 +313,7 @@ export const aceTheme = createSelector(aceConfig, c => c.theme);
 
 export const offerCrateAutocompleteOnUse = createSelector(
   releaseSelector,
-  (release) => release !== Release.Java21,
+  (release) => release !== Release.Java22,
 );
 
 const websocket = (state: State) => state.websocket;
