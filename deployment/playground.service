@@ -1,5 +1,5 @@
 [Unit]
-Description=The Java Playground
+Description=Run Java Code
 
 [Service]
 Environment=TMPDIR=/mnt/playground

@@ -1,7 +1,7 @@
 use octocrab::Octocrab;
 
 const FILENAME: &str = "Main.java";
-const DESCRIPTION: &str = "Code shared from the Java Playground";
+const DESCRIPTION: &str = "Code shared from run.mccue.dev";
 
 pub struct Gist {
     pub id: String,
