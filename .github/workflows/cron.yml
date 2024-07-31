@@ -17,16 +17,16 @@ jobs:
       matrix:
         include:
         - runtime: latest
-          TARGZ_URL: https://download.java.net/java/GA/jdk22/830ec9fcccef480bb3e73fb7ecafe059/36/GPL/openjdk-22_linux-x64_bin.tar.gz
-          TARGZ_SHA: 4d65cc6ed28711768fd72c2043a7925f7c83f5f51bb64970bd9d52f7791fc6ac
+          TARGZ_URL: https://download.java.net/java/GA/jdk22.0.2/c9ecb94cd31b495da20a27d4581645e8/9/GPL/openjdk-22.0.2_linux-x64_bin.tar.gz
+          TARGZ_SHA: 41536f115668308ecf4eba92aaf6acaeb0936225828b741efd83b6173ba82963
           TARGZ_FOLDER: jdk-22
         - runtime: valhalla
-          TARGZ_URL: https://download.java.net/java/early_access/valhalla/20/openjdk-20-valhalla+20-75_linux-x64_bin.tar.gz
-          TARGZ_SHA: cd0a008aee632cbff2f9c529aba17f4ad7f733cd974d36d2293169bc35e73ae7
-          TARGZ_FOLDER: jdk-20
+          TARGZ_URL: https://download.java.net/java/early_access/valhalla/1/openjdk-23-valhalla+1-90_linux-x64_bin.tar.gz
+          TARGZ_SHA: 5235afaf5ecc86f2237458cf40f8ed965939372f606edbd0fc46e1ee2e69f5f5
+          TARGZ_FOLDER: jdk-23
         - runtime: early_access
-          TARGZ_URL: https://download.java.net/java/early_access/jdk23/14/GPL/openjdk-23-ea+14_linux-x64_bin.tar.gz
-          TARGZ_SHA: 9305399006d6c477d1c84cc48d42d44839199f603c1802298225c13160f1d9d2
+          TARGZ_URL: https://download.java.net/java/early_access/jdk23/34/GPL/openjdk-23-ea+34_linux-x64_bin.tar.gz
+          TARGZ_SHA: 9d3fa4fbb8247f3a47788c52c09ac5c265e023cfda821610ade2a43104bdaace
           TARGZ_FOLDER: jdk-23
     env:
       IMAGE_NAME: ghcr.io/bowbahdoe/run-java-code-ci-${{ matrix.runtime }}
