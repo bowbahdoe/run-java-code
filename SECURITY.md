@@ -1,4 +1,4 @@
-The Java Playground is a fork of The Rust Playground. You can report security issues
+This is a fork of The Rust Playground. You can report security issues
 to me at `ethan@mccue.dev`, but chances are if we have an issue they have the same one too.
 So report to them as well if it is important.
 

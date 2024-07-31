@@ -400,9 +400,9 @@ pub enum Runtime {
 impl Runtime {
     fn default_release(&self) -> Release {
         match *self {
-            Runtime::Latest => Release::_21,
+            Runtime::Latest => Release::_22,
             Runtime::Valhalla => Release::_20,
-            Runtime::EarlyAccess => Release::_21,
+            Runtime::EarlyAccess => Release::_23,
         }
     }
 
@@ -457,7 +457,7 @@ impl Release {
             _20 => "20",
             _21 => "21",
             _22 => "22",
-            _23 => "23"
+            _23 => "23",
         }
     }
 }

@@ -73,8 +73,8 @@ Reboot the instance at this point.
 
 #### Get the code
 ```
-git clone https://github.com/McCue-Software-Solutions/java-playground.git
-cd java-playground
+git clone https://github.com/bowbahdoe/run-java-code.git
+cd run-java-code
 ```
 
 #### Make update.sh
