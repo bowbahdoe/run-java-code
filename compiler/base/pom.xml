@@ -20,13 +20,13 @@
         <dependency>
             <groupId>org.jspecify</groupId>
             <artifactId>jspecify</artifactId>
-            <version>0.3.0</version>
+            <version>1.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>dev.mccue</groupId>
             <artifactId>json</artifactId>
-            <version>0.2.4</version>
+            <version>2023.12.23</version>
         </dependency>
 
         <dependency>
@@ -38,73 +38,73 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-afterburner</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <!-- <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-pcollections</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency> -->
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-properties</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-cbor</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-smile</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-csv</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-toml</artifactId>
-            <version>2.15.3</version>
+            <version>2.17.2</version>
         </dependency>
 
         <dependency>
@@ -116,19 +116,19 @@
         <dependency>
             <groupId>dev.mccue</groupId>
             <artifactId>feather</artifactId>
-            <version>0.0.2</version>
+            <version>2023.08.21</version>
         </dependency>
 
         <dependency>
             <groupId>dev.mccue</groupId>
             <artifactId>josql</artifactId>
-            <version>0.0.1</version>
+            <version>2023.08.05</version>
         </dependency>
 
         <dependency>
             <groupId>dev.mccue</groupId>
             <artifactId>search</artifactId>
-            <version>0.0.1</version>
+            <version>2023.08.17</version>
         </dependency>
 
         <dependency>
@@ -140,7 +140,7 @@
         <dependency>
             <groupId>dev.mccue</groupId>
             <artifactId>guava</artifactId>
-            <version>0.0.4</version>
+            <version>33.2.0</version>
         </dependency>
 
         <dependency>
