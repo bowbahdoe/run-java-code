@@ -19,7 +19,7 @@ jobs:
         - runtime: latest
           TARGZ_URL: https://download.java.net/java/GA/jdk22.0.2/c9ecb94cd31b495da20a27d4581645e8/9/GPL/openjdk-22.0.2_linux-x64_bin.tar.gz
           TARGZ_SHA: 41536f115668308ecf4eba92aaf6acaeb0936225828b741efd83b6173ba82963
-          TARGZ_FOLDER: jdk-22
+          TARGZ_FOLDER: jdk-22.0.2
         - runtime: valhalla
           TARGZ_URL: https://download.java.net/java/early_access/valhalla/1/openjdk-23-valhalla+1-90_linux-x64_bin.tar.gz
           TARGZ_SHA: 5235afaf5ecc86f2237458cf40f8ed965939372f606edbd0fc46e1ee2e69f5f5
