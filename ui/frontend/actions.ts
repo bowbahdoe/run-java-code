@@ -536,6 +536,8 @@ function parseRelease(s?: string): Release | null {
       return Release.Java21;
     case '22':
       return Release.Java22;
+    case '23':
+      return Release.Java23;
     default:
       return null;
   }
@@ -561,7 +563,7 @@ export function indexPageLoad({
 }: { code?: string, gist?: string, runtime?: string, release?: string, preview?: string }): ThunkAction {
   return function(dispatch) {
     const runtime = parseRuntime(runtimeString) || Runtime.Latest;
-    const release = parseRelease(releaseString) || Release.Java21;
+    const release = parseRelease(releaseString) || Release.Java22;
     const preview = parsePreview(previewString) || Preview.Disabled;
 
     dispatch(navigateToIndex());

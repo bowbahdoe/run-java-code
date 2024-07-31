@@ -89,7 +89,7 @@ const slice = createSlice({
         const { stdout } = action.payload;
         let { stderr } = action.payload;
         stderr = stderr?.replace(
-          'Note: Main.java uses preview features of Java SE 21.\n' +
+          'Note: Main.java uses preview features of Java SE 22.\n' +
             'Note: Recompile with -Xlint:preview for details.\n\n',
           '',
         );

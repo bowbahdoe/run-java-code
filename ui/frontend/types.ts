@@ -98,7 +98,8 @@ export enum Release {
   Java19 = '19',
   Java20 = '20',
   Java21 = '21',
-  Java22 = '22'
+  Java22 = '22',
+  Java23 = '23'
 }
 
 export enum Preview {

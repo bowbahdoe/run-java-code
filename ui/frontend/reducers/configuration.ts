@@ -49,7 +49,7 @@ const DEFAULT: State = {
   processAssembly: ProcessAssembly.Filter,
   primaryAction: PrimaryActionAuto.Auto,
   runtime: Runtime.Latest,
-  release: Release.Java21,
+  release: Release.Java22,
   preview: Preview.Disabled,
 };
 
@@ -86,11 +86,11 @@ export default function configuration(state = DEFAULT, action: Action): State {
       return { ...state, primaryAction: action.primaryAction };
     case ActionType.ChangeRuntime: {
       const maxRelease = (runtime: Runtime, release: Release) => {
-        if (runtime == Runtime.Valhalla && release > Release.Java20) {
-          return Release.Java20;
+        if (runtime == Runtime.Valhalla && release > Release.Java23) {
+          return Release.Java23;
         }
         else {
-          return Release.Java21;
+          return Release.Java22;
         }
       }
       return { ...state, runtime: action.runtime, release: maxRelease(action.runtime, state.release)  };
