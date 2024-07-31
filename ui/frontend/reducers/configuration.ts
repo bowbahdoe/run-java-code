@@ -53,6 +53,15 @@ const DEFAULT: State = {
   preview: Preview.Disabled,
 };
 
+const maxRelease = (runtime: Runtime) => {
+  if ((runtime == Runtime.Valhalla || runtime == Runtime.EarlyAccess)) {
+    return Release.Java23;
+  }
+  else {
+    return Release.Java22;
+  }
+}
+
 export default function configuration(state = DEFAULT, action: Action): State {
   switch (action.type) {
     case ActionType.ChangeEditor:
@@ -85,22 +94,14 @@ export default function configuration(state = DEFAULT, action: Action): State {
     case ActionType.ChangePrimaryAction:
       return { ...state, primaryAction: action.primaryAction };
     case ActionType.ChangeRuntime: {
-      const maxRelease = (runtime: Runtime, release: Release) => {
-        if (runtime == Runtime.Valhalla && release > Release.Java23) {
-          return Release.Java23;
-        }
-        else {
-          return Release.Java22;
-        }
-      }
-      return { ...state, runtime: action.runtime, release: maxRelease(action.runtime, state.release)  };
+      return { ...state, runtime: action.runtime, release: maxRelease(action.runtime)  };
     }
     case ActionType.ChangeRelease: {
 
       return { ...state, release: action.release };
     }
     case ActionType.ChangePreview:
-      return { ...state, preview: action.preview };
+      return { ...state, preview: action.preview, release: maxRelease(state.runtime) };
     default:
       return state;
   }
