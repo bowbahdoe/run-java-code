@@ -163,7 +163,6 @@ fn build_execution_command(
 
         if req.preview() {
             cmd.push("--enable-preview".to_string());
-            cmd.push("-J--enable-preview".to_string());
         }
 
         cmd.push("Main.java".to_string());
