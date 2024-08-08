@@ -25,6 +25,12 @@
 
         <dependency>
             <groupId>dev.mccue</groupId>
+            <artifactId>jdbc</artifactId>
+            <version>2024.08.08.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>dev.mccue</groupId>
             <artifactId>json</artifactId>
             <version>2023.12.23</version>
         </dependency>
