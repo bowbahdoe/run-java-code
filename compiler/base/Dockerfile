@@ -41,6 +41,9 @@ RUN /playground/attach_notice.sh /playground/security_notice.txt /etc/passwd && 
 COPY --chown=playground --from=dependencies target/dependency /playground/dependencies
 COPY --chown=playground --from=jre jre /playground/jre
 
+# Copy the downloaded JAR files to the plugins directory
+COPY --chown=playground plugins /playground/plugins
+
 USER playground
 ENV USER=playground
 ENV PATH=/playground/jre/bin:$PATH

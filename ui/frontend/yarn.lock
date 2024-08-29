@@ -1978,10 +1978,10 @@
   resolved "https://registry.yarnpkg.com/@xtuc/long/-/long-4.2.2.tgz#d291c6a4e97989b5c61d9acf396ae4fe133a718d"
   integrity sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==
 
-ace-builds@^1.23.0:
-  version "1.23.1"
-  resolved "https://registry.yarnpkg.com/ace-builds/-/ace-builds-1.23.1.tgz#2a1a2c2717c21cfd102f641552cf371ab6bce6e4"
-  integrity sha512-vmLfsfOOvEiQPri2Vz+76FvUalz/nHB7+X2GqonG7rc2V+WrHvqc4xYowt1+fxHH3aWw/pDF2jqKQrd8JNMmiQ==
+ace-builds@^1.32.7:
+  version "1.36.0"
+  resolved "https://registry.yarnpkg.com/ace-builds/-/ace-builds-1.36.0.tgz#6f776eb162a1e98e865fdd0fdfc5dbd61c30d00c"
+  integrity sha512-7to4F86V5N13EY4M9LWaGo2Wmr9iWe5CrYpc28F+/OyYCf7yd+xBV5x9v/GB73EBGGoYd89m6JjeIUjkL6Yw+w==
 
 acorn-import-assertions@^1.9.0:
   version "1.9.0"

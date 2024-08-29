@@ -2,6 +2,11 @@
 
 set -euv -o pipefail
 
+# Download the JAR files for errorprone
+mkdir -p base/plugins
+wget https://repo1.maven.org/maven2/com/google/errorprone/error_prone_core/2.8.0/error_prone_core-2.8.0-with-dependencies.jar -P base/plugins/
+wget https://repo1.maven.org/maven2/io/github/eisop/dataflow-errorprone/3.42.0-eisop4/dataflow-errorprone-3.42.0-eisop4.jar -P base/plugins/
+
 cd "base"
 
 perform_push="${PERFORM_PUSH-false}"
