@@ -2,10 +2,8 @@ import { Action, ActionType } from '../actions';
 import { performGistLoad } from './output/gist'
 import { performFormat } from './output/format'
 
-const DEFAULT: State = `public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello, world!");
-    }
+const DEFAULT: State = `void main() {
+  IO.println("Hello, world!");
 }`;
 
 export type State = string;

@@ -23,12 +23,10 @@ const LEO_GITHUB_URL = 'https://github.com/LeonardoA77';
 
 const CRATE_EXAMPLE = `import io.vavr.collection.Vector;
 
-class Main {
-    public static void main(String[] args) {
-        System.out.println(Vector.of(
-          "a", "b", "c"
-        ));
-    }
+void main() {
+    IO.println(Vector.of(
+      "a", "b", "c"
+    ))
 }
 `;
 
