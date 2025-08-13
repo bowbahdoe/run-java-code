@@ -108,7 +108,7 @@ jobs:
     - name: Restore permissions
       run: sudo chown -R runner:docker ~/.cargo/ ui/target
     - name: Save backend artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: backend
         path: |
@@ -147,7 +147,7 @@ jobs:
     - name: Build frontend
       run: yarn --cwd ui/frontend/ run build:production
     - name: Save frontend artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: frontend
         path: ui/frontend/build
