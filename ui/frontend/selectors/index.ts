@@ -108,8 +108,11 @@ export const isReleaseDefault = createSelector(
     if (runtime == Runtime.Valhalla) {
       return release == Release.Java23;
     }
+    else if (runtime == Runtime.EarlyAccess) {
+      return release == Release.Java26;
+    }
     else {
-      return release == Release.Java22;
+      return release == Release.Java25;
     }
   }
 );
