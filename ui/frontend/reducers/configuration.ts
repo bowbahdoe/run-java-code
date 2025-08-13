@@ -49,16 +49,19 @@ const DEFAULT: State = {
   processAssembly: ProcessAssembly.Filter,
   primaryAction: PrimaryActionAuto.Auto,
   runtime: Runtime.Latest,
-  release: Release.Java22,
+  release: Release.Java25,
   preview: Preview.Disabled,
 };
 
 const maxRelease = (runtime: Runtime) => {
-  if ((runtime == Runtime.Valhalla || runtime == Runtime.EarlyAccess)) {
+  if (runtime == Runtime.Valhalla) {
     return Release.Java23;
   }
+  else if (runtime == Runtime.EarlyAccess) {
+    return Release.Java26;
+  }
   else {
-    return Release.Java22;
+    return Release.Java25;
   }
 }
 

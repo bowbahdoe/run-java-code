@@ -538,6 +538,12 @@ function parseRelease(s?: string): Release | null {
       return Release.Java22;
     case '23':
       return Release.Java23;
+    case '24':
+      return Release.Java24;
+    case '25':
+      return Release.Java25;
+    case '26':
+      return Release.Java26;
     default:
       return null;
   }

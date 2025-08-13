@@ -400,6 +400,9 @@ fn parse_release(s: &str) -> Result<Option<sandbox::Release>> {
         "21" => Some(sandbox::Release::_21),
         "22" => Some(sandbox::Release::_22),
         "23" => Some(sandbox::Release::_23),
+        "24" => Some(sandbox::Release::_24),
+        "25" => Some(sandbox::Release::_25),
+        "26" => Some(sandbox::Release::_26),
         value => InvalidReleaseSnafu { value }.fail()?,
     })
 }
