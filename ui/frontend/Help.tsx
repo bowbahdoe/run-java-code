@@ -26,7 +26,7 @@ const CRATE_EXAMPLE = `import io.vavr.collection.Vector;
 void main() {
     IO.println(Vector.of(
       "a", "b", "c"
-    ))
+    ));
 }
 `;
 

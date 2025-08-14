@@ -3,7 +3,7 @@ import { performGistLoad } from './output/gist'
 import { performFormat } from './output/format'
 
 const DEFAULT: State = `void main() {
-  IO.println("Hello, world!");
+    IO.println("Hello, world!");
 }`;
 
 export type State = string;
