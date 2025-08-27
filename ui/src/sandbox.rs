@@ -156,6 +156,7 @@ fn build_execution_command(
         cmd.push("java".to_string());
         cmd.extend(["--module-path".to_string(), "dependencies".to_string()]);
         cmd.extend(["--add-modules".to_string(), "ALL-MODULE-PATH".to_string()]);
+        cmd.extend(["--enable-native-access=org.fusesource.jansi".to_string()]);
         cmd.extend(["--source".to_string(), release.to_string()]);
 
         // Enable using java.lang.foreign w/o warnings
