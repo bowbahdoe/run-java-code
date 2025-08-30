@@ -41,6 +41,13 @@ RUN /playground/attach_notice.sh /playground/security_notice.txt /etc/passwd && 
 COPY --chown=playground --from=dependencies target/dependency /playground/dependencies
 COPY --chown=playground --from=jre jre /playground/jre
 
+# Install locale for proper Unicode support
+RUN apt-get update && \
+    apt-get -y install locales && \
+    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
+    locale-gen
+ENV LANG en_US.UTF-8
+
 USER playground
 ENV USER=playground
 ENV PATH=/playground/jre/bin:$PATH
