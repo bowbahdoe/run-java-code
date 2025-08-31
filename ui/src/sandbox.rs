@@ -680,6 +680,28 @@ mod test {
     }
 
     #[tokio::test]
+    async fn unicode() {
+        let _singleton = one_test_at_a_time();
+        let code = r#"
+            public class Main {
+                public static void main(String[] args) {
+                    System.out.println("Привет, мир!");
+                }
+            }
+        "#;
+
+        let req = ExecuteRequest {
+            code: code.to_string(),
+            ..ExecuteRequest::default()
+        };
+
+        let sb = Sandbox::new().await.expect("Unable to create sandbox");
+        let resp = sb.execute(&req).await.expect("Unable to execute code");
+
+        assert!(resp.stdout.contains("Привет, мир!"));
+    }
+
+    #[tokio::test]
     async fn network_connections_are_disabled() {
         let _singleton = one_test_at_a_time();
         let code = r#"
