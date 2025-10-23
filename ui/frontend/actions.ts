@@ -569,7 +569,7 @@ export function indexPageLoad({
 }: { code?: string, gist?: string, runtime?: string, release?: string, preview?: string }): ThunkAction {
   return function(dispatch) {
     const runtime = parseRuntime(runtimeString) || Runtime.Latest;
-    const release = parseRelease(releaseString) || Release.Java22;
+    const release = parseRelease(releaseString) || Release.Java25;
     const preview = parsePreview(previewString) || Preview.Disabled;
 
     dispatch(navigateToIndex());

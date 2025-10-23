@@ -28,7 +28,7 @@ const AdvancedOptionsMenu: React.FC = () => {
         isNotDefault={!isReleaseDefault}
         onChange={changeRelease}
       >
-        { runtime == Runtime.EarlyAccess || Runtime == Runtime.Valhalla ?
+        { runtime == Runtime.EarlyAccess || runtime == Runtime.Valhalla ?
           <option value={Release.Java26}>26</option> : null}
         <option value={Release.Java25}>25</option>
         <option value={Release.Java24}>24</option>
