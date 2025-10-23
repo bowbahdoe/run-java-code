@@ -106,7 +106,7 @@ export const isReleaseDefault = createSelector(
   releaseSelector,
   (runtime, release) => {
     if (runtime == Runtime.Valhalla) {
-      return release == Release.Java23;
+      return release == Release.Java26;
     }
     else if (runtime == Runtime.EarlyAccess) {
       return release == Release.Java26;

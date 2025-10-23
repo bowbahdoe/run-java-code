@@ -51,9 +51,9 @@ components:
               TARGZ_SHA: c00224c25b0b915f4d69929d90e59dfd66e949f79f7437d334248f7789b646f4
               TARGZ_FOLDER: jdk-25
             - runtime: valhalla
-              TARGZ_URL: https://download.java.net/java/early_access/valhalla/1/openjdk-23-valhalla+1-90_linux-x64_bin.tar.gz
-              TARGZ_SHA: 5235afaf5ecc86f2237458cf40f8ed965939372f606edbd0fc46e1ee2e69f5f5
-              TARGZ_FOLDER: jdk-23
+              TARGZ_URL: https://download.java.net/java/early_access/valhalla/26/1/openjdk-26-jep401ea2+1-1_linux-x64_bin.tar.gz
+              TARGZ_SHA: 27d12e7ed51b0a9e94c6356adb4c42a50a8861031e1bc833b3f6b7a3212bed55
+              TARGZ_FOLDER: jdk-26
             - runtime: early_access
               TARGZ_URL: https://download.java.net/java/early_access/jdk26/10/GPL/openjdk-26-ea+10_linux-x64_bin.tar.gz
               TARGZ_SHA: 09044ebef2f1122e484e84df3a95605462c66caf6fb6363a6b3bb70cb6dba3db

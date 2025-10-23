@@ -8,9 +8,9 @@ perform_push="${PERFORM_PUSH-false}"
 
 docker build -t "javaplayground/valhalla"\
     --platform linux/amd64\
-    --build-arg TARGZ_URL=https://download.java.net/java/early_access/valhalla/1/openjdk-23-valhalla+1-90_linux-x64_bin.tar.gz\
-    --build-arg TARGZ_SHA=5235afaf5ecc86f2237458cf40f8ed965939372f606edbd0fc46e1ee2e69f5f5\
-    --build-arg TARGZ_FOLDER=jdk-23\
+    --build-arg TARGZ_URL=https://download.java.net/java/early_access/valhalla/26/1/openjdk-26-jep401ea2+1-1_linux-x64_bin.tar.gz\
+    --build-arg TARGZ_SHA=27d12e7ed51b0a9e94c6356adb4c42a50a8861031e1bc833b3f6b7a3212bed55\
+    --build-arg TARGZ_FOLDER=jdk-26\
     .
 
 docker build -t "javaplayground/latest"\

@@ -55,7 +55,7 @@ const DEFAULT: State = {
 
 const maxRelease = (runtime: Runtime) => {
   if (runtime == Runtime.Valhalla) {
-    return Release.Java23;
+    return Release.Java26;
   }
   else if (runtime == Runtime.EarlyAccess) {
     return Release.Java26;

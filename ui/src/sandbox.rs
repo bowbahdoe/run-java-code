@@ -401,9 +401,9 @@ pub enum Runtime {
 impl Runtime {
     fn default_release(&self) -> Release {
         match *self {
-            Runtime::Latest => Release::_22,
-            Runtime::Valhalla => Release::_20,
-            Runtime::EarlyAccess => Release::_23,
+            Runtime::Latest => Release::_25,
+            Runtime::Valhalla => Release::_26,
+            Runtime::EarlyAccess => Release::_26,
         }
     }
 
